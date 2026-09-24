@@ -856,3 +856,376 @@ textarea:focus-visible {
   background: #cbd5e1;
   border-radius: 999px;
 }
+
+.create-subject-overlay {
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.create-subject-modal {
+  width: calc(100vw - 32px);
+  max-width: 420px;
+  padding: 22px;
+  overflow: hidden;
+  border: 2px solid #263d32;
+  border-radius: 8px;
+  background: #0b1511;
+  box-shadow: 4px 4px 0 #020806;
+  color: #f8fafc;
+}
+
+.create-subject-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.create-subject-header {
+  margin-bottom: 22px;
+}
+
+.create-subject-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #d1d5db;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.create-subject-field {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 2px solid #31503f;
+  border-radius: 6px;
+  background: #111c17;
+  box-shadow: 3px 3px 0 #020806;
+  color: #f8fafc;
+  padding: 10px 12px;
+  outline: none;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease;
+}
+
+.create-subject-field::placeholder {
+  color: #64748b;
+}
+
+.create-subject-input {
+  height: 42px;
+}
+
+.create-subject-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.create-subject-field:focus {
+  border-color: #22c55e;
+  outline: none;
+  box-shadow:
+    3px 3px 0 #020806,
+    0 0 0 1px #22c55e;
+}
+
+.create-subject-swatch {
+  width: 32px;
+  height: 32px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  box-shadow: 2px 2px 0 #020806;
+  cursor: pointer;
+  transition: transform 120ms ease;
+}
+
+.create-subject-swatch:hover {
+  transform: translateY(-1px);
+}
+
+.create-subject-swatch.is-selected {
+  border: 2px solid #ffffff;
+  box-shadow:
+    2px 2px 0 #020806,
+    0 0 0 2px rgba(34, 197, 94, 0.25);
+}
+
+.create-subject-btn {
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-weight: 700;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.create-subject-btn-cancel {
+  border: 2px solid #020806;
+  background: #263244;
+  box-shadow: 3px 3px 0 #020806;
+}
+
+.create-subject-btn-cancel:hover {
+  background: #324258;
+}
+
+.create-subject-btn-cancel:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 #020806;
+}
+
+.create-subject-btn-submit {
+  border: 2px solid #052e16;
+  background: #16a34a;
+  box-shadow: 4px 4px 0 #052e16;
+}
+
+.create-subject-btn-submit:hover {
+  background: #22c55e;
+}
+
+.create-subject-btn-submit:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 #052e16;
+}
+
+.create-subject-btn-submit:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.neuronDetailBody {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+  min-height: 0;
+  flex: 1;
+  padding: 12px 16px 16px;
+}
+
+.neuronDetailContent {
+  min-width: 0;
+  overflow-y: auto;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  padding-left: 20px;
+}
+
+.neuronSectionMenu {
+  display: flex;
+  width: 122px;
+  flex-direction: column;
+  gap: 6px;
+  justify-self: center;
+  align-self: center;
+}
+
+.neuronSectionMenuTop,
+.neuronSectionMenuBottom {
+  display: flex;
+  gap: 6px;
+}
+
+.neuronSectionButton {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  background: #111827;
+  color: #94a3b8;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.neuronSectionButtonKnowledge {
+  border-radius: 58px 10px 10px 10px;
+}
+
+.neuronSectionButtonNote {
+  border-radius: 10px 58px 10px 10px;
+}
+
+.neuronSectionButtonApplication {
+  border-radius: 10px 10px 10px 58px;
+}
+
+.neuronSectionButtonSettings {
+  border-radius: 10px 10px 58px 10px;
+}
+
+.neuronSectionButton:hover {
+  transform: scale(1.05);
+  color: #cbd5e1;
+  background: #1e293b;
+}
+
+.neuronSectionButton.is-active {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(52, 211, 153, 0.7);
+  color: #34d399;
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.18);
+}
+
+.neuronContentCard {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 150px;
+  padding: 20px 22px;
+  overflow: hidden;
+  
+  background: #0b1420;
+  box-shadow:
+    4px 4px 0 rgba(255, 255, 255, 0.18),
+    0 10px 30px rgba(0, 0, 0, 0.25);
+  color: #f8fafc;
+}
+
+.neuronContentHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-left: 10px;
+  border-left: 3px solid #22c55e;
+  color: #f8fafc;
+  font-size: 17px;
+}
+
+.neuronContentCardNote .neuronContentHeader {
+  border-left-color: #60a5fa;
+}
+
+.neuronContentCardApplication .neuronContentHeader {
+  border-left-color: #fbbf24;
+}
+
+.neuronContentCardSettings .neuronContentHeader {
+  border-left-color: #94a3b8;
+}
+
+.neuronContentHeaderIcon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  color: #22c55e;
+}
+
+.neuronContentCardNote .neuronContentHeaderIcon {
+  color: #60a5fa;
+}
+
+.neuronContentCardApplication .neuronContentHeaderIcon {
+  color: #fbbf24;
+}
+
+.neuronContentSectionLabel {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.neuronContentBody {
+  margin: 8px 0 0;
+  color: #cbd5e1;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.neuronContentDivider {
+  margin: 16px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.neuronContentInputWrap {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.neuronContentInput {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  border-radius: 5px;
+  background: #0f1b2a;
+  box-shadow: 3px 3px 0 rgba(255, 255, 255, 0.15);
+  color: #f8fafc;
+  outline: none;
+}
+
+.neuronContentInput:focus {
+  border-color: #22c55e;
+  outline: none;
+}
+
+.neuronContentBtn {
+  padding: 8px 14px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 5px;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.neuronContentBtnSave {
+  background: #16a34a;
+  box-shadow: 3px 3px 0 rgba(255, 255, 255, 0.18);
+}
+
+.neuronContentBtnSave:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+
+.neuronContentBtnGhost {
+  background: #1e293b;
+  box-shadow: 3px 3px 0 rgba(255, 255, 255, 0.12);
+}
+
+.neuronContentBtnGhost:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+
+.neuronContentBtnDanger {
+  background: #7f1d1d;
+  box-shadow: 3px 3px 0 rgba(255, 255, 255, 0.12);
+}
+
+.neuronContentBtnDanger:active {
+  transform: translate(3px, 3px);
+  box-shadow: none;
+}
+
+.neuronContentNoteItem {
+  padding: 10px 12px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 5px;
+  background: #0f1b2a;
+}
+
+@media (max-width: 640px) {
+  .neuronDetailBody {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+
+  .neuronDetailContent {
+    width: 100%;
+    padding-left: 0;
+    border-left: 0;
+  }
+}

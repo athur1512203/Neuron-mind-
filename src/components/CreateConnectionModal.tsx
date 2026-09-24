@@ -6,11 +6,13 @@ type CreateConnectionModalProps = {
   source: Neuron;
   target: Neuron;
   onCancel: () => void;
-  onCreate: (explanation: string) => void;
+  onCreate: (explanation: string) => void | Promise<void>;
 };
 
 export function CreateConnectionModal({ source, target, onCancel, onCreate }: CreateConnectionModalProps) {
   const [explanation, setExplanation] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4">
@@ -39,6 +41,7 @@ export function CreateConnectionModal({ source, target, onCancel, onCreate }: Cr
               placeholder="Giải thích tại sao hai kiến thức này có liên quan..."
             />
           </label>
+          {error ? <p className="text-sm text-red-500">{error}</p> : null}
         </div>
 
         <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
@@ -48,13 +51,24 @@ export function CreateConnectionModal({ source, target, onCancel, onCreate }: Cr
             <span className="btn-front">Hủy</span>
           </button>
           <button
-            onClick={() => explanation.trim() && onCreate(explanation.trim())}
+            onClick={async () => {
+              if (!explanation.trim()) return;
+              setBusy(true);
+              setError("");
+              try {
+                await onCreate(explanation.trim());
+              } catch (caught) {
+                setError(caught instanceof Error ? caught.message : "Không tạo được liên kết.");
+              } finally {
+                setBusy(false);
+              }
+            }}
             className="action-3d-button"
-            disabled={!explanation.trim()}
+            disabled={!explanation.trim() || busy}
           >
             <span className="btn-shadow" />
             <span className="btn-edge" />
-            <span className="btn-front">Tạo liên kết</span>
+            <span className="btn-front">{busy ? "Đang tạo..." : "Tạo liên kết"}</span>
           </button>
         </div>
       </section>

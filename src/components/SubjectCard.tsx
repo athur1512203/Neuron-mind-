@@ -1,13 +1,15 @@
-import { ArrowRight, BrainCircuit } from "lucide-react";
-import type { CSSProperties } from "react";
+import { ArrowRight, BrainCircuit, MoreVertical } from "lucide-react";
+import { useState, type CSSProperties, type MouseEvent } from "react";
 import type { Subject } from "../types";
 
 type SubjectCardProps = {
   subject: Subject;
   onOpen: (subjectId: string) => void;
+  onDelete: (subject: Subject) => void;
 };
 
-export function SubjectCard({ subject, onOpen }: SubjectCardProps) {
+export function SubjectCard({ subject, onOpen, onDelete }: SubjectCardProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const fallbackBySubject: Record<string, string> = {
     microeconomics: "#22c55e",
     english: "#3b82f6",
@@ -21,9 +23,19 @@ export function SubjectCard({ subject, onOpen }: SubjectCardProps) {
     "--subject-glow": glow,
   } as CSSProperties;
 
+  const stopCardOpen = (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   return (
-    <button
+    <article
+      role="button"
+      tabIndex={0}
       onClick={() => onOpen(subject.id)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") onOpen(subject.id);
+      }}
       className="subject-card group text-left"
       style={style}
     >
@@ -46,6 +58,39 @@ export function SubjectCard({ subject, onOpen }: SubjectCardProps) {
           </div>
         </div>
       </div>
-    </button>
+
+      <div
+        className="absolute right-3 top-3 z-20"
+        onClick={stopCardOpen}
+        onKeyDown={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          aria-label="Tùy chọn môn học"
+          className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-white"
+          onClick={(event) => {
+            stopCardOpen(event);
+            setMenuOpen((open) => !open);
+          }}
+        >
+          <MoreVertical size={16} />
+        </button>
+        {menuOpen ? (
+          <div className="absolute right-0 top-8 min-w-[140px] rounded-md border border-[#1f2a26] bg-[#0b1210] py-1 shadow-xl">
+            <button
+              type="button"
+              className="block w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-white/5"
+              onClick={(event) => {
+                stopCardOpen(event);
+                setMenuOpen(false);
+                onDelete(subject);
+              }}
+            >
+              Xóa môn học
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </article>
   );
 }

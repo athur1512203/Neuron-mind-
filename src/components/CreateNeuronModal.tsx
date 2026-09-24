@@ -6,7 +6,7 @@ import { colorPresets } from "../utils/neuron";
 type CreateNeuronModalProps = {
   subjectId: string;
   onClose: () => void;
-  onCreate: (neuron: Neuron) => void;
+  onCreate: (neuron: Neuron) => void | Promise<void>;
 };
 
 export function CreateNeuronModal({ subjectId, onClose, onCreate }: CreateNeuronModalProps) {
@@ -18,30 +18,40 @@ export function CreateNeuronModal({ subjectId, onClose, onCreate }: CreateNeuron
   const [application, setApplication] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [audio, setAudio] = useState<string[]>([]);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) return;
     const timestamp = new Date().toISOString();
-    onCreate({
-      id: `neuron-${crypto.randomUUID()}`,
-      subjectId,
-      name: trimmedName,
-      color,
-      position: {
-        x: Math.random() * 4 - 2,
-        y: Math.random() * 3 - 1.5,
-        z: Math.random() * 4 - 2,
-      },
-      textContent,
-      images,
-      audio,
-      keyPoints,
-      memoryMethod,
-      application,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    });
+    setBusy(true);
+    setError("");
+    try {
+      await onCreate({
+        id: "",
+        subjectId,
+        name: trimmedName,
+        color,
+        position: {
+          x: Math.random() * 4 - 2,
+          y: Math.random() * 3 - 1.5,
+          z: Math.random() * 4 - 2,
+        },
+        textContent,
+        images,
+        audio,
+        keyPoints,
+        memoryMethod,
+        application,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Không tạo được neuron.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleLocalFiles = (files: FileList | null, setter: (urls: string[]) => void) => {
@@ -101,12 +111,14 @@ export function CreateNeuronModal({ subjectId, onClose, onCreate }: CreateNeuron
           <Textarea label="Áp dụng" value={application} onChange={setApplication} />
         </div>
 
+        {error ? <p className="px-1 text-sm text-red-500">{error}</p> : null}
+
         <div className="create-neuron-footer sticky bottom-0 flex justify-end gap-3">
           <button onClick={onClose} className="neuron-modal-button">
             Hủy
           </button>
-          <button onClick={handleSubmit} className="neuron-modal-button primary">
-            Tạo neuron
+          <button onClick={handleSubmit} disabled={busy} className="neuron-modal-button primary">
+            {busy ? "Đang tạo..." : "Tạo neuron"}
           </button>
         </div>
       </section>

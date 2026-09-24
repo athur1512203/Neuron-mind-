@@ -1,17 +1,17 @@
 import {
   BookOpen,
+  FileText,
   Image as ImageIcon,
-  MoreHorizontal,
+  Lightbulb,
   Music2,
   Pencil,
-  Trash2,
+  Plus,
+  Settings,
+  StickyNote,
+  Type,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import applicationIcon from "../assets/icons/application.svg";
-import contentIcon from "../assets/icons/content.svg";
-import focusIcon from "../assets/icons/focus.svg";
-import memoryIcon from "../assets/icons/memory.svg";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import type { Neuron, NeuronConnection } from "../types";
 import { colorPresets } from "../utils/neuron";
 
@@ -21,28 +21,23 @@ type NeuronDetailPanelProps = {
   neurons: Neuron[];
   connectionCount: number;
   onClose: () => void;
-  
   onDelete: (neuronId: string) => void;
   onUpdate: (neuron: Neuron) => void;
 };
 
-type Tab = "content" | "images" | "audio";
+type ActiveSection = "knowledge" | "note" | "application" | "settings";
 
-export function NeuronDetailPanel({
-  neuron,
-  connectionCount,
-  onClose,
-  onDelete,
-  onUpdate,
-}: NeuronDetailPanelProps) {
-  const [tab, setTab] = useState<Tab>("content");
+export function NeuronDetailPanel({ neuron, connectionCount, onClose, onDelete, onUpdate }: NeuronDetailPanelProps) {
+  const [activeSection, setActiveSection] = useState<ActiveSection>("knowledge");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(neuron);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setDraft(neuron);
     setEditing(false);
-    setTab("content");
+    setActiveSection("knowledge");
   }, [neuron]);
 
   const save = () => {
@@ -50,495 +45,458 @@ export function NeuronDetailPanel({
       ...draft,
       updatedAt: new Date().toISOString(),
     });
-
     setEditing(false);
   };
 
+  const startEdit = () => {
+    setDraft(neuron);
+    setEditing((value) => !value);
+  };
+
+  const addLocalFiles = (files: FileList | null, kind: "images" | "audio") => {
+    if (!files?.length) return;
+    const urls = Array.from(files).map((file) => URL.createObjectURL(file));
+    setDraft((current) => ({ ...current, [kind]: [...current[kind], ...urls] }));
+    setEditing(true);
+  };
+
   return (
-    <aside className="flex h-full w-[420px] shrink-0 flex-col overflow-hidden border-l border-[#1b2a3d] bg-[#071322] text-white">
-          <header className="shrink-0 border-b border-[#1b2a3d] bg-[#071322]">
-            <div className="flex items-start justify-between gap-3 px-5 py-4">
-              <div className="flex min-w-0 items-center gap-3">
-                <div
-                  className="h-10 w-10 shrink-0 rounded-full"
-                  style={{
-                    backgroundColor: neuron.color,
-                    background: `radial-gradient(circle at 35% 25%, #ffffff 0%, ${neuron.color} 22%, ${neuron.color} 72%)`,
-                    boxShadow: `0 0 20px ${neuron.color}70`,
-                  }}
-                />
-
-                <div className="min-w-0">
-                  <h2 className="app-name truncate text-xl text-white">
-                    {neuron.name}
-                  </h2>
-
-                  <div className="mt-1 flex items-center gap-2 text-sm">
-                    <span className="app-metadata text-slate-500">
-                      {connectionCount} kết nối
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex shrink-0 items-center gap-2">
-              
-                <button
-                  onClick={() => {
-                    setDraft(neuron);
-                    setEditing((value) => !value);
-                  }}
-                  className="action-3d-button"
-                >
-                  <span className="btn-shadow" />
-                  <span className="btn-edge" />
-                  <span className="btn-front"><Pencil />Chỉnh sửa</span>
-                </button>
-
-                <button
-                  onClick={onClose}
-                  className="button button-icon"
-                  aria-label="Đóng"
-                >
-                  <div>
-                    <span>
-                      <X size={17} />
-                    </span>
-                  </div>
-                </button>
-              </div>
+    <aside className="flex h-[min(320px,42vh)] w-full shrink-0 flex-col overflow-hidden border-t border-[#1b2a3d] bg-[#071322] text-white">
+      <header className="shrink-0 border-b border-[#1b2a3d] bg-[#071322]">
+        <div className="flex items-start justify-between gap-3 px-5 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div
+              className="h-9 w-9 shrink-0 rounded-full"
+              style={{
+                backgroundColor: neuron.color,
+                background: `radial-gradient(circle at 35% 25%, #ffffff 0%, ${neuron.color} 22%, ${neuron.color} 72%)`,
+                boxShadow: `0 0 20px ${neuron.color}70`,
+              }}
+            />
+            <div className="min-w-0">
+              <h2 className="app-name truncate text-lg text-white">{neuron.name}</h2>
+              <span className="app-metadata text-sm text-slate-500">{connectionCount} kết nối</span>
             </div>
+          </div>
 
-            {/* =========================
-                TABS
-            ========================== */}
-            {!editing && (
-              <div className="overflow-x-auto px-4 pb-4 pt-1">
-                <div className="flex w-max min-w-max items-center gap-1 rounded-full border border-slate-700/60 bg-slate-900/75 p-1.5 shadow-lg backdrop-blur-md">
-                  <TabButton
-                    active={tab === "content"}
-                    onClick={() => setTab("content")}
-                  >
-                    <BookOpen size={16} />
-                    Nội dung
-                  </TabButton>
-
-                  <TabButton
-                    active={tab === "images"}
-                    onClick={() => setTab("images")}
-                  >
-                    <ImageIcon size={15} />
-                    Hình ảnh ({neuron.images.length})
-                  </TabButton>
-
-                  <TabButton
-                    active={tab === "audio"}
-                    onClick={() => setTab("audio")}
-                  >
-                    <Music2 size={15} />
-                    Âm thanh ({neuron.audio.length})
-                  </TabButton>
-                </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button onClick={startEdit} className="action-3d-button">
+              <span className="btn-shadow" />
+              <span className="btn-edge" />
+              <span className="btn-front">
+                <Pencil />
+                Chỉnh sửa
+              </span>
+            </button>
+            <button onClick={onClose} className="button button-icon" aria-label="Đóng">
+              <div>
+                <span>
+                  <X size={17} />
+                </span>
               </div>
-            )}
-          </header>
+            </button>
+          </div>
+        </div>
+      </header>
 
-          {/* SCROLL CONTENT */}
-          <main className="panel-scroll min-h-0 flex-1 overflow-y-auto px-5 py-5">
+    <div className="neuronDetailBody border-2 border-white/90 rounded-xl mb-4">
+        <NeuronSectionMenu activeSection={activeSection} onSelect={setActiveSection} />
 
-            {/* =========================
-                EDIT MODE
-            ========================== */}
-            {editing ? (
-              <div className="mx-auto max-w-full space-y-5">
-                <Field
-                  label="Tên kiến thức"
-                  value={draft.name}
-                  onChange={(value) =>
-                    setDraft({ ...draft, name: value })
-                  }
-                />
-
-                <div className="app-card p-5">
-                  <div className="mb-3 text-sm font-medium text-slate-300">
-                    Màu neuron
-                  </div>
-
+        <main className="neuronDetailContent panel-scroll mb-3 mr-3">
+          <section className={`neuronContentCard neuronContentCard${activeSection === "knowledge" ? "Knowledge" : activeSection === "note" ? "Note" : activeSection === "application" ? "Application" : "Settings"}`}>
+          {editing && activeSection === "knowledge" ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Tên kiến thức" value={draft.name} onChange={(value) => setDraft({ ...draft, name: value })} />
+                <div className="neuronContentInputWrap">
+                  <div className="neuronContentSectionLabel">Màu neuron</div>
                   <div className="flex flex-wrap gap-3">
                     {colorPresets.map((preset) => (
                       <button
                         key={preset.value}
-                        onClick={() =>
-                          setDraft({
-                            ...draft,
-                            color: preset.value,
-                          })
-                        }
-                        className={`h-8 w-8 rounded-full border-2 ${
-                          draft.color === preset.value
-                            ? "border-white"
-                            : "border-transparent"
-                        }`}
-                        style={{
-                          backgroundColor: preset.value,
-                          boxShadow: `0 0 10px ${preset.value}60`,
-                        }}
+                        onClick={() => setDraft({ ...draft, color: preset.value })}
+                        className={`h-8 w-8 rounded-full border-2 ${draft.color === preset.value ? "border-white" : "border-transparent"}`}
+                        style={{ backgroundColor: preset.value, boxShadow: `0 0 10px ${preset.value}60` }}
                         title={preset.label}
                       />
                     ))}
-
                     <input
                       type="color"
                       value={draft.color}
-                      onChange={(event) =>
-                        setDraft({
-                          ...draft,
-                          color: event.target.value,
-                        })
-                      }
+                      onChange={(event) => setDraft({ ...draft, color: event.target.value })}
                       className="h-8 w-12 rounded border border-slate-700 bg-transparent"
                     />
                   </div>
                 </div>
-
-                <Textarea
-                  label="Nội dung học"
-                  value={draft.textContent}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      textContent: value,
-                    })
-                  }
-                />
-
-                <Textarea
-                  label="Trọng tâm kiến thức"
-                  value={draft.keyPoints}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      keyPoints: value,
-                    })
-                  }
-                />
-
-                <Textarea
-                  label="Cách ghi nhớ"
-                  value={draft.memoryMethod}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      memoryMethod: value,
-                    })
-                  }
-                />
-
-                <Textarea
-                  label="Áp dụng"
-                  value={draft.application}
-                  onChange={(value) =>
-                    setDraft({
-                      ...draft,
-                      application: value,
-                    })
-                  }
-                />
-
-                <div className="flex justify-end gap-3">
-                  <button
-                    onClick={() => {
-                      setDraft(neuron);
-                      setEditing(false);
-                    }}
-                    className="action-3d-button secondary"
-                  >
-                    <span className="btn-shadow" />
-                    <span className="btn-edge" />
-                    <span className="btn-front">Hủy</span>
-                  </button>
-
-                  <button
-                    onClick={save}
-                    className="action-3d-button"
-                  >
-                    <span className="btn-shadow" />
-                    <span className="btn-edge" />
-                    <span className="btn-front">Lưu thay đổi</span>
-                  </button>
-                </div>
               </div>
-            ) : (
-              <>
-                {/* =========================
-                    CONTENT TAB
-                ========================== */}
-                {tab === "content" && (
-                  <div className="space-y-5">
-                    <DetailCard
-                      title="Nội dung học"
-                      body={neuron.textContent}
-                      icon={contentIcon}
-                      tone="green"
-                    />
+              <div className="grid gap-4 md:grid-cols-2">
+                <Textarea label="Nội dung học" value={draft.textContent} onChange={(value) => setDraft({ ...draft, textContent: value })} />
+                <Textarea label="Trọng tâm kiến thức" value={draft.keyPoints} onChange={(value) => setDraft({ ...draft, keyPoints: value })} />
+              </div>
+            </div>
+          ) : null}
 
-                    <DetailCard
-                      title="Trọng tâm kiến thức"
-                      body={neuron.keyPoints}
-                      icon={focusIcon}
-                      tone="purple"
-                    />
+          {editing && activeSection === "note" ? (
+            <NoteEditor
+              draft={draft}
+              imageInputRef={imageInputRef}
+              audioInputRef={audioInputRef}
+              onMemoryChange={(value) => setDraft({ ...draft, memoryMethod: value })}
+              onRemoveImage={(index) => setDraft({ ...draft, images: draft.images.filter((_, i) => i !== index) })}
+              onRemoveAudio={(index) => setDraft({ ...draft, audio: draft.audio.filter((_, i) => i !== index) })}
+            />
+          ) : null}
 
-                    <DetailCard
-                      title="Cách ghi nhớ"
-                      body={neuron.memoryMethod}
-                      icon={memoryIcon}
-                      tone="blue"
-                    />
+          {editing && activeSection === "application" ? (
+            <Textarea label="Áp dụng kiến thức" value={draft.application} onChange={(value) => setDraft({ ...draft, application: value })} />
+          ) : null}
 
-                    <DetailCard
-                      title="Áp dụng"
-                      body={neuron.application}
-                      icon={applicationIcon}
-                      tone="gold"
-                    />
-                  </div>
-                )}
+          {!editing && activeSection === "knowledge" ? (
+            <KnowledgeCard textContent={neuron.textContent} keyPoints={neuron.keyPoints} />
+          ) : null}
 
-                {/* =========================
-                    IMAGE TAB
-                ========================== */}
-                {tab === "images" && (
-                  <div>
-                    <div className="mb-5">
-                      <h3 className="text-lg font-semibold">
-                        Hình ảnh minh họa
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {neuron.images.length} hình ảnh
-                      </p>
-                    </div>
+          {!editing && activeSection === "note" ? (
+            <NoteView
+              neuron={neuron}
+              onAddText={() => {
+                setActiveSection("note");
+                setEditing(true);
+              }}
+              onPickImages={() => {
+                setActiveSection("note");
+                imageInputRef.current?.click();
+              }}
+              onPickAudio={() => {
+                setActiveSection("note");
+                audioInputRef.current?.click();
+              }}
+            />
+          ) : null}
 
-                    {neuron.images.length ? (
-                      <div className="grid gap-4">
-                        {neuron.images.map((src, index) => (
-                          <div
-                            key={`${src}-${index}`}
-                            className="app-card overflow-hidden"
-                          >
-                            <img
-                              src={src}
-                              alt={`${neuron.name} ${index + 1}`}
-                              className="aspect-video w-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <EmptyState text="Chưa có hình ảnh." />
-                    )}
-                  </div>
-                )}
+          {!editing && activeSection === "application" ? <ApplicationCard body={neuron.application} /> : null}
 
-                {/* =========================
-                    AUDIO TAB
-                ========================== */}
-                {tab === "audio" && (
-                  <div>
-                    <div className="mb-5">
-                      <h3 className="text-lg font-semibold">
-                        Âm thanh
-                      </h3>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {neuron.audio.length} file âm thanh
-                      </p>
-                    </div>
-
-                    {neuron.audio.length ? (
-                      <div className="space-y-3">
-                        {neuron.audio.map((src, index) => (
-                          <div
-                            key={`${src}-${index}`}
-                            className="app-card p-4"
-                          >
-                            <div className="mb-3 text-sm font-medium text-slate-300">
-                              Âm thanh {index + 1}
-                            </div>
-
-                            <audio
-                              controls
-                              src={src}
-                              className="w-full"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <EmptyState text="Chưa có âm thanh." />
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* DELETE */}
-            {!editing && (
-              <div className="mt-8 border-t border-slate-800 pt-6">
+          {activeSection === "settings" ? (
+            <div>
+              <div className="neuronContentHeader">
+                <span className="neuronContentHeaderIcon">
+                  <Settings size={16} />
+                </span>
+                <span className="font-fancy">TÙY CHỌN</span>
+              </div>
+              <div className="flex flex-wrap gap-3">
                 <button
-                  onClick={() => onDelete(neuron.id)}
-                  className="action-3d-button danger"
+                  type="button"
+                  onClick={() => {
+                    setDraft(neuron);
+                    setEditing(true);
+                    setActiveSection("knowledge");
+                  }}
+                  className="neuronContentBtn neuronContentBtnSave"
                 >
-                  <span className="btn-shadow" />
-                  <span className="btn-edge" />
-                  <span className="btn-front"><Trash2 />Xóa neuron</span>
+                  Chỉnh sửa
+                </button>
+                <button type="button" onClick={() => onDelete(neuron.id)} className="neuronContentBtn neuronContentBtnDanger">
+                  Xóa neuron
                 </button>
               </div>
-            )}
-          </main>
+            </div>
+          ) : null}
+
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(event) => {
+              addLocalFiles(event.target.files, "images");
+              event.target.value = "";
+            }}
+          />
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept="audio/*"
+            multiple
+            className="hidden"
+            onChange={(event) => {
+              addLocalFiles(event.target.files, "audio");
+              event.target.value = "";
+            }}
+          />
+
+          {editing && activeSection !== "settings" ? (
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(neuron);
+                  setEditing(false);
+                }}
+                className="neuronContentBtn neuronContentBtnGhost"
+              >
+                Hủy
+              </button>
+              <button type="button" onClick={save} className="neuronContentBtn neuronContentBtnSave">
+                Lưu thay đổi
+              </button>
+            </div>
+          ) : null}
+          </section>
+        </main>
+      </div>
     </aside>
   );
 }
 
-/* ==================================================
-   SMALL COMPONENTS
-================================================== */
-
-function TabButton({
-  active,
-  onClick,
-  children,
+function NeuronSectionMenu({
+  activeSection,
+  onSelect,
 }: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
+  activeSection: ActiveSection;
+  onSelect: (section: ActiveSection) => void;
 }) {
   return (
+    <nav className="neuronSectionMenu" aria-label="Mục neuron">
+      <div className="neuronSectionMenuTop">
+        <button
+          type="button"
+          className={`neuronSectionButton neuronSectionButtonKnowledge ${activeSection === "knowledge" ? "is-active" : ""}`}
+          aria-label="Kiến thức"
+          onClick={() => onSelect("knowledge")}
+        >
+          <BookOpen size={22} />
+        </button>
+        <button
+          type="button"
+          className={`neuronSectionButton neuronSectionButtonNote ${activeSection === "note" ? "is-active" : ""}`}
+          aria-label="Note"
+          onClick={() => onSelect("note")}
+        >
+          <FileText size={22} />
+        </button>
+      </div>
+      <div className="neuronSectionMenuBottom">
+        <button
+          type="button"
+          className={`neuronSectionButton neuronSectionButtonApplication ${activeSection === "application" ? "is-active" : ""}`}
+          aria-label="Áp dụng"
+          onClick={() => onSelect("application")}
+        >
+          <Lightbulb size={22} />
+        </button>
+        <button
+          type="button"
+          className={`neuronSectionButton neuronSectionButtonSettings ${activeSection === "settings" ? "is-active" : ""}`}
+          aria-label="Tùy chọn"
+          onClick={() => onSelect("settings")}
+        >
+          <Settings size={22} />
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+function KnowledgeCard({ textContent, keyPoints }: { textContent: string; keyPoints: string }) {
+  return (
+    <div>
+      <div className="neuronContentHeader">
+        <span className="neuronContentHeaderIcon">
+          <BookOpen size={16} />
+        </span>
+        <span className="font-fancy">KIẾN THỨC</span>
+      </div>
+      <div>
+        <h3 className="neuronContentSectionLabel">Nội dung học</h3>
+        <p className="neuronContentBody">{textContent || "Chưa có nội dung."}</p>
+      </div>
+      <div className="neuronContentDivider" />
+      <div>
+        <h3 className="neuronContentSectionLabel">Trọng tâm</h3>
+        <p className="neuronContentBody">{keyPoints || "Chưa có nội dung."}</p>
+      </div>
+    </div>
+  );
+}
+
+function ApplicationCard({ body }: { body: string }) {
+  return (
+    <div>
+      <div className="neuronContentHeader">
+        <span className="neuronContentHeaderIcon">
+          <Lightbulb size={16} />
+        </span>
+        <span className="font-fancy">ÁP DỤNG</span>
+      </div>
+      <p className="neuronContentBody">{body || "Chưa có nội dung."}</p>
+    </div>
+  );
+}
+
+function NoteView({
+  neuron,
+  onAddText,
+  onPickImages,
+  onPickAudio,
+}: {
+  neuron: Neuron;
+  onAddText: () => void;
+  onPickImages: () => void;
+  onPickAudio: () => void;
+}) {
+  const hasNotes = Boolean(neuron.memoryMethod.trim()) || neuron.images.length > 0 || neuron.audio.length > 0;
+
+  return (
+    <div>
+      <div className="neuronContentHeader">
+        <span className="neuronContentHeaderIcon">
+          <FileText size={16} />
+        </span>
+        <span className="font-fancy">NOTE</span>
+      </div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <NoteToolButton onClick={onAddText}>
+          <Type size={14} />+ Text
+        </NoteToolButton>
+        <NoteToolButton onClick={onPickImages}>
+          <ImageIcon size={14} />+ Hình ảnh
+        </NoteToolButton>
+        <NoteToolButton onClick={onPickAudio}>
+          <Music2 size={14} />+ Âm thanh
+        </NoteToolButton>
+      </div>
+
+      {hasNotes ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {neuron.memoryMethod.trim() ? (
+            <NoteCard kind="TEXT NOTE" title="Cách ghi nhớ">
+              <p className="whitespace-pre-wrap text-sm leading-6 text-slate-200">{neuron.memoryMethod}</p>
+            </NoteCard>
+          ) : null}
+          {neuron.images.map((src, index) => (
+            <NoteCard key={`${src}-${index}`} kind="IMAGE">
+              <img src={src} alt={`${neuron.name} ${index + 1}`} className="max-h-28 w-full rounded object-cover" />
+            </NoteCard>
+          ))}
+          {neuron.audio.map((src, index) => (
+            <NoteCard key={`${src}-${index}`} kind="AUDIO">
+              <audio controls src={src} className="w-full" />
+            </NoteCard>
+          ))}
+        </div>
+      ) : (
+        <EmptyState text="Chưa có note. Thêm text, hình ảnh hoặc âm thanh." />
+      )}
+    </div>
+  );
+}
+
+function NoteEditor({
+  draft,
+  imageInputRef,
+  audioInputRef,
+  onMemoryChange,
+  onRemoveImage,
+  onRemoveAudio,
+}: {
+  draft: Neuron;
+  imageInputRef: RefObject<HTMLInputElement | null>;
+  audioInputRef: RefObject<HTMLInputElement | null>;
+  onMemoryChange: (value: string) => void;
+  onRemoveImage: (index: number) => void;
+  onRemoveAudio: (index: number) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <NoteToolButton onClick={() => undefined}>
+          <StickyNote size={14} />
+          Text note
+        </NoteToolButton>
+        <NoteToolButton onClick={() => imageInputRef.current?.click()}>
+          <Plus size={14} />
+          Hình ảnh
+        </NoteToolButton>
+        <NoteToolButton onClick={() => audioInputRef.current?.click()}>
+          <Plus size={14} />
+          Âm thanh
+        </NoteToolButton>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <Textarea label="Cách ghi nhớ" value={draft.memoryMethod} onChange={onMemoryChange} />
+        {draft.images.map((src, index) => (
+          <NoteCard key={`${src}-${index}`} kind="IMAGE" onRemove={() => onRemoveImage(index)}>
+            <img src={src} alt="" className="max-h-28 w-full rounded object-cover" />
+          </NoteCard>
+        ))}
+        {draft.audio.map((src, index) => (
+          <NoteCard key={`${src}-${index}`} kind="AUDIO" onRemove={() => onRemoveAudio(index)}>
+            <audio controls src={src} className="w-full" />
+          </NoteCard>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NoteToolButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
     <button
+      type="button"
       onClick={onClick}
-      className={`flex shrink-0 items-center justify-center gap-1.5 rounded-full border px-3 py-2 text-sm font-medium transition-all duration-200 ease-out hover:scale-105 active:scale-95 ${
-        active
-          ? "border-yellow-400/30 bg-yellow-400/10 text-yellow-300 shadow-[0_0_18px_rgba(250,204,21,0.12)]"
-          : "border-transparent text-slate-400 hover:bg-white/5 hover:text-slate-100"
-      }`}
+      className="inline-flex items-center gap-1.5 rounded-full border border-slate-700/70 bg-slate-900/80 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:border-emerald-500/40 hover:text-white"
     >
       {children}
     </button>
   );
 }
 
-const cardTones = {
-  green: {
-    card: "neuron-card-green",
-    icon: "border-emerald-500/45 bg-emerald-500/15",
-  },
-  purple: {
-    card: "neuron-card-purple",
-    icon: "border-purple-500/45 bg-purple-500/15",
-  },
-  blue: {
-    card: "neuron-card-blue",
-    icon: "border-blue-500/50 bg-blue-500/15",
-  },
-  gold: {
-    card: "neuron-card-yellow",
-    icon: "border-amber-500/45 bg-amber-500/15",
-  },
-} as const;
-
-function DetailCard({
+function NoteCard({
+  kind,
   title,
-  body,
-  icon,
-  tone,
+  children,
+  onRemove,
 }: {
-  title: string;
-  body: string;
-  icon: string;
-  tone: keyof typeof cardTones;
+  kind: string;
+  title?: string;
+  children: React.ReactNode;
+  onRemove?: () => void;
 }) {
-  const styles = cardTones[tone];
-
   return (
-    <section className={`neuron-card relative min-h-[174px] p-6 ${styles.card}`}>
-      <button
-        type="button"
-        className="absolute right-5 top-4 rounded-md p-1 text-slate-500 transition hover:bg-white/5 hover:text-slate-300"
-        aria-label={`Tùy chọn ${title}`}
-      >
-        <MoreHorizontal size={20} />
-      </button>
-
-      <div className="relative z-10 flex items-start gap-6 pr-7">
-        <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border ${styles.icon}`}>
-          <img src={icon} alt="" className="h-12 w-12" />
-        </div>
-
-        <div className="min-w-0 pt-1">
-          <h3 className="text-xl font-semibold text-white">{title}</h3>
-          <p className="mt-4 whitespace-pre-wrap text-base leading-7 text-slate-200">
-            {body || "Chưa có nội dung."}
-          </p>
-        </div>
+    <section className="neuronContentNoteItem relative min-h-0">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="font-fancy text-xs tracking-wide text-emerald-300">{kind}</span>
+        {onRemove ? (
+          <button type="button" onClick={onRemove} className="text-slate-500 hover:text-red-400" aria-label="Xóa note">
+            <X size={14} />
+          </button>
+        ) : null}
       </div>
-
-      <div className="pointer-events-none absolute -bottom-12 -right-10 h-28 w-72 rounded-[50%] bg-white/[0.025] blur-sm" />
+      {title ? <h3 className="mb-2 text-sm font-semibold text-white">{title}</h3> : null}
+      {children}
     </section>
   );
 }
 
 function EmptyState({ text }: { text: string }) {
-  return (
-    <div className="app-card p-12 text-center text-sm text-slate-500">
-      {text}
-    </div>
-  );
+  return <div className="neuronContentBody"> {text}</div>;
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
+function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <label className="app-card block p-5">
-      <span className="text-sm font-medium text-slate-300">
-        {label}
-      </span>
-
-      <input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-3 w-full rounded-lg border border-slate-700 bg-[#07101f] px-4 py-3 text-sm text-white outline-none focus:border-yellow-500"
-      />
+    <label className="neuronContentInputWrap">
+      <span className="neuronContentSectionLabel">{label}</span>
+      <input value={value} onChange={(event) => onChange(event.target.value)} className="neuronContentInput" />
     </label>
   );
 }
 
-function Textarea({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
+function Textarea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <label className="app-card block p-5">
-      <span className="text-sm font-medium text-slate-300">
-        {label}
-      </span>
-
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        rows={5}
-        className="mt-3 w-full resize-y rounded-lg border border-slate-700 bg-[#07101f] px-4 py-3 text-sm leading-6 text-white outline-none focus:border-yellow-500"
-      />
+    <label className="neuronContentInputWrap">
+      <span className="neuronContentSectionLabel">{label}</span>
+      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={4} className="neuronContentInput" />
     </label>
   );
 }

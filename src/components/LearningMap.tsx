@@ -21,14 +21,16 @@ type LearningMapProps = {
   onBack: () => void;
   onSelectNeuron: (neuronId: string) => void;
   onSelectConnection: (connectionId: string) => void;
+  graphLoading?: boolean;
+  graphError?: string | null;
   onMoveNeuron: (neuronId: string, position: Position3D) => void;
-  onCreateNeuron: (neuron: Neuron) => void;
+  onCreateNeuron: (neuron: Neuron) => void | Promise<void>;
   onUpdateNeuron: (neuron: Neuron) => void;
   onDeleteNeuron: (neuronId: string) => void;
   onStartConnection: () => void;
   pendingConnection: { source: Neuron; target: Neuron } | null;
   onCancelConnection: () => void;
-  onCreateConnection: (explanation: string) => void;
+  onCreateConnection: (explanation: string) => void | Promise<void>;
   onUpdateConnection: (connection: NeuronConnection) => void;
   onDeleteConnection: (connectionId: string) => void;
 };
@@ -45,6 +47,8 @@ export function LearningMap({
   notice,
   onBack,
   onSelectNeuron,
+  graphLoading,
+  graphError,
   onSelectConnection,
   onMoveNeuron,
   onCreateNeuron,
@@ -158,7 +162,7 @@ export function LearningMap({
           {notice && <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">{notice}</div>}
         </header>
 
-        <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 flex-col">
           <div className="relative min-h-0 min-w-0 flex-1 p-4">
             <button
               type="button"
@@ -169,7 +173,7 @@ export function LearningMap({
             >
               {mapExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
-            <div className="relative h-full min-h-[520px]">
+            <div className="relative h-full min-h-0">
             <NeuralCanvas
               neurons={neurons}
               connections={connections}
@@ -182,7 +186,17 @@ export function LearningMap({
               onSelectConnection={onSelectConnection}
               onMoveNeuron={onMoveNeuron}
             />
-            {neurons.length === 0 && (
+            {graphLoading ? (
+              <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center text-sm text-slate-300">
+                Đang tải sơ đồ...
+              </div>
+            ) : null}
+            {graphError ? (
+              <div className="absolute inset-x-6 top-16 z-20 rounded-md border border-red-500/40 bg-slate-950/80 px-3 py-2 text-sm text-red-300">
+                {graphError}
+              </div>
+            ) : null}
+            {!graphLoading && neurons.length === 0 && (
               <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center p-6">
                 <div className="pointer-events-auto max-w-sm rounded-xl border border-slate-700/80 bg-slate-950/90 px-6 py-5 text-center shadow-xl">
                   <h3 className="text-lg font-semibold text-white">Chưa có neuron nào</h3>
@@ -220,14 +234,16 @@ export function LearningMap({
           )}
 
           {selectedConnection && selectedSource && selectedTarget && (
-            <ConnectionDetailPanel
-              connection={selectedConnection}
-              source={selectedSource}
-              target={selectedTarget}
-              onClose={() => onSelectConnection("")}
-              onDelete={onDeleteConnection}
-              onUpdate={onUpdateConnection}
-            />
+            <div className="w-full shrink-0 [&_aside]:h-[min(280px,38vh)] [&_aside]:w-full">
+              <ConnectionDetailPanel
+                connection={selectedConnection}
+                source={selectedSource}
+                target={selectedTarget}
+                onClose={() => onSelectConnection("")}
+                onDelete={onDeleteConnection}
+                onUpdate={onUpdateConnection}
+              />
+            </div>
           )}
         </div>
       </section>
@@ -236,8 +252,8 @@ export function LearningMap({
         <CreateNeuronModal
           subjectId={subject.id}
           onClose={() => setShowCreateNeuron(false)}
-          onCreate={(neuron) => {
-            onCreateNeuron(neuron);
+          onCreate={async (neuron) => {
+            await onCreateNeuron(neuron);
             setShowCreateNeuron(false);
           }}
         />
