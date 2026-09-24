@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  subjects     Subject[]
+}
+
+model Subject {
+  id          String             @id @default(cuid())
+  userId      String
+  name        String
+  color       String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  neurons     Neuron[]
+  connections NeuronConnection[]
+
+  @@index([userId])
+}
+
+model Neuron {
+  id                String             @id @default(cuid())
+  subjectId         String
+  name              String
+  color             String
+  textContent       String             @default("")
+  keyPoints         String             @default("")
+  memoryMethod      String             @default("")
+  application       String             @default("")
+  positionX         Float              @default(0)
+  positionY         Float              @default(0)
+  positionZ         Float              @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  subject           Subject            @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  sourceConnections NeuronConnection[] @relation("ConnectionSource")
+  targetConnections NeuronConnection[] @relation("ConnectionTarget")
+  images            NeuronImage[]
+  audio             NeuronAudio[]
+
+  @@index([subjectId])
+}
+
+model NeuronConnection {
+  id             String   @id @default(cuid())
+  subjectId      String
+  sourceNeuronId String
+  targetNeuronId String
+  createdAt      DateTime @default(now())
+  subject        Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  sourceNeuron   Neuron   @relation("ConnectionSource", fields: [sourceNeuronId], references: [id], onDelete: Cascade)
+  targetNeuron   Neuron   @relation("ConnectionTarget", fields: [targetNeuronId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, sourceNeuronId, targetNeuronId])
+  @@index([subjectId])
+  @@index([sourceNeuronId])
+  @@index([targetNeuronId])
+}
+
+model NeuronImage {
+  id        String   @id @default(cuid())
+  neuronId  String
+  url       String
+  createdAt DateTime @default(now())
+  neuron    Neuron   @relation(fields: [neuronId], references: [id], onDelete: Cascade)
+
+  @@index([neuronId])
+}
+
+model NeuronAudio {
+  id        String   @id @default(cuid())
+  neuronId  String
+  url       String
+  createdAt DateTime @default(now())
+  neuron    Neuron   @relation(fields: [neuronId], references: [id], onDelete: Cascade)
+
+  @@index([neuronId])
+}

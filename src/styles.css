@@ -1,0 +1,858 @@
+@font-face {
+  font-family: "Guttenberg";
+   src: url("./assets/fonts/MinecraftBold-4.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #172033;
+  background: #f4f6f8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+   font-family: "MinecraftBold", sans-serif;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.65;
+  letter-spacing: -0.005em;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-family: "Guttenberg", sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+h2,
+h3,
+h4 {
+  font-family: "Guttenberg", sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.font-fancy {
+  font-family: "Guttenberg", sans-serif;
+  font-weight: 400;
+}
+
+p {
+  font-weight: 400;
+  line-height: 1.65;
+  letter-spacing: -0.005em;
+}
+
+.app-name {
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.app-metadata {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.button {
+  --stone-50: #fafaf9;
+  --stone-800: #292524;
+  --yellow-400: #facc15;
+
+  position: relative;
+  padding: 1px;
+  border: 0;
+  border-radius: 9999px;
+  outline: 2px solid transparent;
+  outline-offset: 5px;
+  background-color: var(--stone-800);
+  color: var(--stone-800);
+  box-shadow:
+    0.5px 0.5px 0 0 var(--stone-800),
+    1px 1px 0 0 var(--stone-800),
+    1.5px 1.5px 0 0 var(--stone-800),
+    2px 2px 0 0 var(--stone-800),
+    2.5px 2.5px 0 0 var(--stone-800),
+    3px 3px 0 0 var(--stone-800),
+    0 0 0 2px var(--stone-50),
+    0.5px 0.5px 0 2px var(--stone-50),
+    1px 1px 0 2px var(--stone-50),
+    1.5px 1.5px 0 2px var(--stone-50),
+    2px 2px 0 2px var(--stone-50),
+    2.5px 2.5px 0 2px var(--stone-50),
+    3px 3px 0 2px var(--stone-50),
+    3.5px 3.5px 0 2px var(--stone-50),
+    4px 4px 0 2px var(--stone-50);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+  transform: translate(-4px, -4px);
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.button:hover {
+  transform: translate(0, 0);
+  box-shadow: 0 0 0 2px var(--stone-50);
+}
+
+.button:active,
+.button:focus-visible {
+  outline-color: var(--yellow-400);
+}
+
+.button:focus-visible {
+  outline-style: dashed;
+}
+
+.button > div {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+  border: 2px solid rgb(255 255 255 / 30%);
+  border-radius: 9999px;
+  background-color: var(--yellow-400);
+}
+
+.button > div::before {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background-image:
+    radial-gradient(rgb(255 255 255 / 80%) 20%, transparent 20%),
+    radial-gradient(rgb(255 255 255 / 100%) 20%, transparent 20%);
+  background-position:
+    0 0,
+    4px 4px;
+  background-size: 8px 8px;
+  content: "";
+  mix-blend-mode: hard-light;
+  opacity: 0.5;
+  animation: dots 0.5s infinite linear;
+}
+
+.button > div > span {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.1rem;
+  filter: drop-shadow(0 -1px 0 rgb(255 255 255 / 25%));
+}
+
+.button.button-icon > div > span {
+  padding: 0.65rem;
+}
+
+.button:active > div > span {
+  transform: translateY(2px);
+}
+
+@keyframes dots {
+  0% {
+    background-position:
+      0 0,
+      4px 4px;
+  }
+
+  100% {
+    background-position:
+      8px 0,
+      12px 4px;
+  }
+}
+
+.dashboard-action-button {
+  border: none;
+  border-radius: 20px;
+  background-image: linear-gradient(30deg, #0400ff, #4ce3f7);
+  background-size: 100% auto;
+  color: #fff;
+  font-family: inherit;
+  font-size: 17px;
+  padding: 0.6em 1.5em;
+  cursor: pointer;
+  transition:
+    background-position 0.3s ease,
+    background-size 0.3s ease,
+    transform 0.15s ease;
+}
+
+.dashboard-action-button:hover {
+  background-position: right center;
+  background-size: 200% auto;
+  animation: dashboardButtonPulse 1.5s infinite;
+}
+
+.dashboard-action-button:active {
+  transform: scale(0.97);
+}
+
+@keyframes dashboardButtonPulse {
+  0% {
+    box-shadow: 0 0 0 0 #05bada66;
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgb(218 103 68 / 0%);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgb(218 103 68 / 0%);
+  }
+}
+
+.map-action-button {
+  padding: 4px;
+  border: 3px solid rgb(37, 37, 37);
+  border-style: outset;
+  border-radius: 45px;
+  background: linear-gradient(
+    140deg,
+    rgba(75, 118, 200, 1) 0%,
+    rgba(31, 70, 145, 1) 100%
+  );
+  box-shadow: -4px -4px 14px rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.map-action-button .c-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 12px;
+  border: 1px solid transparent;
+  border-radius: 45px;
+  color: white;
+  box-shadow: inset 0 0 5px rgba(17, 17, 17, 0);
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.map-action-button:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    -4px -4px 14px rgba(255, 255, 255, 0.12),
+    0 5px 14px rgba(31, 70, 145, 0.3);
+}
+
+.map-action-button:hover .c-main {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 5px rgba(17, 17, 17, 0.6);
+}
+
+.map-action-button:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.map-action-button .c-ico {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-action-button .c-blur {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(
+    318deg,
+    rgba(75, 118, 200, 1) 0%,
+    rgba(31, 70, 145, 1) 100%
+  );
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.25),
+    0 0 8px rgba(76, 140, 255, 0.3);
+}
+
+.map-action-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.app-card {
+  position: relative;
+  border: 1px solid rgba(190, 190, 190, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 27, 45, 0.92);
+  box-shadow:
+    inset 0 -3em 3em rgba(0, 0, 0, 0.1),
+    0 0 0 1px rgba(190, 190, 190, 0.12),
+    0.3em 0.3em 1em rgba(0, 0, 0, 0.3);
+  transition:
+    border-radius 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.app-card:hover {
+  border-color: rgba(190, 190, 190, 0.28);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 -3em 3em rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(190, 190, 190, 0.18),
+    0.4em 0.5em 1.2em rgba(0, 0, 0, 0.36);
+}
+
+.app-card-interactive {
+  cursor: pointer;
+}
+
+.app-card-interactive:hover {
+  transform: translateY(-3px);
+}
+
+.app-card-interactive:active {
+  transform: translateY(-1px) scale(0.99);
+}
+
+.neuron-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow:
+    inset 0 -3em 3em rgba(0, 0, 0, 0.1),
+    0.3em 0.3em 1em rgba(0, 0, 0, 0.28);
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.neuron-card:hover {
+  transform: translateY(-2px);
+}
+
+.neuron-card-green {
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  background:
+    radial-gradient(circle at 100% 100%, rgba(34, 197, 94, 0.13), transparent 40%),
+    linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(15, 27, 45, 0.96) 55%);
+  box-shadow:
+    inset 0 -3em 3em rgba(34, 197, 94, 0.035),
+    0.3em 0.3em 1em rgba(0, 0, 0, 0.28);
+}
+
+.neuron-card-purple {
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  background:
+    radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.14), transparent 40%),
+    linear-gradient(135deg, rgba(168, 85, 247, 0.11), rgba(15, 27, 45, 0.96) 55%);
+  box-shadow:
+    inset 0 -3em 3em rgba(168, 85, 247, 0.04),
+    0.3em 0.3em 1em rgba(0, 0, 0, 0.28);
+}
+
+.neuron-card-blue {
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  background:
+    radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.15), transparent 40%),
+    linear-gradient(135deg, rgba(59, 130, 246, 0.11), rgba(15, 27, 45, 0.96) 55%);
+  box-shadow:
+    inset 0 -3em 3em rgba(59, 130, 246, 0.04),
+    0.3em 0.3em 1em rgba(0, 0, 0, 0.28);
+}
+
+.neuron-card-yellow {
+  border: 1px solid rgba(250, 204, 21, 0.28);
+  background:
+    radial-gradient(circle at 100% 100%, rgba(250, 204, 21, 0.13), transparent 40%),
+    linear-gradient(135deg, rgba(250, 204, 21, 0.09), rgba(15, 27, 45, 0.96) 55%);
+  box-shadow:
+    inset 0 -3em 3em rgba(250, 204, 21, 0.035),
+    0.3em 0.3em 1em rgba(0, 0, 0, 0.28);
+}
+
+.action-3d-button {
+  position: relative;
+  padding: 0;
+  border: none;
+  outline-offset: 4px;
+  background: transparent;
+  cursor: pointer;
+  transition: filter 250ms;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.action-3d-button .btn-shadow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  transform: translateY(2px);
+  transition: transform 600ms cubic-bezier(0.3, 0.7, 0.4, 1);
+  will-change: transform;
+}
+
+.action-3d-button .btn-edge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  background: linear-gradient(
+    to left,
+    hsl(220deg 80% 18%) 0%,
+    hsl(220deg 80% 35%) 8%,
+    hsl(220deg 80% 35%) 92%,
+    hsl(220deg 80% 18%) 100%
+  );
+}
+
+.action-3d-button .btn-front {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  padding: 9px 17px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #3567c8 0%, #244c9a 100%);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  transform: translateY(-4px);
+  transition: transform 600ms cubic-bezier(0.3, 0.7, 0.4, 1);
+  will-change: transform;
+}
+
+.action-3d-button .btn-front svg {
+  width: 15px;
+  height: 15px;
+}
+
+.action-3d-button:hover {
+  filter: brightness(110%);
+}
+
+.action-3d-button:hover .btn-front {
+  transform: translateY(-6px);
+  transition: transform 250ms cubic-bezier(0.3, 0.7, 0.4, 1.5);
+}
+
+.action-3d-button:active .btn-front {
+  transform: translateY(-2px);
+  transition: transform 34ms;
+}
+
+.action-3d-button:hover .btn-shadow {
+  transform: translateY(4px);
+  transition: transform 250ms cubic-bezier(0.3, 0.7, 0.4, 1.5);
+}
+
+.action-3d-button:active .btn-shadow {
+  transform: translateY(1px);
+  transition: transform 34ms;
+}
+
+.action-3d-button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.action-3d-button:focus-visible {
+  outline: 2px solid #60a5fa;
+}
+
+.action-3d-button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.5) opacity(0.55);
+}
+
+.action-3d-button:disabled .btn-front,
+.action-3d-button:disabled .btn-shadow {
+  transform: none;
+}
+
+.action-3d-button.danger .btn-edge {
+  background: linear-gradient(
+    to left,
+    hsl(0deg 75% 15%) 0%,
+    hsl(0deg 75% 30%) 8%,
+    hsl(0deg 75% 30%) 92%,
+    hsl(0deg 75% 15%) 100%
+  );
+}
+
+.action-3d-button.danger .btn-front {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+}
+
+.action-3d-button.secondary .btn-edge {
+  background: linear-gradient(
+    to left,
+    #111827 0%,
+    #334155 8%,
+    #334155 92%,
+    #111827 100%
+  );
+}
+
+.action-3d-button.secondary .btn-front {
+  background: linear-gradient(135deg, #334155, #1e293b);
+}
+
+.app-sidebar {
+  border-color: rgba(74, 222, 128, 0.18);
+  background: linear-gradient(180deg, #123524 0%, #0b281b 55%, #071d14 100%);
+  box-shadow: 4px 0 18px rgba(0, 0, 0, 0.25);
+}
+
+.sidebar-brand-icon {
+  background: rgba(5, 46, 22, 0.72);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.2);
+}
+
+.sidebar-nav-item {
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+}
+
+.sidebar-nav-item.is-active {
+  border-color: rgba(134, 239, 172, 0.35);
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.22);
+  color: #ffffff;
+}
+
+.dashboard-main {
+  min-height: 100vh;
+  background-color: #050807;
+  background-image: radial-gradient(circle at 50% 0%, #101a17 0%, #080d0b 35%, #030504 100%);
+}
+
+.dashboard-add-button {
+  transition:
+    filter 250ms,
+    transform 250ms ease;
+}
+
+.dashboard-add-button .btn-edge {
+  background: linear-gradient(to left, #0b542b 0%, #15803d 8%, #15803d 92%, #0b542b 100%);
+}
+
+.dashboard-add-button .btn-front {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 5px 14px rgba(34, 197, 94, 0.25);
+}
+
+.dashboard-add-button:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+}
+
+.subject-card {
+  --subject-color: #22c55e;
+  --subject-glow: rgba(34, 197, 94, 0.25);
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 140px;
+  padding: 4px;
+  overflow: visible;
+  border: 0;
+  border-radius: 20px;
+  background: var(--subject-color);
+  box-shadow:
+    inset 0 1px 3px rgba(255, 255, 255, 0.45),
+    0 10px 25px rgba(0, 0, 0, 0.45),
+    0 0 18px var(--subject-glow);
+  color: white;
+  cursor: pointer;
+  transition:
+    transform 250ms ease,
+    box-shadow 250ms ease;
+}
+
+.subject-card::before {
+  position: absolute;
+  top: 47px;
+  right: -7px;
+  z-index: -1;
+  width: 10px;
+  height: 46px;
+  border-radius: 0 12px 12px 0;
+  background: var(--subject-color);
+  box-shadow:
+    inset 0 1px 3px rgba(255, 255, 255, 0.35),
+    3px 3px 8px rgba(0, 0, 0, 0.15);
+  content: "";
+}
+
+.subject-card-middle {
+  width: 100%;
+  height: 100%;
+  padding: 3px;
+  border-radius: 17px;
+  background: #0b1728;
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.18);
+}
+
+.subject-card-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 18px;
+  overflow: hidden;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 85% 10%, var(--subject-glow), transparent 38%),
+    #081525;
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.12);
+}
+
+.subject-card-brain {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  right: 9px;
+  width: 48px;
+  height: 48px;
+  color: var(--subject-color);
+  filter: drop-shadow(0 0 6px var(--subject-glow));
+  opacity: 0.65;
+  pointer-events: none;
+  transition:
+    filter 250ms ease,
+    opacity 250ms ease;
+}
+
+.subject-card:hover {
+  box-shadow:
+    inset 0 1px 4px rgba(255, 255, 255, 0.5),
+    0 14px 26px rgba(0, 0, 0, 0.25),
+    0 0 24px var(--subject-glow);
+  transform: translateY(-6px);
+}
+
+.subject-card:hover .subject-card-brain {
+  filter: drop-shadow(0 0 9px var(--subject-glow));
+  opacity: 0.85;
+}
+
+.subject-card:active {
+  transform: translateY(-1px) scale(0.99);
+}
+
+.subject-card-accent {
+  color: var(--subject-color);
+}
+
+.subject-card .subject-arrow {
+  transition: transform 250ms ease;
+}
+
+.subject-card:hover .subject-arrow {
+  transform: translateX(4px);
+}
+
+.create-neuron-form {
+  --input-focus: #2563eb;
+  --font-color: #0f172a;
+  --font-color-sub: #64748b;
+  --bg-color: #f8fafc;
+  --main-color: #0f172a;
+
+  width: 100%;
+  max-width: 620px;
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 2px solid var(--main-color);
+  border-radius: 12px;
+  background: var(--bg-color);
+  box-shadow: 6px 6px 0 var(--main-color);
+  color: var(--font-color);
+}
+
+.create-neuron-header {
+  padding: 20px 24px;
+  border-bottom: 2px solid var(--main-color);
+  background: var(--bg-color);
+}
+
+.create-neuron-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 24px 24px;
+}
+
+.create-neuron-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--font-color);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.neuron-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid var(--main-color);
+  border-radius: 7px;
+  outline: none;
+  background: #ffffff;
+  box-shadow: 3px 3px 0 var(--main-color);
+  color: var(--font-color);
+  font-size: 14px;
+  font-weight: 500;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.neuron-input:focus {
+  border-color: var(--input-focus);
+  box-shadow: 3px 3px 0 var(--input-focus);
+}
+
+.neuron-textarea {
+  resize: none;
+}
+
+.neuron-color {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--main-color);
+  border-radius: 9999px;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    outline-color 150ms ease;
+}
+
+.neuron-color:hover {
+  transform: translateY(-2px);
+}
+
+.neuron-color.is-selected {
+  outline-color: var(--main-color);
+  transform: scale(1.12);
+}
+
+.neuron-upload {
+  display: block;
+  padding: 16px;
+  border: 2px dashed var(--main-color);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 3px 3px 0 var(--main-color);
+}
+
+.create-neuron-footer {
+  padding: 16px 24px;
+  border-top: 2px solid var(--main-color);
+  background: var(--bg-color);
+}
+
+.neuron-modal-button {
+  padding: 10px 18px;
+  border: 2px solid var(--main-color);
+  border-radius: 7px;
+  background: #ffffff;
+  box-shadow: 4px 4px 0 var(--main-color);
+  color: var(--font-color);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    transform 100ms ease,
+    box-shadow 100ms ease;
+}
+
+.neuron-modal-button:hover {
+  box-shadow: 5px 5px 0 var(--main-color);
+  transform: translate(-1px, -1px);
+}
+
+.neuron-modal-button:active {
+  box-shadow: 1px 1px 0 var(--main-color);
+  transform: translate(3px, 3px);
+}
+
+.neuron-modal-button.primary {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.panel-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.panel-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.panel-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
