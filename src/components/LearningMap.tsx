@@ -1,6 +1,6 @@
 import { ArrowLeft, Link2, Maximize2, Minimize2, Plus, RotateCcw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { Neuron, NeuronConnection, Selection, Subject } from "../types";
+import type { Neuron, NeuronConnection, Position3D, Selection, Subject } from "../types";
 import { getConnectionCount } from "../utils/neuron";
 import { ConnectionDetailPanel } from "./ConnectionDetailPanel";
 import { CreateConnectionModal } from "./CreateConnectionModal";
@@ -21,6 +21,7 @@ type LearningMapProps = {
   onBack: () => void;
   onSelectNeuron: (neuronId: string) => void;
   onSelectConnection: (connectionId: string) => void;
+  onLayoutSettled: (positions: Record<string, Position3D>) => void;
   graphLoading?: boolean;
   graphError?: string | null;
   onCreateNeuron: (neuron: Neuron) => void | Promise<void>;
@@ -49,6 +50,7 @@ export function LearningMap({
   graphLoading,
   graphError,
   onSelectConnection,
+  onLayoutSettled,
   onCreateNeuron,
   onUpdateNeuron,
   onDeleteNeuron,
@@ -182,6 +184,7 @@ export function LearningMap({
               resetSignal={resetSignal}
               onSelectNeuron={onSelectNeuron}
               onSelectConnection={onSelectConnection}
+              onLayoutSettled={onLayoutSettled}
             />
             {graphLoading ? (
               <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center text-sm text-slate-300">
@@ -248,6 +251,7 @@ export function LearningMap({
       {showCreateNeuron && (
         <CreateNeuronModal
           subjectId={subject.id}
+          neuronCount={neurons.length}
           onClose={() => setShowCreateNeuron(false)}
           onCreate={async (neuron) => {
             await onCreateNeuron(neuron);

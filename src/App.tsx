@@ -10,7 +10,7 @@ import { Dashboard } from "./components/Dashboard";
 import { LearningMap } from "./components/LearningMap";
 import { Settings } from "./components/Settings";
 import { Sidebar } from "./components/Sidebar";
-import type { Neuron, NeuronConnection, Selection, Subject, ViewName } from "./types";
+import type { Neuron, NeuronConnection, Position3D, Selection, Subject, ViewName } from "./types";
 import { areSameConnection } from "./utils/neuron";
 
 export default function App() {
@@ -236,6 +236,33 @@ export default function App() {
     }
   };
 
+  const persistLayout = (positions: Record<string, Position3D>) => {
+    const changed = neurons.filter((neuron) => {
+      const next = positions[neuron.id];
+      return next && (
+        Math.abs(next.x - neuron.position.x) > 0.01 ||
+        Math.abs(next.y - neuron.position.y) > 0.01 ||
+        Math.abs(next.z - neuron.position.z) > 0.01
+      );
+    });
+    if (!changed.length) return;
+
+    setNeurons((current) =>
+      current.map((neuron) => (positions[neuron.id] ? { ...neuron, position: positions[neuron.id] } : neuron)),
+    );
+
+    void Promise.all(
+      changed.map((neuron) => {
+        const position = positions[neuron.id];
+        return updateNeuronApi(neuron.id, {
+          positionX: position.x,
+          positionY: position.y,
+          positionZ: position.z,
+        });
+      }),
+    ).catch((error) => setNotice(apiMessage(error, "Không lưu được bố cục neuron.")));
+  };
+
   const deleteNeuron = async (neuronId: string) => {
     try {
       await deleteNeuronApi(neuronId);
@@ -321,6 +348,7 @@ export default function App() {
         }}
         onSelectNeuron={selectNeuron}
         onSelectConnection={(connectionId) => setSelection(connectionId ? { type: "connection", id: connectionId } : null)}
+        onLayoutSettled={persistLayout}
         onCreateNeuron={addNeuron}
         onUpdateNeuron={persistNeuron}
         onDeleteNeuron={deleteNeuron}
