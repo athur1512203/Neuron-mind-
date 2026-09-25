@@ -15,7 +15,6 @@ type NeuralCanvasProps = {
   resetSignal: number;
   onSelectNeuron: (neuronId: string) => void;
   onSelectConnection: (connectionId: string) => void;
-  onMoveNeuron: (neuronId: string, position: Position3D) => void;
 };
 
 type ControlsHandle = {
@@ -24,14 +23,11 @@ type ControlsHandle = {
   update: () => void;
 };
 
-type PositionRegistry = React.MutableRefObject<Map<string, THREE.Vector3>>;
-
 const glowTexture = createRadialGlowTexture();
 
 // Visual spacing multiplier for the 3D knowledge graph.
 // Stored neuron coordinates remain unchanged; only scene coordinates are expanded.
 const GRAPH_SPREAD = 1.6;
-const DRAG_THRESHOLD_PX = 4;
 
 function toDisplayPosition(position: Position3D) {
   return new THREE.Vector3(
@@ -39,14 +35,6 @@ function toDisplayPosition(position: Position3D) {
     position.y * GRAPH_SPREAD,
     position.z * GRAPH_SPREAD,
   );
-}
-
-function toDataPosition(position: THREE.Vector3): Position3D {
-  return {
-    x: position.x / GRAPH_SPREAD,
-    y: position.y / GRAPH_SPREAD,
-    z: position.z / GRAPH_SPREAD,
-  };
 }
 
 // Neuron size is driven only by its number of connections.
@@ -152,16 +140,9 @@ function RaycasterSettings() {
 
 export function NeuralCanvas(props: NeuralCanvasProps) {
   const controlsRef = useRef<ControlsHandle | null>(null);
-  const positionRefs = useRef(new Map<string, THREE.Vector3>());
   const [hoveredNeuronId, setHoveredNeuronId] = useState<string | null>(null);
 
   const activeFocusId = props.selectedNeuronId ?? hoveredNeuronId;
-
-  props.neurons.forEach((neuron) => {
-    if (!positionRefs.current.has(neuron.id)) {
-      positionRefs.current.set(neuron.id, toDisplayPosition(neuron.position));
-    }
-  });
 
   return (
     <div className="h-full min-h-[520px] overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
@@ -192,7 +173,6 @@ export function NeuralCanvas(props: NeuralCanvasProps) {
               key={connection.id}
               connection={connection}
               neurons={props.neurons}
-              positionRefs={positionRefs}
               sourceRadius={getNeuronRadius(getConnectionCount(connection.sourceNeuronId, props.connections))}
               targetRadius={getNeuronRadius(getConnectionCount(connection.targetNeuronId, props.connections))}
               selected={props.selectedConnectionId === connection.id}
@@ -214,17 +194,22 @@ export function NeuralCanvas(props: NeuralCanvasProps) {
               selected={selected}
               isConnectionSource={isConnectionSource}
               connectionCount={getConnectionCount(neuron.id, props.connections)}
-              controlsRef={controlsRef}
-              positionRefs={positionRefs}
               onSelect={props.onSelectNeuron}
-              onMove={props.onMoveNeuron}
               onHoverChange={setHoveredNeuronId}
             />
           );
         })}
 
         <DimGrid />
-        <OrbitControls ref={controlsRef as never} enableDamping dampingFactor={0.08} makeDefault />
+        <OrbitControls
+          ref={controlsRef as never}
+          enableRotate
+          enableZoom
+          enablePan
+          enableDamping
+          dampingFactor={0.08}
+          makeDefault
+        />
       </Canvas>
     </div>
   );
@@ -296,23 +281,16 @@ function NeuronNode({
   selected,
   isConnectionSource,
   connectionCount,
-  controlsRef,
-  positionRefs,
   onSelect,
-  onMove,
   onHoverChange,
 }: {
   neuron: Neuron;
   selected: boolean;
   isConnectionSource: boolean;
   connectionCount: number;
-  controlsRef: React.MutableRefObject<ControlsHandle | null>;
-  positionRefs: PositionRegistry;
   onSelect: (neuronId: string) => void;
-  onMove: (neuronId: string, position: Position3D) => void;
   onHoverChange: (neuronId: string | null) => void;
 }) {
-  const groupRef = useRef<THREE.Group>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const rimRef = useRef<THREE.Mesh>(null);
   const glowRef = useRef<THREE.Sprite>(null);
@@ -320,17 +298,6 @@ function NeuronNode({
   const rimScale = useRef(new THREE.Vector3());
   const glowScale = useRef(new THREE.Vector3());
   const [hovered, setHovered] = useState(false);
-  const dragRef = useRef({
-    active: false,
-    moved: false,
-    startClientX: 0,
-    startClientY: 0,
-    plane: new THREE.Plane(),
-    offset: new THREE.Vector3(),
-    point: new THREE.Vector3(),
-    position: new THREE.Vector3(),
-  });
-  const { camera, gl, raycaster } = useThree();
 
   const targetRadius = getNeuronRadius(connectionCount);
   const palette = useMemo(() => neuronPalette(neuron.color), [neuron.color]);
@@ -341,15 +308,6 @@ function NeuronNode({
     }),
     [palette],
   );
-
-  useEffect(() => {
-    if (dragRef.current.active) return;
-    const displayPosition = toDisplayPosition(neuron.position);
-    groupRef.current?.position.copy(displayPosition);
-    const registeredPosition = positionRefs.current.get(neuron.id);
-    if (registeredPosition) registeredPosition.copy(displayPosition);
-    else positionRefs.current.set(neuron.id, displayPosition);
-  }, [neuron.id, neuron.position, positionRefs]);
 
   useFrame(() => {
     const scale = selected || isConnectionSource ? targetRadius * 1.12 : hovered ? targetRadius * 1.06 : targetRadius;
@@ -363,54 +321,8 @@ function NeuronNode({
     rimUniforms.uIntensity.value = selected || isConnectionSource ? 1.55 : hovered ? 1.28 : 1.12;
   });
 
-  const updateFromPointer = (event: PointerEvent) => {
-    if (!dragRef.current.moved) {
-      const deltaX = event.clientX - dragRef.current.startClientX;
-      const deltaY = event.clientY - dragRef.current.startClientY;
-      if (Math.hypot(deltaX, deltaY) < DRAG_THRESHOLD_PX) return;
-      dragRef.current.moved = true;
-    }
-
-    const bounds = gl.domElement.getBoundingClientRect();
-    const pointer = new THREE.Vector2(
-      ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
-      -((event.clientY - bounds.top) / bounds.height) * 2 + 1,
-    );
-    raycaster.setFromCamera(pointer, camera);
-    if (raycaster.ray.intersectPlane(dragRef.current.plane, dragRef.current.point)) {
-      dragRef.current.position.copy(dragRef.current.point).sub(dragRef.current.offset);
-      groupRef.current?.position.copy(dragRef.current.position);
-      positionRefs.current.get(neuron.id)?.copy(dragRef.current.position);
-    }
-  };
-
-  const onPointerDown = (event: ThreeEvent<PointerEvent>) => {
-    event.stopPropagation();
-    const normal = camera.getWorldDirection(new THREE.Vector3()).normalize();
-    const position = toDisplayPosition(neuron.position);
-    dragRef.current.plane.setFromNormalAndCoplanarPoint(normal, position);
-    dragRef.current.offset.copy(event.point).sub(position);
-    dragRef.current.active = true;
-    dragRef.current.moved = false;
-    dragRef.current.startClientX = event.clientX;
-    dragRef.current.startClientY = event.clientY;
-    if (controlsRef.current) controlsRef.current.enabled = false;
-
-    const onMoveWindow = (moveEvent: PointerEvent) => updateFromPointer(moveEvent);
-    const onUpWindow = () => {
-      window.removeEventListener("pointermove", onMoveWindow);
-      window.removeEventListener("pointerup", onUpWindow);
-      if (controlsRef.current) controlsRef.current.enabled = true;
-      if (dragRef.current.moved) onMove(neuron.id, toDataPosition(dragRef.current.position));
-      else onSelect(neuron.id);
-      dragRef.current.active = false;
-    };
-    window.addEventListener("pointermove", onMoveWindow);
-    window.addEventListener("pointerup", onUpWindow);
-  };
-
   return (
-    <group ref={groupRef} position={[neuron.position.x * GRAPH_SPREAD, neuron.position.y * GRAPH_SPREAD, neuron.position.z * GRAPH_SPREAD]}>
+    <group position={[neuron.position.x * GRAPH_SPREAD, neuron.position.y * GRAPH_SPREAD, neuron.position.z * GRAPH_SPREAD]}>
       <sprite ref={glowRef} renderOrder={0} raycast={() => {}}>
         <spriteMaterial
           map={glowTexture}
@@ -440,8 +352,10 @@ function NeuronNode({
       <mesh
         ref={meshRef}
         renderOrder={2}
-        onPointerDown={onPointerDown}
-        onClick={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect(neuron.id);
+        }}
         onPointerOver={(event) => {
           event.stopPropagation();
           setHovered(true);
@@ -511,7 +425,6 @@ function createStraightLineGeometry(sourceColor: THREE.Color, targetColor: THREE
 function NeuronConnectionLine({
   connection,
   neurons,
-  positionRefs,
   sourceRadius,
   targetRadius,
   selected,
@@ -522,7 +435,6 @@ function NeuronConnectionLine({
 }: {
   connection: NeuronConnection;
   neurons: Neuron[];
-  positionRefs: PositionRegistry;
   sourceRadius: number;
   targetRadius: number;
   selected: boolean;
@@ -536,7 +448,6 @@ function NeuronConnectionLine({
   const pulseRef = useRef<THREE.Sprite>(null);
   const startRef = useRef(new THREE.Vector3());
   const endRef = useRef(new THREE.Vector3());
-  const directionRef = useRef(new THREE.Vector3());
   const showPulse = pulseIndex % 3 !== 2;
 
   const sourceColor = useMemo(() => luminousColor(source?.color ?? "#8aa0bd", 0.08), [source?.color]);
@@ -553,26 +464,22 @@ function NeuronConnectionLine({
         intersections: THREE.Intersection[],
       ) {
         const pointerOverNeuron = neurons.some((neuron) => {
-          const position = positionRefs.current.get(neuron.id);
-          return position ? raycaster.ray.distanceSqToPoint(position) <= 0.42 ** 2 : false;
+          const position = toDisplayPosition(neuron.position);
+          return raycaster.ray.distanceSqToPoint(position) <= 0.42 ** 2;
         });
         if (pointerOverNeuron) return;
 
         THREE.LineSegments.prototype.raycast.call(this, raycaster, intersections);
       },
-    [neurons, positionRefs],
+    [neurons],
   );
 
   useEffect(() => {
-    return () => geometry.dispose();
-  }, [geometry]);
+    if (!source || !targetNeuron) return;
 
-  useFrame(({ clock }) => {
-    const centerA = positionRefs.current.get(connection.sourceNeuronId);
-    const centerB = positionRefs.current.get(connection.targetNeuronId);
-    if (!centerA || !centerB) return;
-
-    const direction = directionRef.current.copy(centerB).sub(centerA);
+    const centerA = toDisplayPosition(source.position);
+    const centerB = toDisplayPosition(targetNeuron.position);
+    const direction = centerB.clone().sub(centerA);
     const distance = Math.max(direction.length(), 0.001);
     direction.multiplyScalar(1 / distance);
     const maxOffset = distance * 0.42;
@@ -583,6 +490,21 @@ function NeuronConnectionLine({
     positions.setXYZ(1, end.x, end.y, end.z);
     positions.needsUpdate = true;
 
+  }, [
+    geometry,
+    source?.position.x,
+    source?.position.y,
+    source?.position.z,
+    sourceRadius,
+    targetNeuron?.position.x,
+    targetNeuron?.position.y,
+    targetNeuron?.position.z,
+    targetRadius,
+  ]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  useFrame(({ clock }) => {
     const sprite = pulseRef.current;
     if (!sprite || !showPulse) {
       if (sprite) sprite.visible = false;
@@ -590,7 +512,7 @@ function NeuronConnectionLine({
     }
     sprite.visible = true;
     const t = (clock.elapsedTime * 0.14 + pulseIndex * 0.17) % 1;
-    sprite.position.lerpVectors(start, end, t);
+    sprite.position.lerpVectors(startRef.current, endRef.current, t);
   });
 
   if (!source || !targetNeuron) return null;

@@ -8,6 +8,7 @@ import {
   Plus,
   Settings,
   StickyNote,
+  Trash2,
   Type,
   X,
 } from "lucide-react";
@@ -21,7 +22,7 @@ type NeuronDetailPanelProps = {
   neurons: Neuron[];
   connectionCount: number;
   onClose: () => void;
-  onDelete: (neuronId: string) => void;
+  onDelete: (neuronId: string) => Promise<void>;
   onUpdate: (neuron: Neuron) => void;
 };
 
@@ -31,6 +32,9 @@ export function NeuronDetailPanel({ neuron, connectionCount, onClose, onDelete, 
   const [activeSection, setActiveSection] = useState<ActiveSection>("knowledge");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(neuron);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
@@ -38,6 +42,9 @@ export function NeuronDetailPanel({ neuron, connectionCount, onClose, onDelete, 
     setDraft(neuron);
     setEditing(false);
     setActiveSection("knowledge");
+    setShowDeleteConfirm(false);
+    setDeleting(false);
+    setDeleteError("");
   }, [neuron]);
 
   const save = () => {
@@ -60,7 +67,25 @@ export function NeuronDetailPanel({ neuron, connectionCount, onClose, onDelete, 
     setEditing(true);
   };
 
+  const openDeleteConfirm = () => {
+    setDeleteError("");
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await onDelete(neuron.id);
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Không xóa được neuron. Vui lòng thử lại.");
+      setDeleting(false);
+    }
+  };
+
   return (
+    <>
     <aside className="flex h-[min(320px,42vh)] w-full shrink-0 flex-col overflow-hidden border-t border-[#1b2a3d] bg-[#071322] text-white">
       <header className="shrink-0 border-b border-[#1b2a3d] bg-[#071322]">
         <div className="flex items-start justify-between gap-3 px-5 py-3">
@@ -86,6 +111,14 @@ export function NeuronDetailPanel({ neuron, connectionCount, onClose, onDelete, 
               <span className="btn-front">
                 <Pencil />
                 Chỉnh sửa
+              </span>
+            </button>
+            <button onClick={openDeleteConfirm} className="action-3d-button danger">
+              <span className="btn-shadow" />
+              <span className="btn-edge" />
+              <span className="btn-front">
+                <Trash2 />
+                Xóa neuron
               </span>
             </button>
             <button onClick={onClose} className="button button-icon" aria-label="Đóng">
@@ -195,7 +228,7 @@ export function NeuronDetailPanel({ neuron, connectionCount, onClose, onDelete, 
                 >
                   Chỉnh sửa
                 </button>
-                <button type="button" onClick={() => onDelete(neuron.id)} className="neuronContentBtn neuronContentBtnDanger">
+                <button type="button" onClick={openDeleteConfirm} className="neuronContentBtn neuronContentBtnDanger">
                   Xóa neuron
                 </button>
               </div>
@@ -246,6 +279,58 @@ export function NeuronDetailPanel({ neuron, connectionCount, onClose, onDelete, 
         </main>
       </div>
     </aside>
+    {showDeleteConfirm ? (
+      <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/70 p-4 backdrop-blur-sm">
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-neuron-title"
+          className="w-full max-w-md rounded-xl border border-red-500/35 bg-[#071322] p-6 text-white shadow-2xl"
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-red-500/35 bg-red-500/10 text-red-400">
+              <Trash2 size={20} />
+            </div>
+            <div>
+              <h3 id="delete-neuron-title" className="text-lg font-bold">Xóa neuron</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                Bạn có chắc muốn xóa neuron &quot;{neuron.name}&quot; không?
+              </p>
+              <p className="mt-1 text-sm leading-6 text-red-300">
+                Neuron và các liên kết liên quan sẽ bị xóa.
+              </p>
+            </div>
+          </div>
+
+          {deleteError ? (
+            <div className="mt-4 rounded-md border border-red-500/35 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+              {deleteError}
+            </div>
+          ) : null}
+
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={() => setShowDeleteConfirm(false)}
+              className="neuronContentBtn neuronContentBtnGhost disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={confirmDelete}
+              className="neuronContentBtn neuronContentBtnDanger disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Trash2 size={16} />
+              {deleting ? "Đang xóa..." : "Xóa neuron"}
+            </button>
+          </div>
+        </section>
+      </div>
+    ) : null}
+    </>
   );
 }
 

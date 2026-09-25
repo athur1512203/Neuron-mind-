@@ -10,7 +10,7 @@ import { Dashboard } from "./components/Dashboard";
 import { LearningMap } from "./components/LearningMap";
 import { Settings } from "./components/Settings";
 import { Sidebar } from "./components/Sidebar";
-import type { Neuron, NeuronConnection, Position3D, Selection, Subject, ViewName } from "./types";
+import type { Neuron, NeuronConnection, Selection, Subject, ViewName } from "./types";
 import { areSameConnection } from "./utils/neuron";
 
 export default function App() {
@@ -216,26 +216,6 @@ export default function App() {
     setSelection({ type: "neuron", id: created.id });
   };
 
-  const updateNeuronPosition = async (neuronId: string, position: Position3D) => {
-    const previous = neurons.find((neuron) => neuron.id === neuronId);
-    setNeurons((current) =>
-      current.map((neuron) => (neuron.id === neuronId ? { ...neuron, position, updatedAt: new Date().toISOString() } : neuron)),
-    );
-    try {
-      const updated = await updateNeuronApi(neuronId, {
-        positionX: position.x,
-        positionY: position.y,
-        positionZ: position.z,
-      });
-      setNeurons((current) => current.map((neuron) => (neuron.id === neuronId ? { ...updated, position } : neuron)));
-    } catch (error) {
-      if (previous) {
-        setNeurons((current) => current.map((neuron) => (neuron.id === neuronId ? previous : neuron)));
-      }
-      setNotice(apiMessage(error, "Không lưu được vị trí neuron."));
-    }
-  };
-
   const persistNeuron = async (updated: Neuron) => {
     try {
       const saved = await updateNeuronApi(updated.id, {
@@ -271,6 +251,7 @@ export default function App() {
       setConnectionSourceId(null);
     } catch (error) {
       setNotice(apiMessage(error, "Không xóa được neuron."));
+      throw error;
     }
   };
 
@@ -340,7 +321,6 @@ export default function App() {
         }}
         onSelectNeuron={selectNeuron}
         onSelectConnection={(connectionId) => setSelection(connectionId ? { type: "connection", id: connectionId } : null)}
-        onMoveNeuron={updateNeuronPosition}
         onCreateNeuron={addNeuron}
         onUpdateNeuron={persistNeuron}
         onDeleteNeuron={deleteNeuron}

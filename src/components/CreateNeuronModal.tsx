@@ -3,6 +3,25 @@ import { useState } from "react";
 import type { Neuron } from "../types";
 import { colorPresets } from "../utils/neuron";
 
+function getFixedInitialPosition(seed: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  const normalized = hash >>> 0;
+  const angle = ((normalized % 360) * Math.PI) / 180;
+  const elevation = ((((normalized >>> 9) % 120) - 60) * Math.PI) / 180;
+  const radius = 2.2 + ((normalized >>> 17) % 18) / 10;
+
+  return {
+    x: Number((Math.cos(elevation) * Math.cos(angle) * radius).toFixed(3)),
+    y: Number((Math.sin(elevation) * radius).toFixed(3)),
+    z: Number((Math.cos(elevation) * Math.sin(angle) * radius).toFixed(3)),
+  };
+}
+
 type CreateNeuronModalProps = {
   subjectId: string;
   onClose: () => void;
@@ -33,11 +52,7 @@ export function CreateNeuronModal({ subjectId, onClose, onCreate }: CreateNeuron
         subjectId,
         name: trimmedName,
         color,
-        position: {
-          x: Math.random() * 4 - 2,
-          y: Math.random() * 3 - 1.5,
-          z: Math.random() * 4 - 2,
-        },
+        position: getFixedInitialPosition(`${subjectId}:${trimmedName.toLowerCase()}`),
         textContent,
         images,
         audio,
