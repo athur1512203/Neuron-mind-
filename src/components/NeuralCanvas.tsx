@@ -8,7 +8,7 @@ import {
   type SimulationLinkDatum,
   type SimulationNodeDatum,
 } from "d3-force";
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent } from "react";
+import { useEffect, useMemo, useRef, type PointerEvent as ReactPointerEvent, type WheelEvent } from "react";
 import type { Neuron, NeuronConnection, Position3D } from "../types";
 
 type NeuralCanvasProps = {
@@ -52,6 +52,10 @@ function initialCoordinate(neuron: Neuron, index: number) {
   return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance };
 }
 
+function endpointNode(endpoint: string | GraphNode, nodesById: Map<string, GraphNode>) {
+  return typeof endpoint === "string" ? nodesById.get(endpoint) : endpoint;
+}
+
 export function NeuralCanvas({
   neurons,
   connections,
@@ -65,10 +69,18 @@ export function NeuralCanvas({
   neuronSpacing,
 }: NeuralCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewportGroupRef = useRef<SVGGElement>(null);
+  const nodeElementRefs = useRef(new Map<string, SVGGElement>());
+  const nodeCircleRefs = useRef(new Map<string, SVGCircleElement>());
+  const nodeLabelRefs = useRef(new Map<string, SVGTextElement>());
+  const linkLineRefs = useRef(new Map<string, SVGLineElement>());
+  const linkHitRefs = useRef(new Map<string, SVGLineElement>());
   const nodesRef = useRef<GraphNode[]>([]);
+  const nodesByIdRef = useRef(new Map<string, GraphNode>());
   const simulationRef = useRef<Simulation<GraphNode, GraphLink> | null>(null);
-  const positionsRef = useRef<Record<string, { x: number; y: number }>>({});
   const sizeRef = useRef({ width: 1, height: 1 });
+  const transformRef = useRef<GraphTransform>({ x: 0, y: 0, k: 1 });
+  const hoveredNodeIdRef = useRef<string | null>(null);
   const onLayoutSettledRef = useRef(onLayoutSettled);
   const animationFrameRef = useRef<number | null>(null);
   const lastFocusRef = useRef<string | null>(null);
@@ -77,20 +89,18 @@ export function NeuralCanvas({
   const panRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(null);
   const nodeDragRef = useRef<{ pointerId: number; nodeId: string } | null>(null);
   const persistTimerRef = useRef<number | null>(null);
-  const [size, setSize] = useState({ width: 1, height: 1 });
-  const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const [transform, setTransform] = useState<GraphTransform>({ x: 0, y: 0, k: 1 });
 
   onLayoutSettledRef.current = onLayoutSettled;
-  positionsRef.current = positions;
-  sizeRef.current = size;
+
   const neuronTopology = useMemo(() => neurons.map((neuron) => neuron.id).join("|"), [neurons]);
   const connectionTopology = useMemo(
     () => connections.map((connection) => `${connection.id}:${connection.sourceNeuronId}:${connection.targetNeuronId}`).join("|"),
     [connections],
   );
-
+  const renderPositions = useMemo(
+    () => Object.fromEntries(neurons.map((neuron, index) => [neuron.id, initialCoordinate(neuron, index)])),
+    [neurons],
+  );
   const connectionCounts = useMemo(() => {
     const counts = new Map<string, number>();
     connections.forEach((connection) => {
@@ -99,7 +109,6 @@ export function NeuralCanvas({
     });
     return counts;
   }, [connections]);
-
   const adjacencyMap = useMemo(() => {
     const adjacency = new Map<string, Set<string>>();
     neurons.forEach((neuron) => adjacency.set(neuron.id, new Set()));
@@ -110,17 +119,66 @@ export function NeuralCanvas({
     return adjacency;
   }, [connections, neurons]);
 
-  const connectedNodeIds = useMemo(() => {
-    if (!hoveredNodeId) return new Set<string>();
-    const ids = new Set([hoveredNodeId]);
-    adjacencyMap.get(hoveredNodeId)?.forEach((neighborId) => ids.add(neighborId));
-    return ids;
-  }, [adjacencyMap, hoveredNodeId]);
+  const applyViewportTransform = () => {
+    const viewport = sizeRef.current;
+    const transform = transformRef.current;
+    viewportGroupRef.current?.setAttribute(
+      "transform",
+      `translate(${viewport.width / 2 + transform.x} ${viewport.height / 2 + transform.y}) scale(${transform.k})`,
+    );
+  };
+
+  const renderGraphFrame = (graphNodes = nodesRef.current) => {
+    graphNodes.forEach((node) => {
+      nodeElementRefs.current.get(node.id)?.setAttribute("transform", `translate(${node.x ?? 0} ${node.y ?? 0})`);
+    });
+    connections.forEach((connection) => {
+      const source = nodesByIdRef.current.get(connection.sourceNeuronId);
+      const target = nodesByIdRef.current.get(connection.targetNeuronId);
+      if (!source || !target) return;
+      [linkLineRefs.current.get(connection.id), linkHitRefs.current.get(connection.id)].forEach((line) => {
+        if (!line) return;
+        line.setAttribute("x1", String(source.x ?? 0));
+        line.setAttribute("y1", String(source.y ?? 0));
+        line.setAttribute("x2", String(target.x ?? 0));
+        line.setAttribute("y2", String(target.y ?? 0));
+      });
+    });
+  };
+
+  const applyHighlight = (hoveredNodeId: string | null) => {
+    const neighbors = hoveredNodeId ? adjacencyMap.get(hoveredNodeId) ?? new Set<string>() : new Set<string>();
+    neurons.forEach((neuron) => {
+      const hovered = neuron.id === hoveredNodeId;
+      const related = hovered || neighbors.has(neuron.id);
+      const selected = neuron.id === selectedNeuronId;
+      const group = nodeElementRefs.current.get(neuron.id);
+      const circle = nodeCircleRefs.current.get(neuron.id);
+      const label = nodeLabelRefs.current.get(neuron.id);
+      const radius = nodeRadius(connectionCounts.get(neuron.id) ?? 0);
+      group?.setAttribute("opacity", hoveredNodeId && !related ? "0.14" : "1");
+      circle?.setAttribute("r", String(hovered || selected ? radius * 1.35 : related ? radius * 1.12 : radius));
+      circle?.setAttribute("fill", hovered || selected ? "#7c3aed" : related ? "#64748b" : "#475569");
+      circle?.setAttribute("stroke", selected ? "#4c1d95" : hovered ? "#a78bfa" : "#ffffff");
+      circle?.setAttribute("stroke-width", selected ? "2" : "1");
+      label?.setAttribute("fill", hovered || related || selected ? "#1e1b4b" : "#334155");
+      label?.setAttribute("font-weight", hovered || selected ? "700" : "500");
+    });
+    connections.forEach((connection) => {
+      const related = hoveredNodeId === connection.sourceNeuronId || hoveredNodeId === connection.targetNeuronId;
+      const selected = connection.id === selectedConnectionId;
+      const line = linkLineRefs.current.get(connection.id);
+      line?.setAttribute("stroke", selected || related ? "#8b5cf6" : "#94a3b8");
+      line?.setAttribute("stroke-width", selected ? "2.2" : related ? "1.8" : "1");
+      line?.setAttribute("opacity", hoveredNodeId && !related ? "0.07" : selected || related ? "0.92" : "0.28");
+    });
+  };
 
   const fitGraph = (graphNodes = nodesRef.current) => {
     const viewport = sizeRef.current;
     if (!graphNodes.length || viewport.width <= 1 || viewport.height <= 1) {
-      setTransform({ x: 0, y: 0, k: 1 });
+      transformRef.current = { x: 0, y: 0, k: 1 };
+      applyViewportTransform();
       return;
     }
     const xs = graphNodes.map((node) => node.x ?? 0);
@@ -132,49 +190,47 @@ export function NeuralCanvas({
     const graphWidth = Math.max(160, maxX - minX + 140);
     const graphHeight = Math.max(120, maxY - minY + 100);
     const k = Math.min(1.35, Math.max(0.35, Math.min(viewport.width / graphWidth, viewport.height / graphHeight) * 0.9));
-    setTransform({ x: -((minX + maxX) / 2) * k, y: -((minY + maxY) / 2) * k, k });
+    transformRef.current = { x: -((minX + maxX) / 2) * k, y: -((minY + maxY) / 2) * k, k };
+    applyViewportTransform();
   };
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     const observer = new ResizeObserver(([entry]) => {
-      setSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+      sizeRef.current = { width: entry.contentRect.width, height: entry.contentRect.height };
+      applyViewportTransform();
     });
     observer.observe(container);
     return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
+    const previousNodes = new Map(nodesRef.current.map((node) => [node.id, node]));
     const activeIds = new Set(neurons.map((neuron) => neuron.id));
     const graphNodes: GraphNode[] = neurons.map((neuron, index) => {
+      const previous = previousNodes.get(neuron.id);
       const initial = initialCoordinate(neuron, index);
-      const current = positionsRef.current[neuron.id];
       return {
         id: neuron.id,
         name: neuron.name,
         radius: nodeRadius(connectionCounts.get(neuron.id) ?? 0),
-        x: current?.x ?? initial.x,
-        y: current?.y ?? initial.y,
-        vx: 0,
-        vy: 0,
+        x: previous?.x ?? initial.x,
+        y: previous?.y ?? initial.y,
+        vx: previous?.vx ?? 0,
+        vy: previous?.vy ?? 0,
       };
     });
     const graphLinks: GraphLink[] = connections
       .filter((connection) => activeIds.has(connection.sourceNeuronId) && activeIds.has(connection.targetNeuronId))
       .map((connection) => ({ id: connection.id, source: connection.sourceNeuronId, target: connection.targetNeuronId }));
     nodesRef.current = graphNodes;
-
-    const publishPositions = () => {
-      setPositions(Object.fromEntries(graphNodes.map((node) => [node.id, { x: node.x ?? 0, y: node.y ?? 0 }])));
-    };
+    nodesByIdRef.current = new Map(graphNodes.map((node) => [node.id, node]));
 
     let layoutCommitted = false;
-    let lastPublishedAt = 0;
     const commitSettledLayout = () => {
       if (layoutCommitted) return;
       layoutCommitted = true;
-      publishPositions();
       onLayoutSettledRef.current(
         Object.fromEntries(graphNodes.map((node) => [node.id, { x: node.x ?? 0, y: node.y ?? 0, z: 0 }])),
       );
@@ -203,20 +259,18 @@ export function NeuralCanvas({
       .force("center", forceCenter<GraphNode>(0, 0).strength(0.025))
       .alpha(0.9)
       .alphaDecay(0.045)
-      .alphaTarget(0.01)
+      .alphaTarget(0)
       .velocityDecay(0.4)
       .on("tick", () => {
         if (!layoutCommitted && simulation.alpha() < 0.025) commitSettledLayout();
-        const now = performance.now();
-        if (now - lastPublishedAt < 32) return;
-        lastPublishedAt = now;
         if (animationFrameRef.current !== null) return;
         animationFrameRef.current = window.requestAnimationFrame(() => {
           animationFrameRef.current = null;
-          publishPositions();
+          renderGraphFrame(graphNodes);
         });
       });
     simulationRef.current = simulation;
+    renderGraphFrame(graphNodes);
 
     return () => {
       simulation.stop();
@@ -226,31 +280,47 @@ export function NeuralCanvas({
       animationFrameRef.current = null;
       persistTimerRef.current = null;
     };
-    // Simulation restarts only when graph topology or spacing changes.
+    // Simulation rebuilds only for topology or force-spacing changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectionTopology, neuronSpacing, neuronTopology]);
+
+  useEffect(() => {
+    applyHighlight(hoveredNodeIdRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedConnectionId, selectedNeuronId]);
 
   useEffect(() => {
     if (lastResetRef.current === resetSignal) return;
     lastResetRef.current = resetSignal;
     fitGraph();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resetSignal, size]);
+  }, [resetSignal]);
 
   useEffect(() => {
     if (!focusNeuronId || lastFocusRef.current === focusNeuronId) return;
-    const position = positions[focusNeuronId];
-    if (!position) return;
+    const node = nodesByIdRef.current.get(focusNeuronId);
+    if (!node) return;
     lastFocusRef.current = focusNeuronId;
-    setTransform((current) => {
-      const k = Math.max(1.15, current.k);
-      return { x: -position.x * k, y: -position.y * k, k };
-    });
-  }, [focusNeuronId, positions]);
+    const k = Math.max(1.15, transformRef.current.k);
+    transformRef.current = { x: -(node.x ?? 0) * k, y: -(node.y ?? 0) * k, k };
+    applyViewportTransform();
+  }, [focusNeuronId]);
+
+  const pointerToGraph = (clientX: number, clientY: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    const viewport = sizeRef.current;
+    const transform = transformRef.current;
+    return {
+      x: (clientX - rect.left - viewport.width / 2 - transform.x) / transform.k,
+      y: (clientY - rect.top - viewport.height / 2 - transform.y) / transform.k,
+    };
+  };
 
   const beginPan = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (event.target !== event.currentTarget) return;
     event.currentTarget.setPointerCapture(event.pointerId);
+    const transform = transformRef.current;
     panRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -263,11 +333,9 @@ export function NeuralCanvas({
   const movePan = (event: ReactPointerEvent<SVGSVGElement>) => {
     const pan = panRef.current;
     if (!pan || pan.pointerId !== event.pointerId) return;
-    setTransform((current) => ({
-      ...current,
-      x: pan.originX + event.clientX - pan.startX,
-      y: pan.originY + event.clientY - pan.startY,
-    }));
+    transformRef.current.x = pan.originX + event.clientX - pan.startX;
+    transformRef.current.y = pan.originY + event.clientY - pan.startY;
+    applyViewportTransform();
   };
 
   const endPan = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -277,32 +345,24 @@ export function NeuralCanvas({
   const zoomGraph = (event: WheelEvent<SVGSVGElement>) => {
     event.preventDefault();
     const rect = event.currentTarget.getBoundingClientRect();
-    const pointerX = event.clientX - rect.left - size.width / 2;
-    const pointerY = event.clientY - rect.top - size.height / 2;
-    setTransform((current) => {
-      const nextK = Math.min(3, Math.max(0.25, current.k * Math.exp(-event.deltaY * 0.0012)));
-      const ratio = nextK / current.k;
-      return {
-        k: nextK,
-        x: pointerX - (pointerX - current.x) * ratio,
-        y: pointerY - (pointerY - current.y) * ratio,
-      };
-    });
-  };
-
-  const pointerToGraph = (clientX: number, clientY: number) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return { x: 0, y: 0 };
-    return {
-      x: (clientX - rect.left - size.width / 2 - transform.x) / transform.k,
-      y: (clientY - rect.top - size.height / 2 - transform.y) / transform.k,
+    const viewport = sizeRef.current;
+    const current = transformRef.current;
+    const pointerX = event.clientX - rect.left - viewport.width / 2;
+    const pointerY = event.clientY - rect.top - viewport.height / 2;
+    const nextK = Math.min(3, Math.max(0.25, current.k * Math.exp(-event.deltaY * 0.0012)));
+    const ratio = nextK / current.k;
+    transformRef.current = {
+      k: nextK,
+      x: pointerX - (pointerX - current.x) * ratio,
+      y: pointerY - (pointerY - current.y) * ratio,
     };
+    applyViewportTransform();
   };
 
   const beginNodeDrag = (event: ReactPointerEvent<SVGGElement>, nodeId: string) => {
     event.stopPropagation();
     event.currentTarget.setPointerCapture(event.pointerId);
-    const node = nodesRef.current.find((item) => item.id === nodeId);
+    const node = nodesByIdRef.current.get(nodeId);
     if (!node) return;
     const point = pointerToGraph(event.clientX, event.clientY);
     node.fx = point.x;
@@ -310,43 +370,40 @@ export function NeuralCanvas({
     node.x = point.x;
     node.y = point.y;
     nodeDragRef.current = { pointerId: event.pointerId, nodeId };
-    setHoveredNodeId(nodeId);
-    setPositions((current) => ({ ...current, [nodeId]: point }));
-    simulationRef.current?.alphaTarget(0.12).restart();
+    hoveredNodeIdRef.current = nodeId;
+    applyHighlight(nodeId);
+    renderGraphFrame();
+    simulationRef.current?.alphaTarget(0.08).restart();
   };
 
   const moveNodeDrag = (event: ReactPointerEvent<SVGGElement>, nodeId: string) => {
     const drag = nodeDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId || drag.nodeId !== nodeId) return;
     event.stopPropagation();
-    const node = nodesRef.current.find((item) => item.id === nodeId);
+    const node = nodesByIdRef.current.get(nodeId);
     if (!node) return;
     const point = pointerToGraph(event.clientX, event.clientY);
     node.fx = point.x;
     node.fy = point.y;
-    node.x = point.x;
-    node.y = point.y;
-    setPositions((current) => ({ ...current, [nodeId]: point }));
   };
 
   const endNodeDrag = (event: ReactPointerEvent<SVGGElement>, nodeId: string) => {
     const drag = nodeDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId || drag.nodeId !== nodeId) return;
     event.stopPropagation();
-    const node = nodesRef.current.find((item) => item.id === nodeId);
+    const node = nodesByIdRef.current.get(nodeId);
     if (node) {
       node.fx = null;
       node.fy = null;
     }
     nodeDragRef.current = null;
-    simulationRef.current?.alphaTarget(0.01);
+    simulationRef.current?.alphaTarget(0.005);
 
     if (persistTimerRef.current !== null) window.clearTimeout(persistTimerRef.current);
     persistTimerRef.current = window.setTimeout(() => {
+      simulationRef.current?.alphaTarget(0);
       onLayoutSettledRef.current(
-        Object.fromEntries(
-          nodesRef.current.map((item) => [item.id, { x: item.x ?? 0, y: item.y ?? 0, z: 0 }]),
-        ),
+        Object.fromEntries(nodesRef.current.map((item) => [item.id, { x: item.x ?? 0, y: item.y ?? 0, z: 0 }])),
       );
       persistTimerRef.current = null;
     }, 1200);
@@ -368,34 +425,40 @@ export function NeuralCanvas({
           onSelectConnection("");
         }}
       >
-        <g transform={`translate(${size.width / 2 + transform.x} ${size.height / 2 + transform.y}) scale(${transform.k})`}>
+        <g ref={viewportGroupRef}>
           {connections.map((connection) => {
-            const source = positions[connection.sourceNeuronId];
-            const target = positions[connection.targetNeuronId];
-            if (!source || !target) return null;
-            const related = hoveredNodeId === connection.sourceNeuronId || hoveredNodeId === connection.targetNeuronId;
-            const dimmed = Boolean(hoveredNodeId) && !related;
+            const source = renderPositions[connection.sourceNeuronId] ?? { x: 0, y: 0 };
+            const target = renderPositions[connection.targetNeuronId] ?? { x: 0, y: 0 };
             const selected = selectedConnectionId === connection.id;
             return (
               <g key={connection.id}>
                 <line
+                  ref={(element) => {
+                    if (element) linkLineRefs.current.set(connection.id, element);
+                    else linkLineRefs.current.delete(connection.id);
+                  }}
                   x1={source.x}
                   y1={source.y}
                   x2={target.x}
                   y2={target.y}
-                  stroke={selected || related ? "#8b5cf6" : "#94a3b8"}
-                  strokeWidth={selected ? 2.2 : related ? 1.8 : 1}
-                  opacity={dimmed ? 0.07 : selected || related ? 0.92 : 0.28}
+                  stroke={selected ? "#8b5cf6" : "#94a3b8"}
+                  strokeWidth={selected ? 2.2 : 1}
+                  opacity={selected ? 0.92 : 0.28}
                   vectorEffect="non-scaling-stroke"
-                  className="pointer-events-none transition-opacity duration-150"
+                  className="pointer-events-none"
                 />
                 <line
+                  ref={(element) => {
+                    if (element) linkHitRefs.current.set(connection.id, element);
+                    else linkHitRefs.current.delete(connection.id);
+                  }}
                   x1={source.x}
                   y1={source.y}
                   x2={target.x}
                   y2={target.y}
                   stroke="transparent"
-                  strokeWidth={12 / transform.k}
+                  strokeWidth={12}
+                  vectorEffect="non-scaling-stroke"
                   onClick={(event) => {
                     event.stopPropagation();
                     onSelectConnection(connection.id);
@@ -407,22 +470,26 @@ export function NeuralCanvas({
           })}
 
           {neurons.map((neuron) => {
-            const position = positions[neuron.id];
-            if (!position) return null;
+            const position = renderPositions[neuron.id] ?? { x: 0, y: 0 };
             const radius = nodeRadius(connectionCounts.get(neuron.id) ?? 0);
-            const hovered = hoveredNodeId === neuron.id;
-            const related = connectedNodeIds.has(neuron.id);
-            const dimmed = Boolean(hoveredNodeId) && !related;
             const selected = selectedNeuronId === neuron.id;
             return (
               <g
                 key={neuron.id}
+                ref={(element) => {
+                  if (element) nodeElementRefs.current.set(neuron.id, element);
+                  else nodeElementRefs.current.delete(neuron.id);
+                }}
                 transform={`translate(${position.x} ${position.y})`}
-                opacity={dimmed ? 0.14 : 1}
-                className="cursor-grab transition-opacity duration-150 active:cursor-grabbing"
-                onPointerEnter={() => setHoveredNodeId(neuron.id)}
+                className="cursor-grab active:cursor-grabbing"
+                onPointerEnter={() => {
+                  hoveredNodeIdRef.current = neuron.id;
+                  applyHighlight(neuron.id);
+                }}
                 onPointerLeave={() => {
-                  if (nodeDragRef.current?.nodeId !== neuron.id) setHoveredNodeId(null);
+                  if (nodeDragRef.current?.nodeId === neuron.id) return;
+                  hoveredNodeIdRef.current = null;
+                  applyHighlight(null);
                 }}
                 onPointerDown={(event) => beginNodeDrag(event, neuron.id)}
                 onPointerMove={(event) => moveNodeDrag(event, neuron.id)}
@@ -434,19 +501,26 @@ export function NeuralCanvas({
                 }}
               >
                 <circle
-                  r={hovered || selected ? radius * 1.35 : related ? radius * 1.12 : radius}
-                  fill={hovered || selected ? "#7c3aed" : related ? "#64748b" : "#475569"}
-                  stroke={selected ? "#4c1d95" : hovered ? "#a78bfa" : "#ffffff"}
+                  ref={(element) => {
+                    if (element) nodeCircleRefs.current.set(neuron.id, element);
+                    else nodeCircleRefs.current.delete(neuron.id);
+                  }}
+                  r={selected ? radius * 1.35 : radius}
+                  fill={selected ? "#7c3aed" : "#475569"}
+                  stroke={selected ? "#4c1d95" : "#ffffff"}
                   strokeWidth={selected ? 2 : 1}
                   vectorEffect="non-scaling-stroke"
-                  className="transition-all duration-150"
                 />
                 <text
+                  ref={(element) => {
+                    if (element) nodeLabelRefs.current.set(neuron.id, element);
+                    else nodeLabelRefs.current.delete(neuron.id);
+                  }}
                   x={radius + 6}
                   y={4}
-                  fill={hovered || related || selected ? "#1e1b4b" : "#334155"}
+                  fill={selected ? "#1e1b4b" : "#334155"}
                   fontSize={12}
-                  fontWeight={hovered || selected ? 700 : 500}
+                  fontWeight={selected ? 700 : 500}
                   stroke="#f8fafc"
                   strokeWidth={3}
                   paintOrder="stroke"
