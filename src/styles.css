@@ -1018,7 +1018,21 @@ textarea:focus-visible {
   border-top: 0;
 }
 
+.learning-map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
 @media (min-width: 1280px) {
+  .learning-map-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0fr);
+    transition: grid-template-columns 250ms ease;
+  }
+
+  .learning-map-layout.has-neuron-detail {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
   .learning-map-detail-pane > aside {
     height: 100%;
   }

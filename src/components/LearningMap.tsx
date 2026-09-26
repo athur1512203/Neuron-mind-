@@ -2,7 +2,6 @@ import { ArrowLeft, Maximize2, Minimize2, Plus, RotateCcw, Search } from "lucide
 import { useEffect, useMemo, useState } from "react";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject } from "../types";
 import { getConnectionCount } from "../utils/neuron";
-import { ConnectionDetailPanel } from "./ConnectionDetailPanel";
 import { CreateNeuronModal } from "./CreateNeuronModal";
 import { NeuralCanvas } from "./NeuralCanvas";
 import { NeuronDetailPanel } from "./NeuronDetailPanel";
@@ -73,10 +72,7 @@ export function LearningMap({
   }, [neurons, query]);
 
   const selectedNeuron = selection?.type === "neuron" ? neurons.find((neuron) => neuron.id === selection.id) : null;
-  const selectedConnection =
-    selection?.type === "connection" ? connections.find((connection) => connection.id === selection.id) : null;
-  const selectedSource = selectedConnection ? neurons.find((neuron) => neuron.id === selectedConnection.sourceNeuronId) : null;
-  const selectedTarget = selectedConnection ? neurons.find((neuron) => neuron.id === selectedConnection.targetNeuronId) : null;
+  const selectedConnection = selection?.type === "connection" ? connections.find((connection) => connection.id === selection.id) : null;
   const focusNeuron = (neuronId: string) => {
     setFocusNeuronId(neuronId);
     onSelectNeuron(neuronId);
@@ -156,7 +152,7 @@ export function LearningMap({
           {notice && <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">{notice}</div>}
         </header>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:overflow-hidden">
+        <div className={`learning-map-layout min-h-0 flex-1 overflow-y-auto xl:overflow-hidden ${selectedNeuron ? "has-neuron-detail" : ""}`}>
           <div className="relative min-h-[520px] min-w-0 p-4 xl:min-h-0">
             <button
               type="button"
@@ -215,8 +211,8 @@ export function LearningMap({
             </div>
           </div>
 
-          <div className="learning-map-detail-pane min-h-[420px] overflow-hidden border-t border-[#1b2a3d] bg-[#071322] xl:min-h-0 xl:border-l xl:border-t-0">
-            {selectedNeuron ? (
+          {selectedNeuron ? (
+            <div className="learning-map-detail-pane min-h-[420px] overflow-hidden border-t border-[#1b2a3d] bg-[#071322] xl:min-h-0 xl:border-l xl:border-t-0">
               <NeuronDetailPanel
                 neuron={selectedNeuron}
                 neurons={neurons}
@@ -227,25 +223,8 @@ export function LearningMap({
                 onUpdate={onUpdateNeuron}
                 onSelectNeuron={focusNeuron}
               />
-            ) : selectedConnection && selectedSource && selectedTarget ? (
-              <ConnectionDetailPanel
-                connection={selectedConnection}
-                source={selectedSource}
-                target={selectedTarget}
-                onClose={() => onSelectConnection("")}
-                onDelete={onDeleteConnection}
-                onUpdate={onUpdateConnection}
-              />
-            ) : (
-              <div className="flex h-full min-h-[420px] items-center justify-center px-8 text-center xl:min-h-0">
-                <div>
-                  <div className="mx-auto mb-4 h-10 w-10 rounded-full border border-slate-600 bg-slate-800" />
-                  <p className="text-sm font-semibold text-slate-200">Chọn một neuron để xem chi tiết</p>
-                  <p className="mt-2 text-xs leading-5 text-slate-500">Click vào một node trên sơ đồ để mở nội dung kiến thức.</p>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          ) : null}
         </div>
       </section>
 
