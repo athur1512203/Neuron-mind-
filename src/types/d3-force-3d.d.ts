@@ -56,9 +56,16 @@ declare module "d3-force-3d" {
     strength(value: number): this;
   }
 
+  export interface AxisForce<Node extends SimulationNodeDatum> extends Force<Node> {
+    strength(value: number | ((node: Node) => number)): this;
+  }
+
   export function forceSimulation<Node extends SimulationNodeDatum>(nodes: Node[], numDimensions?: 1 | 2 | 3): Simulation<Node>;
   export function forceLink<Node extends SimulationNodeDatum, Link extends SimulationLinkDatum<Node>>(links: Link[]): LinkForce<Node, Link>;
   export function forceManyBody<Node extends SimulationNodeDatum>(): ManyBodyForce<Node>;
   export function forceCollide<Node extends SimulationNodeDatum>(): CollideForce<Node>;
   export function forceCenter<Node extends SimulationNodeDatum>(x?: number, y?: number, z?: number): CenterForce<Node>;
+  export function forceX<Node extends SimulationNodeDatum>(x?: number | ((node: Node) => number)): AxisForce<Node>;
+  export function forceY<Node extends SimulationNodeDatum>(y?: number | ((node: Node) => number)): AxisForce<Node>;
+  export function forceZ<Node extends SimulationNodeDatum>(z?: number | ((node: Node) => number)): AxisForce<Node>;
 }

@@ -1,6 +1,14 @@
 import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas, ThreeEvent, useFrame, useThree } from "@react-three/fiber";
-import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, type SimulationLinkDatum, type SimulationNodeDatum } from "d3-force-3d";
+import {
+  forceCenter,
+  forceCollide,
+  forceLink,
+  forceManyBody,
+  forceSimulation,
+  type SimulationLinkDatum,
+  type SimulationNodeDatum,
+} from "d3-force-3d";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import type { Neuron, NeuronConnection, Position3D } from "../types";
@@ -17,6 +25,7 @@ type NeuralCanvasProps = {
   onSelectNeuron: (neuronId: string) => void;
   onSelectConnection: (connectionId: string) => void;
   onLayoutSettled: (positions: Record<string, Position3D>) => void;
+  neuronSpacing: number;
 };
 
 type ControlsHandle = {
@@ -39,7 +48,6 @@ const glowTexture = createRadialGlowTexture();
 // Visual spacing multiplier for the 3D knowledge graph.
 // Stored neuron coordinates remain unchanged; only scene coordinates are expanded.
 const GRAPH_SPREAD = 1.6;
-const MAX_LAYOUT_Z = 2 * GRAPH_SPREAD;
 
 function toDataPosition(position: { x?: number; y?: number; z?: number }): Position3D {
   return {
@@ -158,11 +166,103 @@ function RaycasterSettings() {
   return null;
 }
 
+function stableHash(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function fibonacciSphere(count: number) {
+  if (count <= 1) return [new THREE.Vector3(1, 0, 0)];
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  return Array.from({ length: count }, (_, index) => {
+    const y = 1 - (2 * index) / (count - 1);
+    const radius = Math.sqrt(Math.max(0, 1 - y * y));
+    const theta = goldenAngle * index;
+    return new THREE.Vector3(Math.cos(theta) * radius, y, Math.sin(theta) * radius);
+  });
+}
+
+function rotateSpherePoints(points: THREE.Vector3[], seed: string) {
+  const hash = stableHash(seed);
+  const rotation = new THREE.Euler(
+    (((hash & 1023) / 1023) - 0.5) * Math.PI,
+    ((((hash >>> 10) & 1023) / 1023) - 0.5) * Math.PI * 2,
+    ((((hash >>> 20) & 1023) / 1023) - 0.5) * Math.PI,
+  );
+  return points.map((point) => point.clone().applyEuler(rotation));
+}
+
+function buildSphericalTargets(neurons: Neuron[], connections: NeuronConnection[], spacing: number) {
+  const ids = new Set(neurons.map((neuron) => neuron.id));
+  const adjacency = new Map<string, string[]>(neurons.map((neuron) => [neuron.id, []]));
+  connections.forEach((connection) => {
+    if (!ids.has(connection.sourceNeuronId) || !ids.has(connection.targetNeuronId)) return;
+    adjacency.get(connection.sourceNeuronId)?.push(connection.targetNeuronId);
+    adjacency.get(connection.targetNeuronId)?.push(connection.sourceNeuronId);
+  });
+  adjacency.forEach((neighbors) => neighbors.sort());
+
+  const rootId = neurons[0]?.id;
+  const orderedIds = rootId
+    ? [rootId, ...neurons.map((neuron) => neuron.id).filter((id) => id !== rootId).sort()]
+    : [];
+  const componentVisited = new Set<string>();
+  const components: string[][] = [];
+  orderedIds.forEach((startId) => {
+    if (componentVisited.has(startId)) return;
+    const component: string[] = [];
+    const stack = [startId];
+    componentVisited.add(startId);
+    while (stack.length) {
+      const id = stack.pop();
+      if (!id) continue;
+      component.push(id);
+      [...(adjacency.get(id) ?? [])].reverse().forEach((neighborId) => {
+        if (componentVisited.has(neighborId)) return;
+        componentVisited.add(neighborId);
+        stack.push(neighborId);
+      });
+    }
+    components.push(component);
+  });
+
+  const targets = new Map<string, THREE.Vector3>();
+  const outerPoints = rotateSpherePoints(fibonacciSphere(Math.max(1, components.length - 1)), "outer-components");
+  components.forEach((component, componentIndex) => {
+    const componentRoot = componentIndex === 0 && rootId ? rootId : [...component].sort()[0];
+    const base = componentIndex === 0
+      ? new THREE.Vector3(0, 0, 0)
+      : outerPoints[componentIndex - 1].clone().multiplyScalar(spacing * 1.65);
+    targets.set(componentRoot, base);
+
+    const queue = [componentRoot];
+    while (queue.length) {
+      const anchorId = queue.shift();
+      if (!anchorId) continue;
+      const anchor = targets.get(anchorId) ?? base;
+      const neighbors = adjacency.get(anchorId) ?? [];
+      const spherePoints = rotateSpherePoints(fibonacciSphere(Math.max(1, neighbors.length)), anchorId);
+      neighbors.forEach((neighborId, slotIndex) => {
+        if (targets.has(neighborId)) return;
+        targets.set(neighborId, anchor.clone().addScaledVector(spherePoints[slotIndex], spacing));
+        queue.push(neighborId);
+      });
+    }
+  });
+
+  return targets;
+}
+
 function ForceLayout({
   neurons,
   connections,
   neuronTopology,
   connectionTopology,
+  neuronSpacing,
   positionRefs,
   onSettled,
 }: {
@@ -170,11 +270,30 @@ function ForceLayout({
   connections: NeuronConnection[];
   neuronTopology: string;
   connectionTopology: string;
+  neuronSpacing: number;
   positionRefs: PositionRegistry;
   onSettled: (positions: Record<string, Position3D>) => void;
 }) {
   const onSettledRef = useRef(onSettled);
+  const simulationActiveRef = useRef(false);
+  const equilibriumRef = useRef(new Map<string, THREE.Vector3>());
   onSettledRef.current = onSettled;
+
+  useFrame(({ clock }) => {
+    if (simulationActiveRef.current || equilibriumRef.current.size === 0) return;
+
+    const time = clock.elapsedTime;
+    equilibriumRef.current.forEach((base, id) => {
+      const position = positionRefs.current.get(id);
+      if (!position) return;
+      const phase = (stableHash(id) % 6283) / 1000;
+      position.set(
+        base.x + Math.sin(time * 0.22 + phase) * 0.025,
+        base.y + Math.sin(time * 0.18 + phase * 1.37) * 0.02,
+        base.z + Math.cos(time * 0.2 + phase * 0.83) * 0.03,
+      );
+    });
+  });
 
   useEffect(() => {
     const activeIds = new Set(neurons.map((neuron) => neuron.id));
@@ -184,23 +303,24 @@ function ForceLayout({
 
     if (!neurons.length) return;
 
+    simulationActiveRef.current = true;
+    equilibriumRef.current.clear();
+    const targets = buildSphericalTargets(neurons, connections, neuronSpacing);
     const nodes: LayoutNode[] = neurons.map((neuron, index) => {
       const current = positionRefs.current.get(neuron.id) ?? toDisplayPosition(neuron.position);
+      const target = targets.get(neuron.id) ?? new THREE.Vector3();
+      const useSphericalSeed = index > 0 && current.lengthSq() < (neuronSpacing * 0.35) ** 2;
+      const initial = useSphericalSeed ? target : current;
       const node: LayoutNode = {
         id: neuron.id,
         radius: getNeuronRadius(getConnectionCount(neuron.id, connections)),
-        x: index === 0 ? 0 : current.x,
-        y: index === 0 ? 0 : current.y,
-        z: index === 0 ? 0 : THREE.MathUtils.clamp(current.z, -MAX_LAYOUT_Z, MAX_LAYOUT_Z),
+        x: index === 0 ? current.x : initial.x,
+        y: index === 0 ? current.y : initial.y,
+        z: index === 0 ? current.z : initial.z,
         vx: 0,
         vy: 0,
         vz: 0,
       };
-      if (index === 0) {
-        node.fx = 0;
-        node.fy = 0;
-        node.fz = 0;
-      }
       return node;
     });
     const links: LayoutLink[] = connections
@@ -209,11 +329,11 @@ function ForceLayout({
 
     let cancelled = false;
     const simulation = forceSimulation(nodes, 3)
-      .force("charge", forceManyBody<LayoutNode>().strength(-14).distanceMin(1.2).distanceMax(16))
+      .force("charge", forceManyBody<LayoutNode>().strength(-7.5).distanceMin(0.45).distanceMax(neuronSpacing * 4))
       .force(
         "collision",
         forceCollide<LayoutNode>()
-          .radius((node) => 1.22 + node.radius)
+          .radius((node) => node.radius + 0.12)
           .strength(0.95)
           .iterations(2),
       )
@@ -221,23 +341,21 @@ function ForceLayout({
         "link",
         forceLink<LayoutNode, LayoutLink>(links)
           .id((node) => node.id)
-          .distance(3.2)
-          .strength(0.32)
+          .distance(neuronSpacing)
+          .strength(0.9)
           .iterations(2),
       )
-      .force("center", forceCenter<LayoutNode>(0, 0, 0).strength(0.035))
-      .alpha(0.9)
-      .alphaDecay(0.055)
+      .force("center", forceCenter<LayoutNode>(0, 0, 0).strength(0.018))
+      .alpha(0.75)
+      .alphaDecay(0.065)
       .alphaMin(0.018)
       .velocityDecay(0.42);
 
     const syncDisplayPositions = () => {
       nodes.forEach((node) => {
-        node.z = THREE.MathUtils.clamp(node.z ?? 0, -MAX_LAYOUT_Z, MAX_LAYOUT_Z);
-        node.vz = (node.vz ?? 0) * 0.72;
         const position = positionRefs.current.get(node.id);
-        if (position) position.set(node.x ?? 0, node.y ?? 0, node.z);
-        else positionRefs.current.set(node.id, new THREE.Vector3(node.x ?? 0, node.y ?? 0, node.z));
+        if (position) position.set(node.x ?? 0, node.y ?? 0, node.z ?? 0);
+        else positionRefs.current.set(node.id, new THREE.Vector3(node.x ?? 0, node.y ?? 0, node.z ?? 0));
       });
     };
 
@@ -245,6 +363,10 @@ function ForceLayout({
     simulation.on("end", () => {
       if (cancelled) return;
       syncDisplayPositions();
+      equilibriumRef.current = new Map(
+        nodes.map((node) => [node.id, new THREE.Vector3(node.x ?? 0, node.y ?? 0, node.z ?? 0)]),
+      );
+      simulationActiveRef.current = false;
       const settledPositions = Object.fromEntries(nodes.map((node) => [node.id, toDataPosition(node)]));
       onSettledRef.current(settledPositions);
     });
@@ -252,9 +374,10 @@ function ForceLayout({
 
     return () => {
       cancelled = true;
+      simulationActiveRef.current = false;
       simulation.stop();
     };
-  }, [connectionTopology, neuronTopology, positionRefs]);
+  }, [connectionTopology, neuronSpacing, neuronTopology, positionRefs]);
 
   return null;
 }
@@ -286,6 +409,7 @@ export function NeuralCanvas(props: NeuralCanvasProps) {
           connections={props.connections}
           neuronTopology={neuronTopology}
           connectionTopology={connectionTopology}
+          neuronSpacing={props.neuronSpacing}
           positionRefs={positionRefs}
           onSettled={props.onLayoutSettled}
         />

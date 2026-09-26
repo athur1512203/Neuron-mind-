@@ -16,7 +16,7 @@ function getInitialLayoutPosition(seed: string, isFirstNeuron: boolean) {
   return {
     x: ((normalized % 601) - 300) / 1000,
     y: (((normalized >>> 11) % 601) - 300) / 1000,
-    z: 0,
+    z: (((normalized >>> 20) % 601) - 300) / 1000,
   };
 }
 

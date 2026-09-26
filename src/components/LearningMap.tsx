@@ -1,5 +1,5 @@
 import { ArrowLeft, Link2, Maximize2, Minimize2, Plus, RotateCcw, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject } from "../types";
 import { getConnectionCount } from "../utils/neuron";
 import { ConnectionDetailPanel } from "./ConnectionDetailPanel";
@@ -35,6 +35,14 @@ type LearningMapProps = {
   onDeleteConnection: (connectionId: string) => void;
 };
 
+const NEURON_SPACING_KEY = "neuromind_neuron_spacing";
+const DEFAULT_NEURON_SPACING = 2.4;
+
+function loadNeuronSpacing() {
+  const stored = Number(window.localStorage.getItem(NEURON_SPACING_KEY));
+  return Number.isFinite(stored) && stored >= 1.5 && stored <= 5 ? stored : DEFAULT_NEURON_SPACING;
+}
+
 export function LearningMap({
   subject,
   neurons,
@@ -65,6 +73,11 @@ export function LearningMap({
   const [query, setQuery] = useState("");
   const [focusNeuronId, setFocusNeuronId] = useState<string | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
+  const [neuronSpacing, setNeuronSpacing] = useState(loadNeuronSpacing);
+
+  useEffect(() => {
+    window.localStorage.setItem(NEURON_SPACING_KEY, neuronSpacing.toFixed(1));
+  }, [neuronSpacing]);
 
   const filteredNeurons = useMemo(() => {
     const lowered = query.trim().toLowerCase();
@@ -128,6 +141,19 @@ export function LearningMap({
                   </div>
                 )}
               </div>
+              <label className="flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-600">
+                <span className="whitespace-nowrap font-semibold">Khoảng cách neuron</span>
+                <input
+                  type="range"
+                  min="1.5"
+                  max="5"
+                  step="0.1"
+                  value={neuronSpacing}
+                  onChange={(event) => setNeuronSpacing(Number(event.target.value))}
+                  className="w-24 accent-blue-600"
+                />
+                <output className="w-7 text-right font-semibold text-slate-800">{neuronSpacing.toFixed(1)}</output>
+              </label>
               <button
                 onClick={onStartConnection}
                 className="action-3d-button"
@@ -185,6 +211,7 @@ export function LearningMap({
               onSelectNeuron={onSelectNeuron}
               onSelectConnection={onSelectConnection}
               onLayoutSettled={onLayoutSettled}
+              neuronSpacing={neuronSpacing}
             />
             {graphLoading ? (
               <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center text-sm text-slate-300">
