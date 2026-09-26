@@ -162,8 +162,8 @@ export function LearningMap({
           {notice && <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">{notice}</div>}
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col">
-          <div className="relative min-h-0 min-w-0 flex-1 p-4">
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_380px] lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_420px]">
+          <div className="relative min-h-[520px] min-w-0 p-4 lg:min-h-0">
             <button
               type="button"
               onClick={onToggleMapExpanded}
@@ -221,20 +221,18 @@ export function LearningMap({
             </div>
           </div>
 
-          {selectedNeuron && (
-            <NeuronDetailPanel
-              neuron={selectedNeuron}
-              neurons={neurons}
-              connections={selectedNeuronConnections}
-              connectionCount={getConnectionCount(selectedNeuron.id, connections)}
-              onClose={() => onSelectNeuron("")}
-              onDelete={onDeleteNeuron}
-              onUpdate={onUpdateNeuron}
-            />
-          )}
-
-          {selectedConnection && selectedSource && selectedTarget && (
-            <div className="w-full shrink-0 [&_aside]:h-[min(280px,38vh)] [&_aside]:w-full">
+          <div className="learning-map-detail-pane min-h-[420px] overflow-hidden border-t border-[#1b2a3d] bg-[#071322] lg:min-h-0 lg:border-l lg:border-t-0">
+            {selectedNeuron ? (
+              <NeuronDetailPanel
+                neuron={selectedNeuron}
+                neurons={neurons}
+                connections={selectedNeuronConnections}
+                connectionCount={getConnectionCount(selectedNeuron.id, connections)}
+                onClose={() => onSelectNeuron("")}
+                onDelete={onDeleteNeuron}
+                onUpdate={onUpdateNeuron}
+              />
+            ) : selectedConnection && selectedSource && selectedTarget ? (
               <ConnectionDetailPanel
                 connection={selectedConnection}
                 source={selectedSource}
@@ -243,8 +241,16 @@ export function LearningMap({
                 onDelete={onDeleteConnection}
                 onUpdate={onUpdateConnection}
               />
-            </div>
-          )}
+            ) : (
+              <div className="flex h-full min-h-[420px] items-center justify-center px-8 text-center lg:min-h-0">
+                <div>
+                  <div className="mx-auto mb-4 h-10 w-10 rounded-full border border-slate-600 bg-slate-800" />
+                  <p className="text-sm font-semibold text-slate-200">Chọn một neuron để xem chi tiết</p>
+                  <p className="mt-2 text-xs leading-5 text-slate-500">Click vào một node trên sơ đồ để mở nội dung kiến thức.</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

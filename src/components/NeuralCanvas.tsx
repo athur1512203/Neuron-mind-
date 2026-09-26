@@ -4,6 +4,7 @@ import {
   forceLink,
   forceManyBody,
   forceSimulation,
+  type Simulation,
   type SimulationLinkDatum,
   type SimulationNodeDatum,
 } from "d3-force";
@@ -65,6 +66,7 @@ export function NeuralCanvas({
 }: NeuralCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const nodesRef = useRef<GraphNode[]>([]);
+  const simulationRef = useRef<Simulation<GraphNode, GraphLink> | null>(null);
   const positionsRef = useRef<Record<string, { x: number; y: number }>>({});
   const sizeRef = useRef({ width: 1, height: 1 });
   const onLayoutSettledRef = useRef(onLayoutSettled);
@@ -73,6 +75,8 @@ export function NeuralCanvas({
   const lastResetRef = useRef(resetSignal);
   const initialFitRef = useRef(false);
   const panRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const nodeDragRef = useRef<{ pointerId: number; nodeId: string } | null>(null);
+  const persistTimerRef = useRef<number | null>(null);
   const [size, setSize] = useState({ width: 1, height: 1 });
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -212,11 +216,15 @@ export function NeuralCanvas({
           publishPositions();
         });
       });
+    simulationRef.current = simulation;
 
     return () => {
       simulation.stop();
+      if (simulationRef.current === simulation) simulationRef.current = null;
       if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
+      if (persistTimerRef.current !== null) window.clearTimeout(persistTimerRef.current);
       animationFrameRef.current = null;
+      persistTimerRef.current = null;
     };
     // Simulation restarts only when graph topology or spacing changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -280,6 +288,68 @@ export function NeuralCanvas({
         y: pointerY - (pointerY - current.y) * ratio,
       };
     });
+  };
+
+  const pointerToGraph = (clientX: number, clientY: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return { x: 0, y: 0 };
+    return {
+      x: (clientX - rect.left - size.width / 2 - transform.x) / transform.k,
+      y: (clientY - rect.top - size.height / 2 - transform.y) / transform.k,
+    };
+  };
+
+  const beginNodeDrag = (event: ReactPointerEvent<SVGGElement>, nodeId: string) => {
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const node = nodesRef.current.find((item) => item.id === nodeId);
+    if (!node) return;
+    const point = pointerToGraph(event.clientX, event.clientY);
+    node.fx = point.x;
+    node.fy = point.y;
+    node.x = point.x;
+    node.y = point.y;
+    nodeDragRef.current = { pointerId: event.pointerId, nodeId };
+    setHoveredNodeId(nodeId);
+    setPositions((current) => ({ ...current, [nodeId]: point }));
+    simulationRef.current?.alphaTarget(0.12).restart();
+  };
+
+  const moveNodeDrag = (event: ReactPointerEvent<SVGGElement>, nodeId: string) => {
+    const drag = nodeDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || drag.nodeId !== nodeId) return;
+    event.stopPropagation();
+    const node = nodesRef.current.find((item) => item.id === nodeId);
+    if (!node) return;
+    const point = pointerToGraph(event.clientX, event.clientY);
+    node.fx = point.x;
+    node.fy = point.y;
+    node.x = point.x;
+    node.y = point.y;
+    setPositions((current) => ({ ...current, [nodeId]: point }));
+  };
+
+  const endNodeDrag = (event: ReactPointerEvent<SVGGElement>, nodeId: string) => {
+    const drag = nodeDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || drag.nodeId !== nodeId) return;
+    event.stopPropagation();
+    const node = nodesRef.current.find((item) => item.id === nodeId);
+    if (node) {
+      node.fx = null;
+      node.fy = null;
+    }
+    nodeDragRef.current = null;
+    simulationRef.current?.alphaTarget(0.01);
+
+    if (persistTimerRef.current !== null) window.clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = window.setTimeout(() => {
+      onLayoutSettledRef.current(
+        Object.fromEntries(
+          nodesRef.current.map((item) => [item.id, { x: item.x ?? 0, y: item.y ?? 0, z: 0 }]),
+        ),
+      );
+      persistTimerRef.current = null;
+    }, 1200);
   };
 
   return (
@@ -349,9 +419,15 @@ export function NeuralCanvas({
                 key={neuron.id}
                 transform={`translate(${position.x} ${position.y})`}
                 opacity={dimmed ? 0.14 : 1}
-                className="cursor-pointer transition-opacity duration-150"
+                className="cursor-grab transition-opacity duration-150 active:cursor-grabbing"
                 onPointerEnter={() => setHoveredNodeId(neuron.id)}
-                onPointerLeave={() => setHoveredNodeId(null)}
+                onPointerLeave={() => {
+                  if (nodeDragRef.current?.nodeId !== neuron.id) setHoveredNodeId(null);
+                }}
+                onPointerDown={(event) => beginNodeDrag(event, neuron.id)}
+                onPointerMove={(event) => moveNodeDrag(event, neuron.id)}
+                onPointerUp={(event) => endNodeDrag(event, neuron.id)}
+                onPointerCancel={(event) => endNodeDrag(event, neuron.id)}
                 onClick={(event) => {
                   event.stopPropagation();
                   onSelectNeuron(neuron.id);

@@ -1011,6 +1011,33 @@ textarea:focus-visible {
   padding-left: 20px;
 }
 
+.learning-map-detail-pane > aside {
+  width: 100%;
+  height: 420px;
+  border-left: 0;
+  border-top: 0;
+}
+
+.learning-map-detail-pane .neuronDetailBody {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.learning-map-detail-pane .neuronDetailContent {
+  border-left: 0;
+  padding-left: 0;
+}
+
+.learning-map-detail-pane .neuronDetailContent .grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+  .learning-map-detail-pane > aside {
+    height: 100%;
+  }
+}
+
 .neuronSectionMenu {
   display: flex;
   width: 122px;
