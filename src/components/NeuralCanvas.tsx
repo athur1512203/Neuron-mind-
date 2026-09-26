@@ -165,42 +165,52 @@ export function NeuralCanvas({
       setPositions(Object.fromEntries(graphNodes.map((node) => [node.id, { x: node.x ?? 0, y: node.y ?? 0 }])));
     };
 
+    let layoutCommitted = false;
+    let lastPublishedAt = 0;
+    const commitSettledLayout = () => {
+      if (layoutCommitted) return;
+      layoutCommitted = true;
+      publishPositions();
+      onLayoutSettledRef.current(
+        Object.fromEntries(graphNodes.map((node) => [node.id, { x: node.x ?? 0, y: node.y ?? 0, z: 0 }])),
+      );
+      if (!initialFitRef.current) {
+        initialFitRef.current = true;
+        window.requestAnimationFrame(() => fitGraph(graphNodes));
+      }
+    };
+
     const simulation = forceSimulation<GraphNode>(graphNodes)
       .force(
         "link",
         forceLink<GraphNode, GraphLink>(graphLinks)
           .id((node) => node.id)
-          .distance(neuronSpacing * 42)
-          .strength(0.72),
+          .distance(90 * (neuronSpacing / 2.4))
+          .strength(0.25),
       )
-      .force("charge", forceManyBody<GraphNode>().strength(-170).distanceMax(neuronSpacing * 180))
+      .force("charge", forceManyBody<GraphNode>().strength(-140).distanceMax(neuronSpacing * 180))
       .force(
         "collision",
         forceCollide<GraphNode>()
           .radius((node) => node.radius + Math.min(42, 18 + node.name.length * 2.2))
-          .strength(0.9)
+          .strength(0.8)
           .iterations(2),
       )
-      .force("center", forceCenter<GraphNode>(0, 0).strength(0.06))
+      .force("center", forceCenter<GraphNode>(0, 0).strength(0.025))
       .alpha(0.9)
       .alphaDecay(0.045)
-      .velocityDecay(0.42)
+      .alphaTarget(0.01)
+      .velocityDecay(0.4)
       .on("tick", () => {
+        if (!layoutCommitted && simulation.alpha() < 0.025) commitSettledLayout();
+        const now = performance.now();
+        if (now - lastPublishedAt < 32) return;
+        lastPublishedAt = now;
         if (animationFrameRef.current !== null) return;
         animationFrameRef.current = window.requestAnimationFrame(() => {
           animationFrameRef.current = null;
           publishPositions();
         });
-      })
-      .on("end", () => {
-        publishPositions();
-        onLayoutSettledRef.current(
-          Object.fromEntries(graphNodes.map((node) => [node.id, { x: node.x ?? 0, y: node.y ?? 0, z: 0 }])),
-        );
-        if (!initialFitRef.current) {
-          initialFitRef.current = true;
-          window.requestAnimationFrame(() => fitGraph(graphNodes));
-        }
       });
 
     return () => {
