@@ -77,12 +77,6 @@ export function LearningMap({
     selection?.type === "connection" ? connections.find((connection) => connection.id === selection.id) : null;
   const selectedSource = selectedConnection ? neurons.find((neuron) => neuron.id === selectedConnection.sourceNeuronId) : null;
   const selectedTarget = selectedConnection ? neurons.find((neuron) => neuron.id === selectedConnection.targetNeuronId) : null;
-  const selectedNeuronConnections = selectedNeuron
-    ? connections.filter(
-        (connection) => connection.sourceNeuronId === selectedNeuron.id || connection.targetNeuronId === selectedNeuron.id,
-      )
-    : [];
-
   const focusNeuron = (neuronId: string) => {
     setFocusNeuronId(neuronId);
     onSelectNeuron(neuronId);
@@ -162,8 +156,8 @@ export function LearningMap({
           {notice && <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">{notice}</div>}
         </header>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_380px] lg:overflow-hidden xl:grid-cols-[minmax(0,1fr)_420px]">
-          <div className="relative min-h-[520px] min-w-0 p-4 lg:min-h-0">
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:overflow-hidden">
+          <div className="relative min-h-[520px] min-w-0 p-4 xl:min-h-0">
             <button
               type="button"
               onClick={onToggleMapExpanded}
@@ -221,16 +215,17 @@ export function LearningMap({
             </div>
           </div>
 
-          <div className="learning-map-detail-pane min-h-[420px] overflow-hidden border-t border-[#1b2a3d] bg-[#071322] lg:min-h-0 lg:border-l lg:border-t-0">
+          <div className="learning-map-detail-pane min-h-[420px] overflow-hidden border-t border-[#1b2a3d] bg-[#071322] xl:min-h-0 xl:border-l xl:border-t-0">
             {selectedNeuron ? (
               <NeuronDetailPanel
                 neuron={selectedNeuron}
                 neurons={neurons}
-                connections={selectedNeuronConnections}
+                connections={connections}
                 connectionCount={getConnectionCount(selectedNeuron.id, connections)}
                 onClose={() => onSelectNeuron("")}
                 onDelete={onDeleteNeuron}
                 onUpdate={onUpdateNeuron}
+                onSelectNeuron={focusNeuron}
               />
             ) : selectedConnection && selectedSource && selectedTarget ? (
               <ConnectionDetailPanel
@@ -242,7 +237,7 @@ export function LearningMap({
                 onUpdate={onUpdateConnection}
               />
             ) : (
-              <div className="flex h-full min-h-[420px] items-center justify-center px-8 text-center lg:min-h-0">
+              <div className="flex h-full min-h-[420px] items-center justify-center px-8 text-center xl:min-h-0">
                 <div>
                   <div className="mx-auto mb-4 h-10 w-10 rounded-full border border-slate-600 bg-slate-800" />
                   <p className="text-sm font-semibold text-slate-200">Chọn một neuron để xem chi tiết</p>

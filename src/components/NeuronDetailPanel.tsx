@@ -1,20 +1,24 @@
 import {
-  BookOpen,
+  Brain,
+  Check,
+  Download,
   FileText,
   Image as ImageIcon,
   Lightbulb,
+  Link2,
+  MoreVertical,
   Music2,
   Pencil,
   Plus,
   Settings,
-  StickyNote,
   Trash2,
-  Type,
+  Upload,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Neuron, NeuronConnection } from "../types";
-import { colorPresets } from "../utils/neuron";
+
+type DetailTab = "overview" | "links" | "ideas" | "custom";
 
 type NeuronDetailPanelProps = {
   neuron: Neuron;
@@ -24,40 +28,81 @@ type NeuronDetailPanelProps = {
   onClose: () => void;
   onDelete: (neuronId: string) => Promise<void>;
   onUpdate: (neuron: Neuron) => void;
+  onSelectNeuron: (neuronId: string) => void;
 };
 
-type ActiveSection = "knowledge" | "note" | "application" | "settings";
-
-export function NeuronDetailPanel({ neuron, connectionCount, onClose, onDelete, onUpdate }: NeuronDetailPanelProps) {
-  const [activeSection, setActiveSection] = useState<ActiveSection>("knowledge");
+export function NeuronDetailPanel({
+  neuron,
+  connections,
+  neurons,
+  connectionCount,
+  onClose,
+  onDelete,
+  onUpdate,
+  onSelectNeuron,
+}: NeuronDetailPanelProps) {
+  const [tab, setTab] = useState<DetailTab>("overview");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(neuron);
+  const [quickNote, setQuickNote] = useState(neuron.textContent);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [documentNotice, setDocumentNotice] = useState("");
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
+  const quickNoteTimerRef = useRef<number | null>(null);
+
+  const directConnections = useMemo(
+    () => connections.filter((connection) => connection.sourceNeuronId === neuron.id || connection.targetNeuronId === neuron.id),
+    [connections, neuron.id],
+  );
+  const linkedNeurons = useMemo(
+    () =>
+      directConnections
+        .map((connection) => {
+          const linkedId = connection.sourceNeuronId === neuron.id ? connection.targetNeuronId : connection.sourceNeuronId;
+          return neurons.find((item) => item.id === linkedId) ?? null;
+        })
+        .filter((item): item is Neuron => Boolean(item)),
+    [directConnections, neuron.id, neurons],
+  );
 
   useEffect(() => {
-    setDraft(neuron);
+    setTab("overview");
     setEditing(false);
-    setActiveSection("knowledge");
+    setDraft(neuron);
+    setQuickNote(neuron.textContent);
     setShowDeleteConfirm(false);
     setDeleting(false);
     setDeleteError("");
-  }, [neuron]);
+    setDocumentNotice("");
+    if (quickNoteTimerRef.current !== null) window.clearTimeout(quickNoteTimerRef.current);
+  }, [neuron.id]);
 
-  const save = () => {
-    onUpdate({
-      ...draft,
-      updatedAt: new Date().toISOString(),
-    });
+  useEffect(() => {
+    if (!editing) setDraft(neuron);
+  }, [editing, neuron]);
+
+  const saveDraft = () => {
+    onUpdate({ ...draft, updatedAt: new Date().toISOString() });
     setEditing(false);
   };
 
-  const startEdit = () => {
-    setDraft(neuron);
-    setEditing((value) => !value);
+  const updateQuickNote = (value: string) => {
+    setQuickNote(value);
+    if (quickNoteTimerRef.current !== null) window.clearTimeout(quickNoteTimerRef.current);
+    quickNoteTimerRef.current = window.setTimeout(() => {
+      onUpdate({ ...neuron, textContent: value, updatedAt: new Date().toISOString() });
+      quickNoteTimerRef.current = null;
+    }, 900);
+  };
+
+  const saveQuickNote = () => {
+    if (quickNoteTimerRef.current !== null) window.clearTimeout(quickNoteTimerRef.current);
+    quickNoteTimerRef.current = null;
+    onUpdate({ ...neuron, textContent: quickNote, updatedAt: new Date().toISOString() });
   };
 
   const addLocalFiles = (files: FileList | null, kind: "images" | "audio") => {
@@ -65,11 +110,6 @@ export function NeuronDetailPanel({ neuron, connectionCount, onClose, onDelete, 
     const urls = Array.from(files).map((file) => URL.createObjectURL(file));
     setDraft((current) => ({ ...current, [kind]: [...current[kind], ...urls] }));
     setEditing(true);
-  };
-
-  const openDeleteConfirm = () => {
-    setDeleteError("");
-    setShowDeleteConfirm(true);
   };
 
   const confirmDelete = async () => {
@@ -86,502 +126,289 @@ export function NeuronDetailPanel({ neuron, connectionCount, onClose, onDelete, 
 
   return (
     <>
-    <aside className="flex h-[min(320px,42vh)] w-full shrink-0 flex-col overflow-hidden border-t border-[#1b2a3d] bg-[#071322] text-white">
-      <header className="shrink-0 border-b border-[#1b2a3d] bg-[#071322]">
-        <div className="flex items-start justify-between gap-3 px-5 py-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div
-              className="h-9 w-9 shrink-0 rounded-full"
-              style={{
-                backgroundColor: neuron.color,
-                background: `radial-gradient(circle at 35% 25%, #ffffff 0%, ${neuron.color} 22%, ${neuron.color} 72%)`,
-                boxShadow: `0 0 20px ${neuron.color}70`,
-              }}
-            />
-            <div className="min-w-0">
-              <h2 className="app-name truncate text-lg text-white">{neuron.name}</h2>
-              <span className="app-metadata text-sm text-slate-500">{connectionCount} kết nối</span>
-            </div>
-          </div>
+      <aside className="neuron-workspace">
+        <NeuronDetailHeader
+          neuron={neuron}
+          connectionCount={connectionCount}
+          editing={editing}
+          onEdit={() => (editing ? saveDraft() : setEditing(true))}
+          onDelete={() => setShowDeleteConfirm(true)}
+          onClose={onClose}
+        />
+        <NeuronTabs tab={tab} onChange={setTab} />
 
-          <div className="flex shrink-0 items-center gap-2">
-            <button onClick={startEdit} className="action-3d-button">
-              <span className="btn-shadow" />
-              <span className="btn-edge" />
-              <span className="btn-front">
-                <Pencil />
-                Chỉnh sửa
-              </span>
-            </button>
-            <button onClick={openDeleteConfirm} className="action-3d-button danger">
-              <span className="btn-shadow" />
-              <span className="btn-edge" />
-              <span className="btn-front">
-                <Trash2 />
-                Xóa neuron
-              </span>
-            </button>
-            <button onClick={onClose} className="button button-icon" aria-label="Đóng">
-              <div>
-                <span>
-                  <X size={17} />
-                </span>
-              </div>
-            </button>
-          </div>
-        </div>
-      </header>
-
-    <div className="neuronDetailBody border-2 border-white/90 rounded-xl mb-4">
-        <NeuronSectionMenu activeSection={activeSection} onSelect={setActiveSection} />
-
-        <main className="neuronDetailContent panel-scroll mb-3 mr-3">
-          <section className={`neuronContentCard neuronContentCard${activeSection === "knowledge" ? "Knowledge" : activeSection === "note" ? "Note" : activeSection === "application" ? "Application" : "Settings"}`}>
-          {editing && activeSection === "knowledge" ? (
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Tên kiến thức" value={draft.name} onChange={(value) => setDraft({ ...draft, name: value })} />
-                <div className="neuronContentInputWrap">
-                  <div className="neuronContentSectionLabel">Màu neuron</div>
-                  <div className="flex flex-wrap gap-3">
-                    {colorPresets.map((preset) => (
-                      <button
-                        key={preset.value}
-                        onClick={() => setDraft({ ...draft, color: preset.value })}
-                        className={`h-8 w-8 rounded-full border-2 ${draft.color === preset.value ? "border-white" : "border-transparent"}`}
-                        style={{ backgroundColor: preset.value, boxShadow: `0 0 10px ${preset.value}60` }}
-                        title={preset.label}
-                      />
-                    ))}
-                    <input
-                      type="color"
-                      value={draft.color}
-                      onChange={(event) => setDraft({ ...draft, color: event.target.value })}
-                      className="h-8 w-12 rounded border border-slate-700 bg-transparent"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Textarea label="Nội dung học" value={draft.textContent} onChange={(value) => setDraft({ ...draft, textContent: value })} />
-                <Textarea label="Trọng tâm kiến thức" value={draft.keyPoints} onChange={(value) => setDraft({ ...draft, keyPoints: value })} />
-              </div>
-            </div>
-          ) : null}
-
-          {editing && activeSection === "note" ? (
-            <NoteEditor
-              draft={draft}
-              imageInputRef={imageInputRef}
-              audioInputRef={audioInputRef}
-              onMemoryChange={(value) => setDraft({ ...draft, memoryMethod: value })}
-              onRemoveImage={(index) => setDraft({ ...draft, images: draft.images.filter((_, i) => i !== index) })}
-              onRemoveAudio={(index) => setDraft({ ...draft, audio: draft.audio.filter((_, i) => i !== index) })}
-            />
-          ) : null}
-
-          {editing && activeSection === "application" ? (
-            <Textarea label="Áp dụng kiến thức" value={draft.application} onChange={(value) => setDraft({ ...draft, application: value })} />
-          ) : null}
-
-          {!editing && activeSection === "knowledge" ? (
-            <KnowledgeCard textContent={neuron.textContent} keyPoints={neuron.keyPoints} />
-          ) : null}
-
-          {!editing && activeSection === "note" ? (
-            <NoteView
+        <div className="neuron-workspace-scroll">
+          {tab === "overview" ? (
+            <NeuronOverview
               neuron={neuron}
-              onAddText={() => {
-                setActiveSection("note");
-                setEditing(true);
-              }}
-              onPickImages={() => {
-                setActiveSection("note");
-                imageInputRef.current?.click();
-              }}
-              onPickAudio={() => {
-                setActiveSection("note");
-                audioInputRef.current?.click();
-              }}
+              draft={draft}
+              editing={editing}
+              connectionCount={connectionCount}
+              linkedNeurons={linkedNeurons}
+              allConnections={connections}
+              quickNote={quickNote}
+              documentNotice={documentNotice}
+              onDraftChange={setDraft}
+              onSelectNeuron={onSelectNeuron}
+              onShowAllLinks={() => setTab("links")}
+              onQuickNoteChange={updateQuickNote}
+              onSaveQuickNote={saveQuickNote}
+              onPickDocuments={() => documentInputRef.current?.click()}
+              onUnsupportedDocuments={() => setDocumentNotice("Chưa có API tải tài liệu. Các file chưa được gửi hoặc lưu.")}
+            />
+          ) : null}
+          {tab === "links" ? (
+            <LinkedNeuronList
+              linkedNeurons={linkedNeurons}
+              allConnections={connections}
+              onSelectNeuron={onSelectNeuron}
+              full
+            />
+          ) : null}
+          {tab === "ideas" ? <NeuronIdeas neuron={editing ? draft : neuron} editing={editing} onChange={setDraft} /> : null}
+          {tab === "custom" ? (
+            <NeuronCustom
+              neuron={editing ? draft : neuron}
+              editing={editing}
+              onPickImages={() => imageInputRef.current?.click()}
+              onPickAudio={() => audioInputRef.current?.click()}
+              onRemoveImage={(index) => setDraft((current) => ({ ...current, images: current.images.filter((_, i) => i !== index) }))}
+              onRemoveAudio={(index) => setDraft((current) => ({ ...current, audio: current.audio.filter((_, i) => i !== index) }))}
             />
           ) : null}
 
-          {!editing && activeSection === "application" ? <ApplicationCard body={neuron.application} /> : null}
-
-          {activeSection === "settings" ? (
-            <div>
-              <div className="neuronContentHeader">
-                <span className="neuronContentHeaderIcon">
-                  <Settings size={16} />
-                </span>
-                <span className="font-fancy">TÙY CHỌN</span>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDraft(neuron);
-                    setEditing(true);
-                    setActiveSection("knowledge");
-                  }}
-                  className="neuronContentBtn neuronContentBtnSave"
-                >
-                  Chỉnh sửa
-                </button>
-                <button type="button" onClick={openDeleteConfirm} className="neuronContentBtn neuronContentBtnDanger">
-                  Xóa neuron
-                </button>
-              </div>
+          {editing ? (
+            <div className="flex justify-end gap-3 pb-2">
+              <button type="button" className="brutal-button" onClick={() => { setDraft(neuron); setEditing(false); }}>Hủy</button>
+              <button type="button" className="brutal-button brutal-button-primary" onClick={saveDraft}><Check size={16} />Lưu thay đổi</button>
             </div>
           ) : null}
+        </div>
 
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={(event) => {
-              addLocalFiles(event.target.files, "images");
-              event.target.value = "";
-            }}
-          />
-          <input
-            ref={audioInputRef}
-            type="file"
-            accept="audio/*"
-            multiple
-            className="hidden"
-            onChange={(event) => {
-              addLocalFiles(event.target.files, "audio");
-              event.target.value = "";
-            }}
-          />
+        <input
+          ref={documentInputRef}
+          type="file"
+          multiple
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md"
+          className="hidden"
+          onChange={(event) => {
+            if (event.target.files?.length) setDocumentNotice("Chưa có API tải tài liệu. Các file chưa được gửi hoặc lưu.");
+            event.target.value = "";
+          }}
+        />
+        <input ref={imageInputRef} type="file" multiple accept="image/*" className="hidden" onChange={(event) => { addLocalFiles(event.target.files, "images"); event.target.value = ""; }} />
+        <input ref={audioInputRef} type="file" multiple accept="audio/*" className="hidden" onChange={(event) => { addLocalFiles(event.target.files, "audio"); event.target.value = ""; }} />
+      </aside>
 
-          {editing && activeSection !== "settings" ? (
-            <div className="mt-4 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setDraft(neuron);
-                  setEditing(false);
-                }}
-                className="neuronContentBtn neuronContentBtnGhost"
-              >
-                Hủy
-              </button>
-              <button type="button" onClick={save} className="neuronContentBtn neuronContentBtnSave">
-                Lưu thay đổi
-              </button>
+      {showDeleteConfirm ? (
+        <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/70 p-4">
+          <section role="dialog" aria-modal="true" aria-labelledby="delete-neuron-title" className="brutal-dialog">
+            <h3 id="delete-neuron-title" className="text-xl font-black">Xóa neuron</h3>
+            <p className="mt-3 text-sm font-semibold">Bạn có chắc muốn xóa neuron &quot;{neuron.name}&quot; không?</p>
+            <p className="mt-2 text-sm">Neuron và các liên kết liên quan sẽ bị xóa.</p>
+            {deleteError ? <p className="mt-4 border-2 border-red-700 bg-red-100 p-3 text-sm font-bold text-red-800">{deleteError}</p> : null}
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" disabled={deleting} onClick={() => setShowDeleteConfirm(false)} className="brutal-button">Hủy</button>
+              <button type="button" disabled={deleting} onClick={confirmDelete} className="brutal-button brutal-button-danger"><Trash2 size={16} />{deleting ? "Đang xóa..." : "Xóa neuron"}</button>
             </div>
-          ) : null}
           </section>
-        </main>
-      </div>
-    </aside>
-    {showDeleteConfirm ? (
-      <div className="fixed inset-0 z-[70] grid place-items-center bg-slate-950/70 p-4 backdrop-blur-sm">
-        <section
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-neuron-title"
-          className="w-full max-w-md rounded-xl border border-red-500/35 bg-[#071322] p-6 text-white shadow-2xl"
-        >
-          <div className="flex items-start gap-4">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-red-500/35 bg-red-500/10 text-red-400">
-              <Trash2 size={20} />
-            </div>
-            <div>
-              <h3 id="delete-neuron-title" className="text-lg font-bold">Xóa neuron</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-300">
-                Bạn có chắc muốn xóa neuron &quot;{neuron.name}&quot; không?
-              </p>
-              <p className="mt-1 text-sm leading-6 text-red-300">
-                Neuron và các liên kết liên quan sẽ bị xóa.
-              </p>
-            </div>
-          </div>
-
-          {deleteError ? (
-            <div className="mt-4 rounded-md border border-red-500/35 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-              {deleteError}
-            </div>
-          ) : null}
-
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              type="button"
-              disabled={deleting}
-              onClick={() => setShowDeleteConfirm(false)}
-              className="neuronContentBtn neuronContentBtnGhost disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Hủy
-            </button>
-            <button
-              type="button"
-              disabled={deleting}
-              onClick={confirmDelete}
-              className="neuronContentBtn neuronContentBtnDanger disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Trash2 size={16} />
-              {deleting ? "Đang xóa..." : "Xóa neuron"}
-            </button>
-          </div>
-        </section>
-      </div>
-    ) : null}
+        </div>
+      ) : null}
     </>
   );
 }
 
-function NeuronSectionMenu({
-  activeSection,
-  onSelect,
-}: {
-  activeSection: ActiveSection;
-  onSelect: (section: ActiveSection) => void;
+function NeuronDetailHeader({ neuron, connectionCount, editing, onEdit, onDelete, onClose }: {
+  neuron: Neuron;
+  connectionCount: number;
+  editing: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onClose: () => void;
 }) {
   return (
-    <nav className="neuronSectionMenu" aria-label="Mục neuron">
-      <div className="neuronSectionMenuTop">
-        <button
-          type="button"
-          className={`neuronSectionButton neuronSectionButtonKnowledge ${activeSection === "knowledge" ? "is-active" : ""}`}
-          aria-label="Kiến thức"
-          onClick={() => onSelect("knowledge")}
-        >
-          <BookOpen size={22} />
-        </button>
-        <button
-          type="button"
-          className={`neuronSectionButton neuronSectionButtonNote ${activeSection === "note" ? "is-active" : ""}`}
-          aria-label="Note"
-          onClick={() => onSelect("note")}
-        >
-          <FileText size={22} />
-        </button>
+    <header className="neuron-workspace-header">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="brutal-icon"><Brain size={22} /></span>
+        <div className="min-w-0">
+          <h2 className="truncate text-xl font-black text-[#111111]">{neuron.name}</h2>
+          <p className="mt-0.5 text-xs font-bold text-[#666666]">{connectionCount} kết nối</p>
+          <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#4b5563]">{neuron.keyPoints || "Chưa có mô tả ngắn cho neuron này."}</p>
+        </div>
       </div>
-      <div className="neuronSectionMenuBottom">
-        <button
-          type="button"
-          className={`neuronSectionButton neuronSectionButtonApplication ${activeSection === "application" ? "is-active" : ""}`}
-          aria-label="Áp dụng"
-          onClick={() => onSelect("application")}
-        >
-          <Lightbulb size={22} />
-        </button>
-        <button
-          type="button"
-          className={`neuronSectionButton neuronSectionButtonSettings ${activeSection === "settings" ? "is-active" : ""}`}
-          aria-label="Tùy chọn"
-          onClick={() => onSelect("settings")}
-        >
-          <Settings size={22} />
-        </button>
+      <div className="flex shrink-0 flex-wrap justify-end gap-2">
+        <button type="button" onClick={onEdit} className="brutal-button brutal-button-compact"><Pencil size={15} />{editing ? "Lưu" : "Chỉnh sửa"}</button>
+        <button type="button" onClick={onDelete} className="brutal-button brutal-button-danger brutal-button-compact"><Trash2 size={15} />Xóa neuron</button>
+        <button type="button" onClick={onClose} className="brutal-icon-button" aria-label="Đóng"><X size={17} /></button>
       </div>
+    </header>
+  );
+}
+
+function NeuronTabs({ tab, onChange }: { tab: DetailTab; onChange: (tab: DetailTab) => void }) {
+  const tabs: Array<{ id: DetailTab; label: string; icon: typeof Brain }> = [
+    { id: "overview", label: "Tổng quan", icon: Brain },
+    { id: "links", label: "Liên kết", icon: Link2 },
+    { id: "ideas", label: "Ý tưởng", icon: Lightbulb },
+    { id: "custom", label: "Tùy chỉnh", icon: Settings },
+  ];
+  return (
+    <nav className="neuron-workspace-tabs" aria-label="Chi tiết neuron">
+      {tabs.map((item) => {
+        const Icon = item.icon;
+        return <button key={item.id} type="button" onClick={() => onChange(item.id)} className={`brutal-tab ${tab === item.id ? "is-active" : ""}`}><Icon size={15} />{item.label}</button>;
+      })}
     </nav>
   );
 }
 
-function KnowledgeCard({ textContent, keyPoints }: { textContent: string; keyPoints: string }) {
-  return (
-    <div>
-      <div className="neuronContentHeader">
-        <span className="neuronContentHeaderIcon">
-          <BookOpen size={16} />
-        </span>
-        <span className="font-fancy">KIẾN THỨC</span>
-      </div>
-      <div>
-        <h3 className="neuronContentSectionLabel">Nội dung học</h3>
-        <p className="neuronContentBody">{textContent || "Chưa có nội dung."}</p>
-      </div>
-      <div className="neuronContentDivider" />
-      <div>
-        <h3 className="neuronContentSectionLabel">Trọng tâm</h3>
-        <p className="neuronContentBody">{keyPoints || "Chưa có nội dung."}</p>
-      </div>
-    </div>
-  );
-}
-
-function ApplicationCard({ body }: { body: string }) {
-  return (
-    <div>
-      <div className="neuronContentHeader">
-        <span className="neuronContentHeaderIcon">
-          <Lightbulb size={16} />
-        </span>
-        <span className="font-fancy">ÁP DỤNG</span>
-      </div>
-      <p className="neuronContentBody">{body || "Chưa có nội dung."}</p>
-    </div>
-  );
-}
-
-function NoteView({
-  neuron,
-  onAddText,
-  onPickImages,
-  onPickAudio,
-}: {
+function NeuronOverview({ neuron, draft, editing, connectionCount, linkedNeurons, allConnections, quickNote, documentNotice, onDraftChange, onSelectNeuron, onShowAllLinks, onQuickNoteChange, onSaveQuickNote, onPickDocuments, onUnsupportedDocuments }: {
   neuron: Neuron;
-  onAddText: () => void;
+  draft: Neuron;
+  editing: boolean;
+  connectionCount: number;
+  linkedNeurons: Neuron[];
+  allConnections: NeuronConnection[];
+  quickNote: string;
+  documentNotice: string;
+  onDraftChange: (neuron: Neuron) => void;
+  onSelectNeuron: (id: string) => void;
+  onShowAllLinks: () => void;
+  onQuickNoteChange: (value: string) => void;
+  onSaveQuickNote: () => void;
+  onPickDocuments: () => void;
+  onUnsupportedDocuments: () => void;
+}) {
+  const ideasCount = [neuron.keyPoints, neuron.memoryMethod, neuron.application].filter((value) => value.trim()).length;
+  const createdTime = new Date(neuron.createdAt).getTime();
+  const activeDays = Number.isNaN(createdTime) ? 1 : Math.max(1, Math.ceil((Date.now() - createdTime) / 86_400_000));
+  return (
+    <div className="space-y-5">
+      <BrutalCard title="Thông tin cơ bản">
+        <dl className="brutal-info-list">
+          <InfoRow label="Tên neuron" value={editing ? <input className="brutal-input" value={draft.name} onChange={(event) => onDraftChange({ ...draft, name: event.target.value })} /> : neuron.name} />
+          <InfoRow label="Số kết nối" value={String(connectionCount)} />
+          <InfoRow label="Ngày tạo" value={formatDate(neuron.createdAt)} />
+          <InfoRow label="Cập nhật cuối" value={formatDate(neuron.updatedAt)} />
+        </dl>
+      </BrutalCard>
+
+      <BrutalCard title="Thống kê nhanh">
+        <div className="grid grid-cols-2 gap-3">
+          <Stat value={connectionCount} label="Kết nối trực tiếp" />
+          <Stat value={0} label="Tài liệu" />
+          <Stat value={ideasCount} label="Ý tưởng" />
+          <Stat value={activeDays} label="Ngày hoạt động" />
+        </div>
+      </BrutalCard>
+
+      <BrutalCard title="Neuron liên kết" action={<button type="button" onClick={onShowAllLinks} className="brutal-link">Xem tất cả →</button>}>
+        <LinkedNeuronList linkedNeurons={linkedNeurons.slice(0, 3)} allConnections={allConnections} onSelectNeuron={onSelectNeuron} />
+      </BrutalCard>
+
+      <NeuronDocuments notice={documentNotice} onPickDocuments={onPickDocuments} onUnsupportedDocuments={onUnsupportedDocuments} />
+      <QuickNote value={quickNote} onChange={onQuickNoteChange} onSave={onSaveQuickNote} />
+    </div>
+  );
+}
+
+function BrutalCard({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+  return <section className="brutal-card"><div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-sm font-black uppercase text-[#111111]">{title}</h3>{action}</div>{children}</section>;
+}
+
+function InfoRow({ label, value }: { label: string; value: ReactNode }) {
+  return <div><dt>{label}</dt><dd>{value}</dd></div>;
+}
+
+function Stat({ value, label }: { value: number; label: string }) {
+  return <div className="brutal-stat"><strong>{value}</strong><span>{label}</span></div>;
+}
+
+function LinkedNeuronList({ linkedNeurons, allConnections, onSelectNeuron, full = false }: { linkedNeurons: Neuron[]; allConnections: NeuronConnection[]; onSelectNeuron: (id: string) => void; full?: boolean }) {
+  if (!linkedNeurons.length) return <p className="text-sm font-semibold text-[#666666]">Chưa có neuron liên kết.</p>;
+  return (
+    <div className={full ? "brutal-card" : "space-y-2"}>
+      {full ? <h3 className="mb-4 text-sm font-black uppercase">Tất cả neuron liên kết</h3> : null}
+      <div className="space-y-2">
+        {linkedNeurons.map((linked) => {
+          const count = allConnections.filter((connection) => connection.sourceNeuronId === linked.id || connection.targetNeuronId === linked.id).length;
+          return (
+            <button key={linked.id} type="button" onClick={() => onSelectNeuron(linked.id)} className="brutal-linked-row">
+              <span className="h-3 w-3 shrink-0 rounded-full border-2 border-black bg-slate-500" />
+              <span className="min-w-0 flex-1 text-left"><strong className="block truncate">{linked.name}</strong><small>{count} kết nối</small></span>
+              <span aria-hidden="true">›</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function NeuronDocuments({ notice, onPickDocuments, onUnsupportedDocuments }: { notice: string; onPickDocuments: () => void; onUnsupportedDocuments: () => void }) {
+  return (
+    <BrutalCard title="Tài liệu" action={<button type="button" onClick={onPickDocuments} className="brutal-button brutal-button-compact"><Plus size={15} />Thêm tài liệu</button>}>
+      <button
+        type="button"
+        onClick={onPickDocuments}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+          if (event.dataTransfer.files.length) onUnsupportedDocuments();
+        }}
+        className="brutal-upload-zone"
+      >
+        <Upload size={28} />
+        <strong>Kéo thả tài liệu vào đây</strong>
+        <span>PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, MD</span>
+        <small>Tối đa 50MB</small>
+      </button>
+      {notice ? <p className="mt-3 border-2 border-black bg-amber-100 p-3 text-xs font-bold">{notice}</p> : null}
+      <div className="mt-4 text-sm font-semibold text-[#666666]">Chưa có tài liệu.</div>
+    </BrutalCard>
+  );
+}
+
+function QuickNote({ value, onChange, onSave }: { value: string; onChange: (value: string) => void; onSave: () => void }) {
+  return (
+    <BrutalCard title="Ghi chú nhanh">
+      <textarea className="brutal-textarea" rows={6} value={value} onChange={(event) => onChange(event.target.value)} />
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs font-semibold text-[#666666]">Ghi chú này sẽ được lưu tự động</p><button type="button" onClick={onSave} className="brutal-button brutal-button-primary">Lưu ghi chú</button></div>
+    </BrutalCard>
+  );
+}
+
+function NeuronIdeas({ neuron, editing, onChange }: { neuron: Neuron; editing: boolean; onChange: (neuron: Neuron) => void }) {
+  const items = [
+    { key: "keyPoints" as const, title: "Trọng tâm kiến thức" },
+    { key: "memoryMethod" as const, title: "Cách ghi nhớ" },
+    { key: "application" as const, title: "Áp dụng" },
+  ];
+  return <div className="space-y-5">{items.map((item) => <BrutalCard key={item.key} title={item.title}>{editing ? <textarea className="brutal-textarea" rows={6} value={neuron[item.key]} onChange={(event) => onChange({ ...neuron, [item.key]: event.target.value })} /> : <p className="whitespace-pre-wrap text-sm font-medium leading-7 text-[#323232]">{neuron[item.key] || "Chưa có nội dung."}</p>}</BrutalCard>)}</div>;
+}
+
+function NeuronCustom({ neuron, editing, onPickImages, onPickAudio, onRemoveImage, onRemoveAudio }: {
+  neuron: Neuron;
+  editing: boolean;
   onPickImages: () => void;
   onPickAudio: () => void;
-}) {
-  const hasNotes = Boolean(neuron.memoryMethod.trim()) || neuron.images.length > 0 || neuron.audio.length > 0;
-
-  return (
-    <div>
-      <div className="neuronContentHeader">
-        <span className="neuronContentHeaderIcon">
-          <FileText size={16} />
-        </span>
-        <span className="font-fancy">NOTE</span>
-      </div>
-      <div className="mb-3 flex flex-wrap gap-2">
-        <NoteToolButton onClick={onAddText}>
-          <Type size={14} />+ Text
-        </NoteToolButton>
-        <NoteToolButton onClick={onPickImages}>
-          <ImageIcon size={14} />+ Hình ảnh
-        </NoteToolButton>
-        <NoteToolButton onClick={onPickAudio}>
-          <Music2 size={14} />+ Âm thanh
-        </NoteToolButton>
-      </div>
-
-      {hasNotes ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {neuron.memoryMethod.trim() ? (
-            <NoteCard kind="TEXT NOTE" title="Cách ghi nhớ">
-              <p className="whitespace-pre-wrap text-sm leading-6 text-slate-200">{neuron.memoryMethod}</p>
-            </NoteCard>
-          ) : null}
-          {neuron.images.map((src, index) => (
-            <NoteCard key={`${src}-${index}`} kind="IMAGE">
-              <img src={src} alt={`${neuron.name} ${index + 1}`} className="max-h-28 w-full rounded object-cover" />
-            </NoteCard>
-          ))}
-          {neuron.audio.map((src, index) => (
-            <NoteCard key={`${src}-${index}`} kind="AUDIO">
-              <audio controls src={src} className="w-full" />
-            </NoteCard>
-          ))}
-        </div>
-      ) : (
-        <EmptyState text="Chưa có note. Thêm text, hình ảnh hoặc âm thanh." />
-      )}
-    </div>
-  );
-}
-
-function NoteEditor({
-  draft,
-  imageInputRef,
-  audioInputRef,
-  onMemoryChange,
-  onRemoveImage,
-  onRemoveAudio,
-}: {
-  draft: Neuron;
-  imageInputRef: RefObject<HTMLInputElement | null>;
-  audioInputRef: RefObject<HTMLInputElement | null>;
-  onMemoryChange: (value: string) => void;
   onRemoveImage: (index: number) => void;
   onRemoveAudio: (index: number) => void;
 }) {
   return (
-    <div>
-      <div className="mb-3 flex flex-wrap gap-2">
-        <NoteToolButton onClick={() => undefined}>
-          <StickyNote size={14} />
-          Text note
-        </NoteToolButton>
-        <NoteToolButton onClick={() => imageInputRef.current?.click()}>
-          <Plus size={14} />
-          Hình ảnh
-        </NoteToolButton>
-        <NoteToolButton onClick={() => audioInputRef.current?.click()}>
-          <Plus size={14} />
-          Âm thanh
-        </NoteToolButton>
-      </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <Textarea label="Cách ghi nhớ" value={draft.memoryMethod} onChange={onMemoryChange} />
-        {draft.images.map((src, index) => (
-          <NoteCard key={`${src}-${index}`} kind="IMAGE" onRemove={() => onRemoveImage(index)}>
-            <img src={src} alt="" className="max-h-28 w-full rounded object-cover" />
-          </NoteCard>
-        ))}
-        {draft.audio.map((src, index) => (
-          <NoteCard key={`${src}-${index}`} kind="AUDIO" onRemove={() => onRemoveAudio(index)}>
-            <audio controls src={src} className="w-full" />
-          </NoteCard>
-        ))}
-      </div>
+    <div className="space-y-5">
+      <BrutalCard title="Hình ảnh" action={editing ? <button type="button" onClick={onPickImages} className="brutal-button brutal-button-compact"><ImageIcon size={15} />Thêm ảnh</button> : undefined}>
+        {neuron.images.length ? <div className="grid grid-cols-2 gap-3">{neuron.images.map((src, index) => <div key={`${src}-${index}`} className="brutal-media"><img src={src} alt={`${neuron.name} ${index + 1}`} />{editing ? <button type="button" onClick={() => onRemoveImage(index)} aria-label="Xóa ảnh"><X size={14} /></button> : null}</div>)}</div> : <p className="text-sm font-semibold text-[#666666]">Chưa có hình ảnh.</p>}
+      </BrutalCard>
+      <BrutalCard title="Âm thanh" action={editing ? <button type="button" onClick={onPickAudio} className="brutal-button brutal-button-compact"><Music2 size={15} />Thêm audio</button> : undefined}>
+        {neuron.audio.length ? <div className="space-y-3">{neuron.audio.map((src, index) => <div key={`${src}-${index}`} className="brutal-file-row"><Music2 size={18} /><audio controls src={src} className="min-w-0 flex-1" />{editing ? <button type="button" onClick={() => onRemoveAudio(index)}><Trash2 size={15} /></button> : null}</div>)}</div> : <p className="text-sm font-semibold text-[#666666]">Chưa có âm thanh.</p>}
+      </BrutalCard>
+      <BrutalCard title="Tùy chọn"><div className="flex gap-3"><span className="brutal-file-row"><FileText size={17} />Dữ liệu neuron</span><span className="brutal-file-row"><Download size={17} />Xuất nội dung</span><button type="button" className="brutal-icon-button" aria-label="Thêm tùy chọn"><MoreVertical size={17} /></button></div></BrutalCard>
     </div>
   );
 }
 
-function NoteToolButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-full border border-slate-700/70 bg-slate-900/80 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:border-emerald-500/40 hover:text-white"
-    >
-      {children}
-    </button>
-  );
-}
-
-function NoteCard({
-  kind,
-  title,
-  children,
-  onRemove,
-}: {
-  kind: string;
-  title?: string;
-  children: React.ReactNode;
-  onRemove?: () => void;
-}) {
-  return (
-    <section className="neuronContentNoteItem relative min-h-0">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="font-fancy text-xs tracking-wide text-emerald-300">{kind}</span>
-        {onRemove ? (
-          <button type="button" onClick={onRemove} className="text-slate-500 hover:text-red-400" aria-label="Xóa note">
-            <X size={14} />
-          </button>
-        ) : null}
-      </div>
-      {title ? <h3 className="mb-2 text-sm font-semibold text-white">{title}</h3> : null}
-      {children}
-    </section>
-  );
-}
-
-function EmptyState({ text }: { text: string }) {
-  return <div className="neuronContentBody"> {text}</div>;
-}
-
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="neuronContentInputWrap">
-      <span className="neuronContentSectionLabel">{label}</span>
-      <input value={value} onChange={(event) => onChange(event.target.value)} className="neuronContentInput" />
-    </label>
-  );
-}
-
-function Textarea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="neuronContentInputWrap">
-      <span className="neuronContentSectionLabel">{label}</span>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={4} className="neuronContentInput" />
-    </label>
-  );
+function formatDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Không xác định" : new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(date);
 }
