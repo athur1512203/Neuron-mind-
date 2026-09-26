@@ -1,9 +1,8 @@
-import { ArrowLeft, Link2, Maximize2, Minimize2, Plus, RotateCcw, Search } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2, Plus, RotateCcw, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject } from "../types";
 import { getConnectionCount } from "../utils/neuron";
 import { ConnectionDetailPanel } from "./ConnectionDetailPanel";
-import { CreateConnectionModal } from "./CreateConnectionModal";
 import { CreateNeuronModal } from "./CreateNeuronModal";
 import { NeuralCanvas } from "./NeuralCanvas";
 import { NeuronDetailPanel } from "./NeuronDetailPanel";
@@ -15,8 +14,6 @@ type LearningMapProps = {
   mapExpanded: boolean;
   onToggleMapExpanded: () => void;
   selection: Selection;
-  isConnecting: boolean;
-  connectionSourceId: string | null;
   notice: string | null;
   onBack: () => void;
   onSelectNeuron: (neuronId: string) => void;
@@ -27,10 +24,6 @@ type LearningMapProps = {
   onCreateNeuron: (neuron: Neuron) => void | Promise<void>;
   onUpdateNeuron: (neuron: Neuron) => void;
   onDeleteNeuron: (neuronId: string) => Promise<void>;
-  onStartConnection: () => void;
-  pendingConnection: { source: Neuron; target: Neuron } | null;
-  onCancelConnection: () => void;
-  onCreateConnection: (explanation: string) => void | Promise<void>;
   onUpdateConnection: (connection: NeuronConnection) => void;
   onDeleteConnection: (connectionId: string) => void;
 };
@@ -50,8 +43,6 @@ export function LearningMap({
   mapExpanded,
   onToggleMapExpanded,
   selection,
-  isConnecting,
-  connectionSourceId,
   notice,
   onBack,
   onSelectNeuron,
@@ -62,10 +53,6 @@ export function LearningMap({
   onCreateNeuron,
   onUpdateNeuron,
   onDeleteNeuron,
-  onStartConnection,
-  pendingConnection,
-  onCancelConnection,
-  onCreateConnection,
   onUpdateConnection,
   onDeleteConnection,
 }: LearningMapProps) {
@@ -155,14 +142,6 @@ export function LearningMap({
                 <output className="w-7 text-right font-semibold text-slate-800">{neuronSpacing.toFixed(1)}</output>
               </label>
               <button
-                onClick={onStartConnection}
-                className="action-3d-button"
-              >
-                <span className="btn-shadow" />
-                <span className="btn-edge" />
-                <span className="btn-front"><Link2 />Tạo liên kết</span>
-              </button>
-              <button
                 onClick={() => setShowCreateNeuron(true)}
                 className="action-3d-button"
               >
@@ -180,11 +159,6 @@ export function LearningMap({
               </button>
             </div>
           </div>
-          {isConnecting && (
-            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              {connectionSourceId ? "Chọn neuron thứ hai" : "Chọn neuron thứ nhất"}
-            </div>
-          )}
           {notice && <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">{notice}</div>}
         </header>
 
@@ -205,7 +179,6 @@ export function LearningMap({
               connections={connections}
               selectedNeuronId={selectedNeuron?.id ?? null}
               selectedConnectionId={selectedConnection?.id ?? null}
-              connectionSourceId={connectionSourceId}
               focusNeuronId={focusNeuronId}
               resetSignal={resetSignal}
               onSelectNeuron={onSelectNeuron}
@@ -284,15 +257,6 @@ export function LearningMap({
             await onCreateNeuron(neuron);
             setShowCreateNeuron(false);
           }}
-        />
-      )}
-
-      {pendingConnection && (
-        <CreateConnectionModal
-          source={pendingConnection.source}
-          target={pendingConnection.target}
-          onCancel={onCancelConnection}
-          onCreate={onCreateConnection}
         />
       )}
     </main>

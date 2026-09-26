@@ -8,6 +8,7 @@ import type { ApiUser } from "./api/mappers";
 import { AuthScreen } from "./components/AuthScreen";
 import { Dashboard } from "./components/Dashboard";
 import { LearningMap } from "./components/LearningMap";
+import { NeuronConnections } from "./components/NeuronConnections";
 import { Settings } from "./components/Settings";
 import { Sidebar } from "./components/Sidebar";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject, ViewName } from "./types";
@@ -27,9 +28,6 @@ export default function App() {
   const [graphError, setGraphError] = useState<string | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
-  const [pendingConnection, setPendingConnection] = useState<{ source: Neuron; target: Neuron } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -68,7 +66,7 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (!user || activeView !== "map" || !selectedSubjectId) return;
+    if (!user || (activeView !== "map" && activeView !== "connections") || !selectedSubjectId) return;
     let cancelled = false;
     setGraphLoading(true);
     setGraphError(null);
@@ -139,8 +137,6 @@ export default function App() {
     setActiveView("map");
     setMapExpanded(false);
     setSelection(null);
-    setIsConnecting(false);
-    setConnectionSourceId(null);
     setNotice(null);
   };
 
@@ -150,47 +146,21 @@ export default function App() {
       return;
     }
 
-    if (isConnecting && !connectionSourceId) {
-      setConnectionSourceId(neuronId);
-      setNotice(null);
-      return;
-    }
-
-    if (isConnecting && connectionSourceId) {
-      if (connectionSourceId === neuronId) {
-        setNotice("Không thể tạo liên kết từ một neuron đến chính nó.");
-        return;
-      }
-      const duplicate = subjectConnections.some((connection) =>
-        areSameConnection(connectionSourceId, neuronId, connection.sourceNeuronId, connection.targetNeuronId),
-      );
-      if (duplicate) {
-        setNotice("Liên kết này đã tồn tại.");
-        setConnectionSourceId(null);
-        return;
-      }
-      const source = subjectNeurons.find((neuron) => neuron.id === connectionSourceId);
-      const target = subjectNeurons.find((neuron) => neuron.id === neuronId);
-      if (source && target) setPendingConnection({ source, target });
-      setNotice(null);
-      return;
-    }
-
     setSelection({ type: "neuron", id: neuronId });
     setNotice(null);
   };
 
-  const createConnection = async (explanation: string) => {
-    if (!pendingConnection || !selectedSubject) return;
+  const createConnection = async (sourceId: string, targetId: string, explanation: string) => {
+    if (!selectedSubject || sourceId === targetId) return;
+    const duplicate = subjectConnections.some((connection) =>
+      areSameConnection(sourceId, targetId, connection.sourceNeuronId, connection.targetNeuronId),
+    );
+    if (duplicate) throw new Error("Hai neuron này đã được liên kết.");
     void explanation;
     try {
-      const created = await createConnectionApi(selectedSubject.id, pendingConnection.source.id, pendingConnection.target.id);
+      const created = await createConnectionApi(selectedSubject.id, sourceId, targetId);
       setConnections((current) => [...current, created]);
       bumpCounts(selectedSubject.id, 0, 1);
-      setSelection({ type: "connection", id: created.id });
-      setIsConnecting(false);
-      setConnectionSourceId(null);
-      setPendingConnection(null);
       setNotice(null);
     } catch (error) {
       setNotice(apiMessage(error, "Không tạo được liên kết."));
@@ -275,7 +245,6 @@ export default function App() {
       );
       if (selectedSubject) bumpCounts(selectedSubject.id, -1, -removedLinks);
       setSelection(null);
-      setConnectionSourceId(null);
     } catch (error) {
       setNotice(apiMessage(error, "Không xóa được neuron."));
       throw error;
@@ -329,6 +298,18 @@ export default function App() {
         />
       );
     }
+    if (activeView === "connections") {
+      return (
+        <NeuronConnections
+          subject={selectedSubject}
+          neurons={subjectNeurons}
+          connections={subjectConnections}
+          loading={graphLoading}
+          error={graphError}
+          onCreateConnection={createConnection}
+        />
+      );
+    }
     return (
       <LearningMap
         subject={selectedSubject}
@@ -339,8 +320,6 @@ export default function App() {
         mapExpanded={mapExpanded}
         onToggleMapExpanded={() => setMapExpanded((value) => !value)}
         selection={selection}
-        isConnecting={isConnecting}
-        connectionSourceId={connectionSourceId}
         notice={notice}
         onBack={() => {
           setMapExpanded(false);
@@ -352,20 +331,6 @@ export default function App() {
         onCreateNeuron={addNeuron}
         onUpdateNeuron={persistNeuron}
         onDeleteNeuron={deleteNeuron}
-        onStartConnection={() => {
-          setIsConnecting(true);
-          setConnectionSourceId(null);
-          setPendingConnection(null);
-          setSelection(null);
-          setNotice(null);
-        }}
-        pendingConnection={pendingConnection}
-        onCancelConnection={() => {
-          setIsConnecting(false);
-          setPendingConnection(null);
-          setConnectionSourceId(null);
-        }}
-        onCreateConnection={createConnection}
         onUpdateConnection={() => {
           setNotice("Backend chưa có endpoint cập nhật mô tả liên kết.");
         }}

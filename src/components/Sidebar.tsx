@@ -1,4 +1,4 @@
-import { Brain, LayoutDashboard, Settings, Share2 } from "lucide-react";
+import { Brain, LayoutDashboard, Link2, Settings, Share2 } from "lucide-react";
 import type { ViewName } from "../types";
 
 type SidebarProps = {
@@ -9,6 +9,7 @@ type SidebarProps = {
 const items: Array<{ id: ViewName; label: string; icon: typeof LayoutDashboard }> = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "map", label: "Sơ đồ học", icon: Share2 },
+  { id: "connections", label: "Liên kết neuron", icon: Link2 },
   { id: "settings", label: "Cài đặt", icon: Settings },
 ];
 
