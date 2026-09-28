@@ -4,8 +4,6 @@ import {
   Download,
   FileText,
   Image as ImageIcon,
-  Lightbulb,
-  Link2,
   MoreVertical,
   Music2,
   Pencil,
@@ -26,8 +24,9 @@ import {
   type DocumentMeta,
 } from "../api/documents";
 import type { Neuron, NeuronConnection } from "../types";
+import { NeuronMarkdownEditor } from "./NeuronMarkdownEditor";
 
-type DetailTab = "overview" | "links" | "ideas" | "custom";
+type DetailTab = "overview" | "markdown" | "custom";
 
 type NeuronDetailPanelProps = {
   neuron: Neuron;
@@ -236,7 +235,7 @@ export function NeuronDetailPanel({
         />
         <NeuronTabs tab={tab} onChange={setTab} />
 
-        <div className="neuron-workspace-scroll">
+        <div className={`neuron-workspace-scroll${tab === "markdown" ? " is-markdown" : ""}`}>
           {tab === "overview" ? (
             <NeuronOverview
               neuron={neuron}
@@ -255,7 +254,6 @@ export function NeuronDetailPanel({
               documentDownloadingId={documentDownloadingId}
               onDraftChange={setDraft}
               onSelectNeuron={onSelectNeuron}
-              onShowAllLinks={() => setTab("links")}
               onQuickNoteChange={updateQuickNote}
               onSaveQuickNote={saveQuickNote}
               onPickDocuments={() => documentInputRef.current?.click()}
@@ -264,15 +262,7 @@ export function NeuronDetailPanel({
               onDeleteDocument={removeDocument}
             />
           ) : null}
-          {tab === "links" ? (
-            <LinkedNeuronList
-              linkedNeurons={linkedNeurons}
-              allConnections={connections}
-              onSelectNeuron={onSelectNeuron}
-              full
-            />
-          ) : null}
-          {tab === "ideas" ? <NeuronIdeas neuron={editing ? draft : neuron} editing={editing} onChange={setDraft} /> : null}
+          {tab === "markdown" ? <NeuronMarkdownEditor key={neuron.id} neuronId={neuron.id} /> : null}
           {tab === "custom" ? (
             <NeuronCustom
               neuron={editing ? draft : neuron}
@@ -284,7 +274,7 @@ export function NeuronDetailPanel({
             />
           ) : null}
 
-          {editing ? (
+          {editing && tab !== "markdown" ? (
             <div className="flex justify-end gap-3 pb-2">
               <button type="button" className="brutal-button" onClick={() => { setDraft(neuron); setEditing(false); }}>Hủy</button>
               <button type="button" className="brutal-button brutal-button-primary" onClick={saveDraft}><Check size={16} />Lưu thay đổi</button>
@@ -355,8 +345,7 @@ function NeuronDetailHeader({ neuron, connectionCount, editing, onEdit, onDelete
 function NeuronTabs({ tab, onChange }: { tab: DetailTab; onChange: (tab: DetailTab) => void }) {
   const tabs: Array<{ id: DetailTab; label: string; icon: typeof Brain }> = [
     { id: "overview", label: "Tổng quan", icon: Brain },
-    { id: "links", label: "Liên kết", icon: Link2 },
-    { id: "ideas", label: "Ý tưởng", icon: Lightbulb },
+    { id: "markdown", label: "Note Markdown", icon: FileText },
     { id: "custom", label: "Tùy chỉnh", icon: Settings },
   ];
   return (
@@ -369,7 +358,7 @@ function NeuronTabs({ tab, onChange }: { tab: DetailTab; onChange: (tab: DetailT
   );
 }
 
-function NeuronOverview({ neuron, onSaveNote, draft, editing, connectionCount, linkedNeurons, allConnections, quickNote, documentNotice, documents, documentsLoading, documentsUploading, documentDeletingId, documentDownloadingId, onDraftChange, onSelectNeuron, onShowAllLinks, onQuickNoteChange, onSaveQuickNote, onPickDocuments, onDocumentFiles, onDownloadDocument, onDeleteDocument }: {
+function NeuronOverview({ neuron, onSaveNote, draft, editing, connectionCount, linkedNeurons, allConnections, quickNote, documentNotice, documents, documentsLoading, documentsUploading, documentDeletingId, documentDownloadingId, onDraftChange, onSelectNeuron, onQuickNoteChange, onSaveQuickNote, onPickDocuments, onDocumentFiles, onDownloadDocument, onDeleteDocument }: {
   neuron: Neuron;
   onSaveNote: (neuronId: string, note: string) => Promise<void>;
   draft: Neuron;
@@ -386,7 +375,6 @@ function NeuronOverview({ neuron, onSaveNote, draft, editing, connectionCount, l
   documentDownloadingId: string | null;
   onDraftChange: (neuron: Neuron) => void;
   onSelectNeuron: (id: string) => void;
-  onShowAllLinks: () => void;
   onQuickNoteChange: (value: string) => void;
   onSaveQuickNote: () => void;
   onPickDocuments: () => void;
@@ -407,8 +395,8 @@ function NeuronOverview({ neuron, onSaveNote, draft, editing, connectionCount, l
 
       <NeuronNote key={neuron.id} neuron={neuron} onSave={onSaveNote} />
 
-      <BrutalCard title="Neuron liên kết" action={<button type="button" onClick={onShowAllLinks} className="brutal-link">Xem tất cả →</button>}>
-        <LinkedNeuronList linkedNeurons={linkedNeurons.slice(0, 3)} allConnections={allConnections} onSelectNeuron={onSelectNeuron} />
+      <BrutalCard title="Neuron liên kết">
+        <LinkedNeuronList linkedNeurons={linkedNeurons} allConnections={allConnections} onSelectNeuron={onSelectNeuron} />
       </BrutalCard>
 
       <NeuronDocuments

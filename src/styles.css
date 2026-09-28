@@ -1397,6 +1397,227 @@ textarea:focus-visible {
   padding: 20px 22px 28px;
 }
 
+.neuron-workspace-scroll.is-markdown {
+  display: flex;
+  overflow: hidden;
+  padding: 16px 18px 18px;
+}
+
+.neuron-md {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border: 2px solid #111111;
+  border-radius: 7px;
+  background: #fffdf3;
+  box-shadow: 4px 4px 0 #111111;
+}
+
+.neuron-md.is-fullscreen {
+  position: fixed;
+  inset: 16px;
+  z-index: 80;
+  height: auto;
+}
+
+.neuron-md-head,
+.neuron-md-foot {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 2px solid #111111;
+  background: #f5f1df;
+}
+
+.neuron-md-foot {
+  border-bottom: 0;
+  border-top: 2px solid #111111;
+}
+
+.neuron-md-head h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.neuron-md-split {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: 1fr 1fr;
+}
+
+.neuron-md-pane {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  border-right: 2px solid #111111;
+}
+
+.neuron-md-pane:last-child {
+  border-right: 0;
+}
+
+.neuron-md-toolbar {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 2px solid #111111;
+  background: #fffdf3;
+}
+
+.neuron-md-tool {
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 2px solid #111111;
+  border-radius: 5px;
+  background: #fffdf3;
+  box-shadow: 2px 2px 0 #111111;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.neuron-md-tool:hover,
+.neuron-md-tool:focus-visible {
+  background: #2d8cf0;
+  color: #ffffff;
+}
+
+.neuron-md-editor {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  border: 0;
+  background: #fffdf3;
+  padding: 12px 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+}
+
+.neuron-md-preview-wrap {
+  background: #f5f1df;
+}
+
+.neuron-md-preview-label {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 2px solid #111111;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.neuron-md-preview {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 14px 16px 20px;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.neuron-md-preview h1,
+.neuron-md-preview h2,
+.neuron-md-preview h3 {
+  margin: 0 0 10px;
+  font-weight: 900;
+}
+
+.neuron-md-preview p,
+.neuron-md-preview ul,
+.neuron-md-preview ol,
+.neuron-md-preview blockquote,
+.neuron-md-preview pre,
+.neuron-md-preview table {
+  margin: 0 0 12px;
+}
+
+.neuron-md-preview code {
+  border: 1px solid #111111;
+  background: #fffdf3;
+  padding: 1px 4px;
+  font-size: 12px;
+}
+
+.neuron-md-preview pre {
+  overflow: auto;
+  border: 2px solid #111111;
+  background: #fffdf3;
+  padding: 10px;
+}
+
+.neuron-md-preview pre code {
+  border: 0;
+  padding: 0;
+}
+
+.neuron-md-preview blockquote {
+  border-left: 4px solid #2d8cf0;
+  padding-left: 10px;
+}
+
+.neuron-md-preview table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.neuron-md-preview th,
+.neuron-md-preview td {
+  border: 2px solid #111111;
+  padding: 6px 8px;
+}
+
+.neuron-md-empty {
+  color: #666666;
+  font-weight: 700;
+}
+
+.neuron-md-foot p,
+.neuron-md-foot span {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4b5563;
+}
+
+.neuron-md-foot-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .neuron-md-split {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(180px, 1fr) minmax(180px, 1fr);
+  }
+
+  .neuron-md-pane {
+    border-right: 0;
+    border-bottom: 2px solid #111111;
+  }
+
+  .neuron-md-pane:last-child {
+    border-bottom: 0;
+  }
+}
+
 .brutal-card {
   border: 2px solid #111111;
   border-radius: 7px;
