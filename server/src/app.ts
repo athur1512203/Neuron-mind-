@@ -5,6 +5,7 @@ import { connectionRouter } from "./routes/connection.routes";
 import { authRouter } from "./routes/auth.routes";
 import { documentRouter } from "./routes/document.routes";
 import { neuronRouter } from "./routes/neuron.routes";
+import { searchRouter } from "./routes/search.routes";
 import { subjectRouter } from "./routes/subject.routes";
 import { userRouter } from "./routes/user.routes";
 import { errorHandler, notFoundHandler } from "./middleware/error-handler";
@@ -37,6 +38,7 @@ app.use("/api/subjects", subjectRouter);
 app.use("/api/neurons", neuronRouter);
 app.use("/api/documents", documentRouter);
 app.use("/api/connections", connectionRouter);
+app.use("/api/search", searchRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

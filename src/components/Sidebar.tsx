@@ -1,9 +1,10 @@
-import { Brain, Home, Settings, Share2 } from "lucide-react";
+import { Brain, Home, Search, Settings, Share2 } from "lucide-react";
 import type { ViewName } from "../types";
 
 type SidebarProps = {
   activeView: ViewName;
   onNavigate: (view: ViewName) => void;
+  onSearch: () => void;
 };
 
 const items: Array<{ id: ViewName; label: string; icon: typeof Home }> = [
@@ -12,7 +13,7 @@ const items: Array<{ id: ViewName; label: string; icon: typeof Home }> = [
   { id: "settings", label: "Cài đặt", icon: Settings },
 ];
 
-export function Sidebar({ activeView, onNavigate }: SidebarProps) {
+export function Sidebar({ activeView, onNavigate, onSearch }: SidebarProps) {
   return (
     <aside className="app-sidebar">
       <div className="sidebar-brand-icon" role="img" aria-label="NeuroMind">
@@ -20,6 +21,15 @@ export function Sidebar({ activeView, onNavigate }: SidebarProps) {
       </div>
 
       <nav className="sidebar-navigation" aria-label="Điều hướng chính">
+        <button
+          type="button"
+          aria-label="Tìm kiếm"
+          onClick={onSearch}
+          className="sidebar-nav-item"
+        >
+          <Search size={22} aria-hidden="true" />
+          <span className="sidebar-tooltip" aria-hidden="true">Tìm kiếm</span>
+        </button>
         {items.map((item) => {
           const Icon = item.icon;
           const active = activeView === item.id;

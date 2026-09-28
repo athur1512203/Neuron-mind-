@@ -26,7 +26,7 @@ import {
 import type { Neuron, NeuronConnection } from "../types";
 import { NeuronMarkdownEditor } from "./NeuronMarkdownEditor";
 
-type DetailTab = "overview" | "markdown" | "custom";
+export type DetailTab = "overview" | "markdown" | "custom";
 
 type NeuronDetailPanelProps = {
   neuron: Neuron;
@@ -38,6 +38,7 @@ type NeuronDetailPanelProps = {
   onUpdate: (neuron: Neuron) => void;
   onSaveNote: (neuronId: string, note: string) => Promise<void>;
   onSelectNeuron: (neuronId: string) => void;
+  initialTab?: DetailTab;
 };
 
 export function NeuronDetailPanel({
@@ -50,8 +51,9 @@ export function NeuronDetailPanel({
   onUpdate,
   onSaveNote,
   onSelectNeuron,
+  initialTab = "overview",
 }: NeuronDetailPanelProps) {
-  const [tab, setTab] = useState<DetailTab>("overview");
+  const [tab, setTab] = useState<DetailTab>(initialTab);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(neuron);
   const [quickNote, setQuickNote] = useState(neuron.textContent);
@@ -85,7 +87,7 @@ export function NeuronDetailPanel({
   );
 
   useEffect(() => {
-    setTab("overview");
+    setTab(initialTab);
     setEditing(false);
     setDraft(neuron);
     setQuickNote(neuron.textContent);
@@ -94,7 +96,7 @@ export function NeuronDetailPanel({
     setDeleteError("");
     setDocumentNotice("");
     if (quickNoteTimerRef.current !== null) window.clearTimeout(quickNoteTimerRef.current);
-  }, [neuron.id]);
+  }, [initialTab, neuron.id]);
 
   useEffect(() => {
     let active = true;

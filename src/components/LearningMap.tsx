@@ -4,7 +4,7 @@ import type { Neuron, NeuronConnection, Position3D, Selection, Subject } from ".
 import { getConnectionCount } from "../utils/neuron";
 import { CreateNeuronModal } from "./CreateNeuronModal";
 import { NeuralCanvas } from "./NeuralCanvas";
-import { NeuronDetailPanel } from "./NeuronDetailPanel";
+import { NeuronDetailPanel, type DetailTab } from "./NeuronDetailPanel";
 
 type LearningMapProps = {
   subject: Subject;
@@ -20,6 +20,7 @@ type LearningMapProps = {
   onLayoutSettled: (positions: Record<string, Position3D>) => void;
   graphLoading?: boolean;
   graphError?: string | null;
+  detailInitialTab?: DetailTab;
   onCreateNeuron: (neuron: Neuron) => void | Promise<void>;
   onCreateConnection: (sourceId: string, targetId: string) => void | Promise<void>;
   onUpdateNeuron: (neuron: Neuron) => void;
@@ -49,6 +50,7 @@ export function LearningMap({
   onSelectNeuron,
   graphLoading,
   graphError,
+  detailInitialTab,
   onSelectConnection,
   onLayoutSettled,
   onCreateNeuron,
@@ -308,6 +310,7 @@ export function LearningMap({
                 onUpdate={onUpdateNeuron}
                 onSaveNote={onSaveNote}
                 onSelectNeuron={focusNeuron}
+                initialTab={detailInitialTab}
               />
             </div>
           ) : null}

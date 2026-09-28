@@ -3,11 +3,14 @@ import { getMe } from "./api/auth";
 import { apiMessage, clearToken, getToken, setUnauthorizedHandler } from "./api/client";
 import { createConnection as createConnectionApi, deleteConnection as deleteConnectionApi } from "./api/connections";
 import { createNeuron as createNeuronApi, deleteNeuron as deleteNeuronApi, updateNeuron as updateNeuronApi } from "./api/neurons";
+import type { SearchResult } from "./api/search";
 import { createSubject as createSubjectApi, deleteSubject as deleteSubjectApi, getSubjectGraph, listSubjects } from "./api/subjects";
 import type { ApiUser } from "./api/mappers";
 import { AuthScreen } from "./components/AuthScreen";
 import { Dashboard } from "./components/Dashboard";
+import { GlobalSearchPalette } from "./components/GlobalSearchPalette";
 import { LearningMap } from "./components/LearningMap";
+import type { DetailTab } from "./components/NeuronDetailPanel";
 import { Settings } from "./components/Settings";
 import { Sidebar } from "./components/Sidebar";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject, ViewName } from "./types";
@@ -27,6 +30,9 @@ export default function App() {
   const [graphError, setGraphError] = useState<string | null>(null);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
+  const [pendingNeuronSelection, setPendingNeuronSelection] = useState<{ neuronId: string; tab: DetailTab } | null>(null);
+  const [detailInitialTab, setDetailInitialTab] = useState<DetailTab>("overview");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -89,6 +95,16 @@ export default function App() {
     };
   }, [user, activeView, selectedSubjectId]);
 
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "k") return;
+      event.preventDefault();
+      setSearchOpen(true);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
+
   const selectedSubject = useMemo(
     () => subjects.find((subject) => subject.id === selectedSubjectId) ?? subjects[0],
     [subjects, selectedSubjectId],
@@ -98,6 +114,15 @@ export default function App() {
   const subjectConnections = selectedSubject
     ? connections.filter((connection) => connection.subjectId === selectedSubject.id)
     : [];
+
+  useEffect(() => {
+    if (!pendingNeuronSelection || graphLoading) return;
+    const exists = subjectNeurons.some((neuron) => neuron.id === pendingNeuronSelection.neuronId);
+    if (!exists) return;
+    setDetailInitialTab(pendingNeuronSelection.tab);
+    setSelection({ type: "neuron", id: pendingNeuronSelection.neuronId });
+    setPendingNeuronSelection(null);
+  }, [graphLoading, pendingNeuronSelection, subjectNeurons]);
 
   const bumpCounts = (subjectId: string, neuronDelta: number, connectionDelta: number) => {
     setSubjects((current) =>
@@ -136,7 +161,25 @@ export default function App() {
     setActiveView("map");
     setMapExpanded(false);
     setSelection(null);
+    setPendingNeuronSelection(null);
+    setDetailInitialTab("overview");
     setNotice(null);
+  };
+
+  const openNeuron = (subjectId: string, neuronId: string, tab: DetailTab = "overview") => {
+    setSelectedSubjectId(subjectId);
+    setActiveView("map");
+    setMapExpanded(false);
+    setSelection(null);
+    setDetailInitialTab(tab);
+    setPendingNeuronSelection({ neuronId, tab });
+    setNotice(null);
+  };
+
+  const openSearchResult = (result: SearchResult) => {
+    if (!result.subjectId || !result.neuronId) return;
+    const tab: DetailTab = result.type === "markdown" ? "markdown" : "overview";
+    openNeuron(result.subjectId, result.neuronId, tab);
   };
 
   const selectNeuron = (neuronId: string) => {
@@ -314,6 +357,7 @@ export default function App() {
         connections={subjectConnections}
         graphLoading={graphLoading}
         graphError={graphError}
+        detailInitialTab={detailInitialTab}
         mapExpanded={mapExpanded}
         onToggleMapExpanded={() => setMapExpanded((value) => !value)}
         selection={selection}
@@ -355,8 +399,9 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 md:h-screen md:flex-row">
-      {!(activeView === "map" && mapExpanded) && <Sidebar activeView={activeView} onNavigate={navigate} />}
+      {!(activeView === "map" && mapExpanded) && <Sidebar activeView={activeView} onNavigate={navigate} onSearch={() => setSearchOpen(true)} />}
       {renderView()}
+      <GlobalSearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} onOpenResult={openSearchResult} />
     </div>
   );
 }
