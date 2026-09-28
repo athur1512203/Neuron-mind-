@@ -1,6 +1,9 @@
 import "dotenv/config";
 import { app } from "./app";
 import { prisma } from "./lib/prisma";
+import { getStorageProvider } from "./storage";
+
+getStorageProvider();
 
 const port = Number(process.env.PORT) || 3000;
 

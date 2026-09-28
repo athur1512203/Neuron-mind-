@@ -9,6 +9,8 @@ import {
 import { requireAuth } from "../middleware/auth";
 import { DOCUMENT_MAX_BYTES, validateDocumentFile } from "../services/document-storage";
 import { asyncHandler } from "../utils/async-handler";
+import { requireOwnedNeuron } from "../services/ownership";
+import { routeParam } from "../utils/request";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -28,7 +30,10 @@ export const documentRouter = Router();
 
 neuronDocumentRouter.use(requireAuth);
 neuronDocumentRouter.get("/", asyncHandler(listDocuments));
-neuronDocumentRouter.post("/", upload.single("file"), asyncHandler(uploadDocument));
+neuronDocumentRouter.post("/", asyncHandler(async (request, _response, next) => {
+  await requireOwnedNeuron(routeParam(request, "neuronId"), request.userId);
+  next();
+}), upload.single("file"), asyncHandler(uploadDocument));
 
 documentRouter.use(requireAuth);
 documentRouter.get("/:documentId/download", asyncHandler(downloadDocument));

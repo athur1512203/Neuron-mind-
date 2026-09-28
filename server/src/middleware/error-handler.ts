@@ -9,6 +9,10 @@ export const notFoundHandler: RequestHandler = (_request, _response, next) => {
 };
 
 export const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
+  if (response.headersSent || response.destroyed) {
+    _next(error);
+    return;
+  }
   if (error instanceof ZodError) {
     response.status(400).json({
       error: {
