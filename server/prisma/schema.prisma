@@ -51,8 +51,18 @@ model Neuron {
   images            NeuronImage[]
   audio             NeuronAudio[]
   documents         Document[]
+  markdownNote      MarkdownNote?
 
   @@index([subjectId])
+}
+
+model MarkdownNote {
+  id        String   @id @default(cuid())
+  neuronId  String   @unique
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  neuron    Neuron   @relation(fields: [neuronId], references: [id], onDelete: Cascade)
 }
 
 model NeuronConnection {
@@ -92,20 +102,20 @@ model NeuronAudio {
 }
 
 model Document {
-  id           String   @id @default(cuid())
-  neuronId     String
-  originalName String
-  storedName   String
-  mimeType     String
-  extension    String
-  size         Int
-  storagePath  String
-  storageProvider String @default("local")
-  storageKey   String
-  checksum     String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  neuron       Neuron   @relation(fields: [neuronId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  neuronId        String
+  originalName    String
+  storedName      String
+  mimeType        String
+  extension       String
+  size            Int
+  storagePath     String
+  storageProvider String   @default("local")
+  storageKey      String
+  checksum        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  neuron          Neuron   @relation(fields: [neuronId], references: [id], onDelete: Cascade)
 
   @@index([neuronId])
 }

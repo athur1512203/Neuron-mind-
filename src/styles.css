@@ -1572,15 +1572,82 @@ textarea:focus-visible {
   padding-left: 10px;
 }
 
+.neuron-md-preview a {
+  color: #1d4ed8;
+  font-weight: 800;
+  text-decoration: underline;
+}
+
+.neuron-md-preview hr {
+  margin: 16px 0;
+  border: 0;
+  border-top: 2px solid #111111;
+}
+
+.neuron-md-preview img {
+  max-width: 100%;
+  height: auto;
+}
+
+.neuron-md-preview ul.contains-task-list,
+.neuron-md-preview li.task-list-item {
+  list-style: none;
+}
+
+.neuron-md-preview li.task-list-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.neuron-md-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0 0 12px;
+}
+
 .neuron-md-preview table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
   border-collapse: collapse;
+  background: #fffdf3;
 }
 
 .neuron-md-preview th,
 .neuron-md-preview td {
   border: 2px solid #111111;
-  padding: 6px 8px;
+  padding: 8px 10px;
+  vertical-align: top;
+}
+
+.neuron-md-preview th {
+  background: #f5f1df;
+  font-weight: 900;
+}
+
+.neuron-md-inline-code {
+  border: 1px solid #111111;
+  background: #fffdf3;
+  padding: 1px 4px;
+  font-size: 12px;
+}
+
+.neuron-md-codeblock {
+  overflow: auto;
+  border: 2px solid #111111;
+  background: #111111;
+  color: #f8fafc;
+  padding: 12px;
+}
+
+.neuron-md-codeblock code {
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  font-size: 12px;
+  white-space: pre;
 }
 
 .neuron-md-empty {

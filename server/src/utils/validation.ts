@@ -49,6 +49,10 @@ export const updateNeuronSchema = z
   })
   .refine((value) => Object.keys(value).length > 0, "At least one field is required");
 
+export const upsertMarkdownNoteSchema = z.object({
+  content: z.string(),
+});
+
 export const createConnectionSchema = z.object({
   sourceNeuronId: z.string().min(1),
   targetNeuronId: z.string().min(1),
