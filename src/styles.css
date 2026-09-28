@@ -1712,11 +1712,11 @@ textarea:focus-visible {
   color: #323232;
 }
 
-.nm-dashboard__content {
+.nm-dashboard {
     width: 100%;
     max-width: none;
     margin: 0;
-    padding: 20px;
+    padding: 20px 32px;
 }
 .nm-dashboard-header {
   display: flex;
