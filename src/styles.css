@@ -1712,14 +1712,12 @@ textarea:focus-visible {
   color: #323232;
 }
 
-.nm-dashboard-inner {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 20px;
+.nm-dashboard__content {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 20px;
 }
-
 .nm-dashboard-header {
   display: flex;
   flex-wrap: wrap;
