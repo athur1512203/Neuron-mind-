@@ -39,7 +39,7 @@ export function Dashboard({ subjects, loading, error, onOpenSubject, onCreateSub
 
         {loading ? <p className="text-sm text-[#8b9a93]">Đang tải môn học...</p> : null}
         {error ? <p className="mb-4 text-sm text-red-400">{error}</p> : null}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {subjects.map((subject) => (
             <SubjectCard
               key={subject.id}

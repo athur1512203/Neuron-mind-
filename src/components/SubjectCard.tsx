@@ -1,5 +1,5 @@
 import { ArrowRight, BrainCircuit, MoreVertical } from "lucide-react";
-import { useState, type CSSProperties, type MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 import type { Subject } from "../types";
 
 type SubjectCardProps = {
@@ -10,18 +10,6 @@ type SubjectCardProps = {
 
 export function SubjectCard({ subject, onOpen, onDelete }: SubjectCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const fallbackBySubject: Record<string, string> = {
-    microeconomics: "#22c55e",
-    english: "#3b82f6",
-    javascript: "#a855f7",
-    research: "#f59e0b",
-  };
-  const color = subject.color || fallbackBySubject[subject.id] || "#22c55e";
-  const glow = `${color}40`;
-  const style = {
-    "--subject-color": color,
-    "--subject-glow": glow,
-  } as CSSProperties;
 
   const stopCardOpen = (event: MouseEvent) => {
     event.preventDefault();
@@ -37,19 +25,17 @@ export function SubjectCard({ subject, onOpen, onDelete }: SubjectCardProps) {
         if (event.key === "Enter" || event.key === " ") onOpen(subject.id);
       }}
       className="subject-card group text-left"
-      style={style}
     >
-      <div className="subject-card-middle">
         <div className="subject-card-inner">
           <BrainCircuit className="subject-card-brain" strokeWidth={1.8} />
 
-          <h3 className="app-name relative z-10 max-w-[75%] text-base text-white">{subject.name}</h3>
+          <h3 className="subject-card-title">{subject.name}</h3>
           <div className="relative z-10 mt-auto flex items-end justify-between gap-3">
-            <div className="app-metadata flex items-center gap-2 text-slate-300">
+            <div className="subject-card-metadata">
               <span className="whitespace-nowrap">
                 <strong className="subject-card-accent font-semibold">{subject.neuronCount}</strong> neuron
               </span>
-              <span className="text-slate-600">|</span>
+              <span aria-hidden="true">·</span>
               <span className="whitespace-nowrap">
                 <strong className="subject-card-accent font-semibold">{subject.connectionCount}</strong> kết nối
               </span>
@@ -57,7 +43,6 @@ export function SubjectCard({ subject, onOpen, onDelete }: SubjectCardProps) {
             <ArrowRight className="subject-arrow subject-card-accent shrink-0" size={20} />
           </div>
         </div>
-      </div>
 
       <div
         className="absolute right-3 top-3 z-20"
@@ -67,7 +52,7 @@ export function SubjectCard({ subject, onOpen, onDelete }: SubjectCardProps) {
         <button
           type="button"
           aria-label="Tùy chọn môn học"
-          className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-white"
+          className="subject-card-menu-button rounded-md p-1"
           onClick={(event) => {
             stopCardOpen(event);
             setMenuOpen((open) => !open);
@@ -76,10 +61,10 @@ export function SubjectCard({ subject, onOpen, onDelete }: SubjectCardProps) {
           <MoreVertical size={16} />
         </button>
         {menuOpen ? (
-          <div className="absolute right-0 top-8 min-w-[140px] rounded-md border border-[#1f2a26] bg-[#0b1210] py-1 shadow-xl">
+          <div className="absolute right-0 top-8 min-w-[140px] rounded-md border-2 border-[#111111] bg-[#F5F0DC] py-1 shadow-[2px_2px_0_#111111]">
             <button
               type="button"
-              className="block w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-white/5"
+              className="block w-full px-3 py-2 text-left text-sm text-red-800 hover:bg-black/5"
               onClick={(event) => {
                 stopCardOpen(event);
                 setMenuOpen(false);
