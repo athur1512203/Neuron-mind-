@@ -14,6 +14,7 @@ export type CreateNeuronPayload = {
 };
 
 export type UpdateNeuronPayload = {
+  note?: string;
   name?: string;
   color?: string;
   textContent?: string;

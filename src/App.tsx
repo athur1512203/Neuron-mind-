@@ -186,6 +186,13 @@ export default function App() {
     setSelection({ type: "neuron", id: created.id });
   };
 
+  const persistNote = async (neuronId: string, note: string) => {
+    const saved = await updateNeuronApi(neuronId, { note });
+    setNeurons((current) => current.map((neuron) =>
+      neuron.id === neuronId ? { ...neuron, note: saved.note, updatedAt: saved.updatedAt } : neuron,
+    ));
+  };
+
   const persistNeuron = async (updated: Neuron) => {
     try {
       const saved = await updateNeuronApi(updated.id, {
@@ -330,6 +337,7 @@ export default function App() {
         onLayoutSettled={persistLayout}
         onCreateNeuron={addNeuron}
         onUpdateNeuron={persistNeuron}
+        onSaveNote={persistNote}
         onDeleteNeuron={deleteNeuron}
         onUpdateConnection={() => {
           setNotice("Backend chưa có endpoint cập nhật mô tả liên kết.");

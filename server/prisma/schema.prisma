@@ -36,6 +36,7 @@ model Neuron {
   name              String
   color             String
   textContent       String             @default("")
+  note              String?            @db.Text
   keyPoints         String             @default("")
   memoryMethod      String             @default("")
   application       String             @default("")

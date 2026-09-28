@@ -410,7 +410,7 @@ export function NeuralCanvas({
   };
 
   return (
-    <div ref={containerRef} className="h-full min-h-[420px] w-full overflow-hidden rounded-lg border border-slate-200 bg-[#f8fafc]">
+    <div ref={containerRef} className="h-full min-h-[420px] w-full overflow-hidden bg-[#f8fafc]">
       <svg
         width="100%"
         height="100%"

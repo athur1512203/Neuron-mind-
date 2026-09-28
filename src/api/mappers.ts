@@ -25,6 +25,7 @@ export type ApiNeuron = {
   name: string;
   color: string;
   textContent: string;
+  note: string | null;
   keyPoints: string;
   memoryMethod: string;
   application: string;
@@ -67,6 +68,7 @@ export function mapNeuron(neuron: ApiNeuron): Neuron {
       z: neuron.positionZ,
     },
     textContent: neuron.textContent,
+    note: neuron.note ?? null,
     keyPoints: neuron.keyPoints,
     memoryMethod: neuron.memoryMethod,
     application: neuron.application,

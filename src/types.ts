@@ -20,6 +20,7 @@ export type Neuron = {
   color: string;
   position: Position3D;
   textContent: string;
+  note?: string | null;
   images: string[];
   audio: string[];
   keyPoints: string;

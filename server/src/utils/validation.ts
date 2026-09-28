@@ -39,6 +39,7 @@ export const updateNeuronSchema = z
     name: nonEmptyName.optional(),
     color: color.optional(),
     textContent: z.string().max(100_000).optional(),
+    note: z.string().max(100_000).nullable().optional(),
     keyPoints: z.string().max(100_000).optional(),
     memoryMethod: z.string().max(100_000).optional(),
     application: z.string().max(100_000).optional(),

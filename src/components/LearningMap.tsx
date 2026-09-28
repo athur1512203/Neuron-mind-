@@ -22,6 +22,7 @@ type LearningMapProps = {
   graphError?: string | null;
   onCreateNeuron: (neuron: Neuron) => void | Promise<void>;
   onUpdateNeuron: (neuron: Neuron) => void;
+  onSaveNote: (neuronId: string, note: string) => Promise<void>;
   onDeleteNeuron: (neuronId: string) => Promise<void>;
   onUpdateConnection: (connection: NeuronConnection) => void;
   onDeleteConnection: (connectionId: string) => void;
@@ -51,6 +52,7 @@ export function LearningMap({
   onLayoutSettled,
   onCreateNeuron,
   onUpdateNeuron,
+  onSaveNote,
   onDeleteNeuron,
   onUpdateConnection,
   onDeleteConnection,
@@ -221,6 +223,7 @@ export function LearningMap({
                 onClose={() => onSelectNeuron("")}
                 onDelete={onDeleteNeuron}
                 onUpdate={onUpdateNeuron}
+                onSaveNote={onSaveNote}
                 onSelectNeuron={focusNeuron}
               />
             </div>

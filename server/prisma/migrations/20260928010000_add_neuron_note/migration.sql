@@ -1,0 +1,1 @@
+ALTER TABLE "Neuron" ADD COLUMN "note" TEXT;

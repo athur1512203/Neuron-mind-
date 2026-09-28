@@ -37,6 +37,7 @@ type NeuronDetailPanelProps = {
   onClose: () => void;
   onDelete: (neuronId: string) => Promise<void>;
   onUpdate: (neuron: Neuron) => void;
+  onSaveNote: (neuronId: string, note: string) => Promise<void>;
   onSelectNeuron: (neuronId: string) => void;
 };
 
@@ -48,6 +49,7 @@ export function NeuronDetailPanel({
   onClose,
   onDelete,
   onUpdate,
+  onSaveNote,
   onSelectNeuron,
 }: NeuronDetailPanelProps) {
   const [tab, setTab] = useState<DetailTab>("overview");
@@ -238,6 +240,7 @@ export function NeuronDetailPanel({
           {tab === "overview" ? (
             <NeuronOverview
               neuron={neuron}
+              onSaveNote={onSaveNote}
               draft={draft}
               editing={editing}
               connectionCount={connectionCount}
@@ -366,8 +369,9 @@ function NeuronTabs({ tab, onChange }: { tab: DetailTab; onChange: (tab: DetailT
   );
 }
 
-function NeuronOverview({ neuron, draft, editing, connectionCount, linkedNeurons, allConnections, quickNote, documentNotice, documents, documentsLoading, documentsUploading, documentDeletingId, documentDownloadingId, onDraftChange, onSelectNeuron, onShowAllLinks, onQuickNoteChange, onSaveQuickNote, onPickDocuments, onDocumentFiles, onDownloadDocument, onDeleteDocument }: {
+function NeuronOverview({ neuron, onSaveNote, draft, editing, connectionCount, linkedNeurons, allConnections, quickNote, documentNotice, documents, documentsLoading, documentsUploading, documentDeletingId, documentDownloadingId, onDraftChange, onSelectNeuron, onShowAllLinks, onQuickNoteChange, onSaveQuickNote, onPickDocuments, onDocumentFiles, onDownloadDocument, onDeleteDocument }: {
   neuron: Neuron;
+  onSaveNote: (neuronId: string, note: string) => Promise<void>;
   draft: Neuron;
   editing: boolean;
   connectionCount: number;
@@ -390,9 +394,6 @@ function NeuronOverview({ neuron, draft, editing, connectionCount, linkedNeurons
   onDownloadDocument: (document: DocumentMeta) => void;
   onDeleteDocument: (document: DocumentMeta) => void;
 }) {
-  const ideasCount = [neuron.keyPoints, neuron.memoryMethod, neuron.application].filter((value) => value.trim()).length;
-  const createdTime = new Date(neuron.createdAt).getTime();
-  const activeDays = Number.isNaN(createdTime) ? 1 : Math.max(1, Math.ceil((Date.now() - createdTime) / 86_400_000));
   return (
     <div className="space-y-5">
       <BrutalCard title="Thông tin cơ bản">
@@ -404,14 +405,7 @@ function NeuronOverview({ neuron, draft, editing, connectionCount, linkedNeurons
         </dl>
       </BrutalCard>
 
-      <BrutalCard title="Thống kê nhanh">
-        <div className="grid grid-cols-2 gap-3">
-          <Stat value={connectionCount} label="Kết nối trực tiếp" />
-          <Stat value={documents.length} label="Tài liệu" />
-          <Stat value={ideasCount} label="Ý tưởng" />
-          <Stat value={activeDays} label="Ngày hoạt động" />
-        </div>
-      </BrutalCard>
+      <NeuronNote key={neuron.id} neuron={neuron} onSave={onSaveNote} />
 
       <BrutalCard title="Neuron liên kết" action={<button type="button" onClick={onShowAllLinks} className="brutal-link">Xem tất cả →</button>}>
         <LinkedNeuronList linkedNeurons={linkedNeurons.slice(0, 3)} allConnections={allConnections} onSelectNeuron={onSelectNeuron} />
@@ -442,8 +436,53 @@ function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   return <div><dt>{label}</dt><dd>{value}</dd></div>;
 }
 
-function Stat({ value, label }: { value: number; label: string }) {
-  return <div className="brutal-stat"><strong>{value}</strong><span>{label}</span></div>;
+function NeuronNote({ neuron, onSave }: { neuron: Neuron; onSave: (id: string, note: string) => Promise<void> }) {
+  const [value, setValue] = useState(neuron.note ?? "");
+  const [savedValue, setSavedValue] = useState(neuron.note ?? "");
+  const [saving, setSaving] = useState(false);
+  const [feedback, setFeedback] = useState("");
+
+  useEffect(() => {
+    const nextValue = neuron.note ?? "";
+    setValue((current) => current === savedValue ? nextValue : current);
+    setSavedValue(nextValue);
+  }, [neuron.note]);
+
+  const save = async () => {
+    if (saving || value === savedValue) return;
+    setSaving(true);
+    setFeedback("");
+    try {
+      await onSave(neuron.id, value);
+      setSavedValue(value);
+      setFeedback("Đã lưu");
+    } catch {
+      setFeedback("Không thể lưu ghi chú");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <BrutalCard title="NOTE">
+      <textarea
+        aria-label="NOTE"
+        className="brutal-textarea"
+        style={{ minHeight: 150 }}
+        placeholder="Ghi chú kiến thức, việc cần nhớ..."
+        maxLength={100_000}
+        value={value}
+        disabled={saving}
+        onChange={(event) => { setValue(event.target.value); setFeedback(""); }}
+      />
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
+        <span role="status" className="text-xs font-semibold">{feedback}</span>
+        <button type="button" className="brutal-button brutal-button-primary" disabled={saving || value === savedValue} onClick={() => void save()}>
+          <Check size={16} />{saving ? "Đang lưu..." : "Lưu ghi chú"}
+        </button>
+      </div>
+    </BrutalCard>
+  );
 }
 
 function LinkedNeuronList({ linkedNeurons, allConnections, onSelectNeuron, full = false }: { linkedNeurons: Neuron[]; allConnections: NeuronConnection[]; onSelectNeuron: (id: string) => void; full?: boolean }) {
