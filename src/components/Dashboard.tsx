@@ -37,11 +37,6 @@ export function Dashboard({
     return subjects.filter((subject) => subject.name.toLowerCase().includes(needle));
   }, [subjects, query]);
 
-  const neuronTotal = subjects.reduce((sum, subject) => sum + subject.neuronCount, 0);
-  const connectionTotal = subjects.reduce((sum, subject) => sum + subject.connectionCount, 0);
-  const average = neuronTotal === 0 ? 0 : connectionTotal / neuronTotal;
-  const barMax = Math.max(neuronTotal, connectionTotal, 1);
-
   const openCreate = () => setShowCreate(true);
 
   return (
@@ -102,17 +97,6 @@ export function Dashboard({
 
           <RecentActivity neurons={neurons} subjects={subjects} onOpenSubject={onOpenSubject} />
         </div>
-
-        <section className="nm-network">
-          <h2 className="nm-panel-title">Tổng quan mạng lưới</h2>
-          <div className="nm-network-rows">
-            <NetworkBar label="Tổng neuron" value={neuronTotal} max={barMax} />
-            <NetworkBar label="Tổng kết nối" value={connectionTotal} max={barMax} />
-            <p className="nm-network-average">
-              Trung bình kết nối / neuron: <strong>{average.toFixed(2)}</strong>
-            </p>
-          </div>
-        </section>
       </div>
 
       {showCreate && (
@@ -158,20 +142,5 @@ export function Dashboard({
         </div>
       )}
     </main>
-  );
-}
-
-function NetworkBar({ label, value, max }: { label: string; value: number; max: number }) {
-  const width = `${Math.max(4, Math.round((value / max) * 100))}%`;
-  return (
-    <div className="nm-bar-row">
-      <div className="nm-bar-label">
-        <span>{label}</span>
-        <strong>{value}</strong>
-      </div>
-      <div className="nm-bar-track">
-        <div className="nm-bar-fill" style={{ width }} />
-      </div>
-    </div>
   );
 }

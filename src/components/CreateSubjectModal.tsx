@@ -35,7 +35,7 @@ export function CreateSubjectModal({ onClose, onCreate }: CreateSubjectModalProp
   const handleSubmit = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setError("Tên môn học không được để trống.");
+      setError("Tên không gian không được để trống.");
       nameRef.current?.focus();
       return;
     }
@@ -43,7 +43,7 @@ export function CreateSubjectModal({ onClose, onCreate }: CreateSubjectModalProp
     try {
       await onCreate({ name: trimmedName, description: description.trim(), color });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Không tạo được môn học.");
+      setError(caught instanceof Error ? caught.message : "Không tạo được không gian.");
     } finally {
       setBusy(false);
     }
@@ -53,14 +53,14 @@ export function CreateSubjectModal({ onClose, onCreate }: CreateSubjectModalProp
     <div className="create-subject-overlay fixed inset-0 z-50 grid place-items-center p-4" onClick={onClose}>
       <section className="create-subject-modal" onClick={(event) => event.stopPropagation()}>
         <div className="create-subject-header flex items-center justify-between">
-          <h2 className="create-subject-title font-fancy">Tạo môn học mới</h2>
-          <button onClick={onClose} className="rounded-md p-2 text-slate-400 hover:bg-white/5 hover:text-white" aria-label="Đóng">
+          <h2 className="create-subject-title">Tạo không gian mới</h2>
+          <button onClick={onClose} className="create-subject-close" aria-label="Đóng">
             <X size={18} />
           </button>
         </div>
 
         <label className="block">
-          <span className="create-subject-label">Tên môn học *</span>
+          <span className="create-subject-label">Tên không gian *</span>
           <input
             ref={nameRef}
             value={name}
@@ -69,9 +69,9 @@ export function CreateSubjectModal({ onClose, onCreate }: CreateSubjectModalProp
               if (error) setError("");
             }}
             className="create-subject-field create-subject-input"
-            placeholder="Ví dụ: Kinh tế vĩ mô"
+            placeholder="Ví dụ: Công việc, TMU, Dự án XMP..."
           />
-          {error ? <p className="mt-1.5 text-sm text-red-400">{error}</p> : null}
+          {error ? <p className="mt-1.5 text-sm font-semibold text-red-700">{error}</p> : null}
         </label>
 
         <label className="mt-4 block">
@@ -81,7 +81,7 @@ export function CreateSubjectModal({ onClose, onCreate }: CreateSubjectModalProp
             onChange={(event) => setDescription(event.target.value)}
             rows={3}
             className="create-subject-field create-subject-textarea"
-            placeholder="Kiến thức và ghi chú môn Kinh tế vĩ mô."
+            placeholder="Mô tả ngắn về không gian này..."
           />
         </label>
 
@@ -107,7 +107,7 @@ export function CreateSubjectModal({ onClose, onCreate }: CreateSubjectModalProp
             Hủy
           </button>
           <button type="button" onClick={handleSubmit} disabled={busy} className="create-subject-btn create-subject-btn-submit">
-            {busy ? "Đang tạo..." : "Tạo môn học"}
+            {busy ? "Đang tạo..." : "Tạo không gian"}
           </button>
         </div>
       </section>
