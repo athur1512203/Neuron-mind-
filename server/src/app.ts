@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import { connectionRouter } from "./routes/connection.routes";
 import { authRouter } from "./routes/auth.routes";
+import { documentRouter } from "./routes/document.routes";
 import { neuronRouter } from "./routes/neuron.routes";
 import { subjectRouter } from "./routes/subject.routes";
 import { userRouter } from "./routes/user.routes";
@@ -34,6 +35,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/users", userRouter);
 app.use("/api/subjects", subjectRouter);
 app.use("/api/neurons", neuronRouter);
+app.use("/api/documents", documentRouter);
 app.use("/api/connections", connectionRouter);
 
 app.use(notFoundHandler);

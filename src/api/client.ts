@@ -38,20 +38,25 @@ function apiBase() {
   return base.replace(/\/$/, "");
 }
 
+export function apiUrl(path: string) {
+  return `${apiBase()}${path}`;
+}
+
 type ErrorBody = {
   error?: { code?: string; message?: string };
 };
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  if (!headers.has("Content-Type") && init.body) {
+  const isFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
+  if (!headers.has("Content-Type") && init.body && !isFormData) {
     headers.set("Content-Type", "application/json");
   }
 
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${apiBase()}${path}`, { ...init, headers });
+  const response = await fetch(apiUrl(path), { ...init, headers });
 
   if (response.status === 401 && !path.startsWith("/auth/")) {
     clearToken();

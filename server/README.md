@@ -45,6 +45,9 @@ npm run prisma:deploy
 - `GET /api/subjects/:subjectId/graph`
 - `GET|POST /api/subjects/:subjectId/neurons`
 - `GET|PATCH|DELETE /api/neurons/:id`
+- `GET|POST /api/neurons/:neuronId/documents`
+- `GET /api/documents/:documentId/download`
+- `DELETE /api/documents/:documentId`
 - `GET|POST /api/subjects/:subjectId/connections`
 - `DELETE /api/connections/:id`
 
@@ -58,3 +61,7 @@ Các endpoint ngoài health/register/login yêu cầu `Authorization: Bearer <to
 4. Health check dùng `/api/health`.
 
 Không cần PostgreSQL local để build. Migration production dùng `prisma migrate deploy`.
+
+## Document storage
+
+Tài liệu upload được lưu local tại `server/uploads/documents/`. API chỉ trả metadata, không expose đường dẫn filesystem thật.

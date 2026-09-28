@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { documentStorageService } from "../services/document-storage";
 import { requireOwnedNeuron, requireOwnedSubject } from "../services/ownership";
 import { routeParam } from "../utils/request";
 
@@ -40,6 +41,13 @@ export async function updateNeuron(request: Request, response: Response) {
 
 export async function deleteNeuron(request: Request, response: Response) {
   const neuron = await requireOwnedNeuron(routeParam(request, "id"), request.userId);
+  const documents = await prisma.document.findMany({ where: { neuronId: neuron.id } });
   await prisma.neuron.delete({ where: { id: neuron.id } });
+  const deletions = await Promise.allSettled(
+    documents.map((document) => documentStorageService.delete(document.storagePath)),
+  );
+  deletions.forEach((result) => {
+    if (result.status === "rejected") console.error("Failed to delete neuron document file", result.reason);
+  });
   response.status(204).send();
 }

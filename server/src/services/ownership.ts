@@ -23,3 +23,11 @@ export async function requireOwnedConnection(connectionId: string, userId: strin
   if (!connection) throw new AppError(404, "CONNECTION_NOT_FOUND", "Connection not found");
   return connection;
 }
+
+export async function requireOwnedDocument(documentId: string, userId: string) {
+  const document = await prisma.document.findFirst({
+    where: { id: documentId, neuron: { subject: { userId } } },
+  });
+  if (!document) throw new AppError(404, "DOCUMENT_NOT_FOUND", "Document not found");
+  return document;
+}

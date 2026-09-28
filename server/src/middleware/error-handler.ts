@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import type { ErrorRequestHandler, RequestHandler } from "express";
+import multer from "multer";
 import { ZodError } from "zod";
 import { AppError } from "../utils/app-error";
 
@@ -21,6 +22,16 @@ export const errorHandler: ErrorRequestHandler = (error, _request, response, _ne
 
   if (error instanceof AppError) {
     response.status(error.status).json({ error: { code: error.code, message: error.message } });
+    return;
+  }
+
+  if (error instanceof multer.MulterError) {
+    if (error.code === "LIMIT_FILE_SIZE") {
+      response.status(413).json({ error: { code: "FILE_TOO_LARGE", message: "Tài liệu vượt quá giới hạn 50MB" } });
+      return;
+    }
+
+    response.status(400).json({ error: { code: error.code, message: error.message } });
     return;
   }
 

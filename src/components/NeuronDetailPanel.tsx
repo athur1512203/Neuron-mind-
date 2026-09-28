@@ -16,6 +16,15 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { apiMessage } from "../api/client";
+import {
+  deleteDocument as deleteDocumentApi,
+  downloadDocument as downloadDocumentApi,
+  listDocuments as listDocumentsApi,
+  uploadDocument as uploadDocumentApi,
+  validateDocumentFile,
+  type DocumentMeta,
+} from "../api/documents";
 import type { Neuron, NeuronConnection } from "../types";
 
 type DetailTab = "overview" | "links" | "ideas" | "custom";
@@ -49,6 +58,11 @@ export function NeuronDetailPanel({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [documentNotice, setDocumentNotice] = useState("");
+  const [documents, setDocuments] = useState<DocumentMeta[]>([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsUploading, setDocumentsUploading] = useState(false);
+  const [documentDeletingId, setDocumentDeletingId] = useState<string | null>(null);
+  const [documentDownloadingId, setDocumentDownloadingId] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
@@ -82,6 +96,28 @@ export function NeuronDetailPanel({
   }, [neuron.id]);
 
   useEffect(() => {
+    let active = true;
+
+    setDocuments([]);
+    setDocumentsLoading(true);
+    setDocumentNotice("");
+    listDocumentsApi(neuron.id)
+      .then((nextDocuments) => {
+        if (active) setDocuments(nextDocuments);
+      })
+      .catch((error) => {
+        if (active) setDocumentNotice(apiMessage(error, "Không tải được danh sách tài liệu."));
+      })
+      .finally(() => {
+        if (active) setDocumentsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [neuron.id]);
+
+  useEffect(() => {
     if (!editing) setDraft(neuron);
   }, [editing, neuron]);
 
@@ -110,6 +146,67 @@ export function NeuronDetailPanel({
     const urls = Array.from(files).map((file) => URL.createObjectURL(file));
     setDraft((current) => ({ ...current, [kind]: [...current[kind], ...urls] }));
     setEditing(true);
+  };
+
+  const refreshDocuments = async () => {
+    const nextDocuments = await listDocumentsApi(neuron.id);
+    setDocuments(nextDocuments);
+  };
+
+  const uploadDocuments = async (files: FileList | null) => {
+    const selectedFiles = Array.from(files ?? []);
+    if (!selectedFiles.length || documentsUploading) return;
+
+    const invalidFile = selectedFiles
+      .map((file) => ({ file, message: validateDocumentFile(file) }))
+      .find((result) => result.message);
+    if (invalidFile) {
+      setDocumentNotice(`${invalidFile.file.name}: ${invalidFile.message}`);
+      return;
+    }
+
+    setDocumentsUploading(true);
+    setDocumentNotice("");
+    try {
+      for (const file of selectedFiles) {
+        await uploadDocumentApi(neuron.id, file);
+      }
+      await refreshDocuments();
+      setDocumentNotice("Tải tài liệu thành công");
+    } catch (error) {
+      setDocumentNotice(apiMessage(error, "Không tải được tài liệu."));
+    } finally {
+      setDocumentsUploading(false);
+    }
+  };
+
+  const removeDocument = async (document: DocumentMeta) => {
+    if (documentDeletingId || !window.confirm("Bạn có chắc muốn xóa tài liệu này?")) return;
+
+    setDocumentDeletingId(document.id);
+    setDocumentNotice("");
+    try {
+      await deleteDocumentApi(document.id);
+      await refreshDocuments();
+    } catch (error) {
+      setDocumentNotice(apiMessage(error, "Không xóa được tài liệu."));
+    } finally {
+      setDocumentDeletingId(null);
+    }
+  };
+
+  const downloadDocument = async (document: DocumentMeta) => {
+    if (documentDownloadingId) return;
+
+    setDocumentDownloadingId(document.id);
+    setDocumentNotice("");
+    try {
+      await downloadDocumentApi(document);
+    } catch (error) {
+      setDocumentNotice(apiMessage(error, "Không tải xuống được tài liệu."));
+    } finally {
+      setDocumentDownloadingId(null);
+    }
   };
 
   const confirmDelete = async () => {
@@ -148,13 +245,20 @@ export function NeuronDetailPanel({
               allConnections={connections}
               quickNote={quickNote}
               documentNotice={documentNotice}
+              documents={documents}
+              documentsLoading={documentsLoading}
+              documentsUploading={documentsUploading}
+              documentDeletingId={documentDeletingId}
+              documentDownloadingId={documentDownloadingId}
               onDraftChange={setDraft}
               onSelectNeuron={onSelectNeuron}
               onShowAllLinks={() => setTab("links")}
               onQuickNoteChange={updateQuickNote}
               onSaveQuickNote={saveQuickNote}
               onPickDocuments={() => documentInputRef.current?.click()}
-              onUnsupportedDocuments={() => setDocumentNotice("Chưa có API tải tài liệu. Các file chưa được gửi hoặc lưu.")}
+              onDocumentFiles={uploadDocuments}
+              onDownloadDocument={downloadDocument}
+              onDeleteDocument={removeDocument}
             />
           ) : null}
           {tab === "links" ? (
@@ -192,7 +296,7 @@ export function NeuronDetailPanel({
           accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md"
           className="hidden"
           onChange={(event) => {
-            if (event.target.files?.length) setDocumentNotice("Chưa có API tải tài liệu. Các file chưa được gửi hoặc lưu.");
+            void uploadDocuments(event.target.files);
             event.target.value = "";
           }}
         />
@@ -262,7 +366,7 @@ function NeuronTabs({ tab, onChange }: { tab: DetailTab; onChange: (tab: DetailT
   );
 }
 
-function NeuronOverview({ neuron, draft, editing, connectionCount, linkedNeurons, allConnections, quickNote, documentNotice, onDraftChange, onSelectNeuron, onShowAllLinks, onQuickNoteChange, onSaveQuickNote, onPickDocuments, onUnsupportedDocuments }: {
+function NeuronOverview({ neuron, draft, editing, connectionCount, linkedNeurons, allConnections, quickNote, documentNotice, documents, documentsLoading, documentsUploading, documentDeletingId, documentDownloadingId, onDraftChange, onSelectNeuron, onShowAllLinks, onQuickNoteChange, onSaveQuickNote, onPickDocuments, onDocumentFiles, onDownloadDocument, onDeleteDocument }: {
   neuron: Neuron;
   draft: Neuron;
   editing: boolean;
@@ -271,13 +375,20 @@ function NeuronOverview({ neuron, draft, editing, connectionCount, linkedNeurons
   allConnections: NeuronConnection[];
   quickNote: string;
   documentNotice: string;
+  documents: DocumentMeta[];
+  documentsLoading: boolean;
+  documentsUploading: boolean;
+  documentDeletingId: string | null;
+  documentDownloadingId: string | null;
   onDraftChange: (neuron: Neuron) => void;
   onSelectNeuron: (id: string) => void;
   onShowAllLinks: () => void;
   onQuickNoteChange: (value: string) => void;
   onSaveQuickNote: () => void;
   onPickDocuments: () => void;
-  onUnsupportedDocuments: () => void;
+  onDocumentFiles: (files: FileList | null) => void;
+  onDownloadDocument: (document: DocumentMeta) => void;
+  onDeleteDocument: (document: DocumentMeta) => void;
 }) {
   const ideasCount = [neuron.keyPoints, neuron.memoryMethod, neuron.application].filter((value) => value.trim()).length;
   const createdTime = new Date(neuron.createdAt).getTime();
@@ -296,7 +407,7 @@ function NeuronOverview({ neuron, draft, editing, connectionCount, linkedNeurons
       <BrutalCard title="Thống kê nhanh">
         <div className="grid grid-cols-2 gap-3">
           <Stat value={connectionCount} label="Kết nối trực tiếp" />
-          <Stat value={0} label="Tài liệu" />
+          <Stat value={documents.length} label="Tài liệu" />
           <Stat value={ideasCount} label="Ý tưởng" />
           <Stat value={activeDays} label="Ngày hoạt động" />
         </div>
@@ -306,7 +417,18 @@ function NeuronOverview({ neuron, draft, editing, connectionCount, linkedNeurons
         <LinkedNeuronList linkedNeurons={linkedNeurons.slice(0, 3)} allConnections={allConnections} onSelectNeuron={onSelectNeuron} />
       </BrutalCard>
 
-      <NeuronDocuments notice={documentNotice} onPickDocuments={onPickDocuments} onUnsupportedDocuments={onUnsupportedDocuments} />
+      <NeuronDocuments
+        notice={documentNotice}
+        documents={documents}
+        loading={documentsLoading}
+        uploading={documentsUploading}
+        deletingId={documentDeletingId}
+        downloadingId={documentDownloadingId}
+        onPickDocuments={onPickDocuments}
+        onDocumentFiles={onDocumentFiles}
+        onDownloadDocument={onDownloadDocument}
+        onDeleteDocument={onDeleteDocument}
+      />
       <QuickNote value={quickNote} onChange={onQuickNoteChange} onSave={onSaveQuickNote} />
     </div>
   );
@@ -345,7 +467,29 @@ function LinkedNeuronList({ linkedNeurons, allConnections, onSelectNeuron, full 
   );
 }
 
-function NeuronDocuments({ notice, onPickDocuments, onUnsupportedDocuments }: { notice: string; onPickDocuments: () => void; onUnsupportedDocuments: () => void }) {
+function NeuronDocuments({
+  notice,
+  documents,
+  loading,
+  uploading,
+  deletingId,
+  downloadingId,
+  onPickDocuments,
+  onDocumentFiles,
+  onDownloadDocument,
+  onDeleteDocument,
+}: {
+  notice: string;
+  documents: DocumentMeta[];
+  loading: boolean;
+  uploading: boolean;
+  deletingId: string | null;
+  downloadingId: string | null;
+  onPickDocuments: () => void;
+  onDocumentFiles: (files: FileList | null) => void;
+  onDownloadDocument: (document: DocumentMeta) => void;
+  onDeleteDocument: (document: DocumentMeta) => void;
+}) {
   return (
     <BrutalCard title="Tài liệu" action={<button type="button" onClick={onPickDocuments} className="brutal-button brutal-button-compact"><Plus size={15} />Thêm tài liệu</button>}>
       <button
@@ -354,7 +498,7 @@ function NeuronDocuments({ notice, onPickDocuments, onUnsupportedDocuments }: { 
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => {
           event.preventDefault();
-          if (event.dataTransfer.files.length) onUnsupportedDocuments();
+          onDocumentFiles(event.dataTransfer.files);
         }}
         className="brutal-upload-zone"
       >
@@ -363,8 +507,29 @@ function NeuronDocuments({ notice, onPickDocuments, onUnsupportedDocuments }: { 
         <span>PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, MD</span>
         <small>Tối đa 50MB</small>
       </button>
+      {uploading ? <p className="mt-3 border-2 border-black bg-white p-3 text-xs font-bold">Uploading...</p> : null}
       {notice ? <p className="mt-3 border-2 border-black bg-amber-100 p-3 text-xs font-bold">{notice}</p> : null}
-      <div className="mt-4 text-sm font-semibold text-[#666666]">Chưa có tài liệu.</div>
+      {loading ? <div className="mt-4 text-sm font-semibold text-[#666666]">Đang tải tài liệu...</div> : null}
+      {!loading && !documents.length ? <div className="mt-4 text-sm font-semibold text-[#666666]">Chưa có tài liệu.</div> : null}
+      {!loading && documents.length ? (
+        <div className="mt-4 space-y-3">
+          {documents.map((document) => (
+            <div key={document.id} className="brutal-file-row">
+              <FileText size={18} />
+              <span className="min-w-0 flex-1">
+                <strong className="block truncate">{document.originalName}</strong>
+                <small className="block text-xs text-[#666666]">{formatFileSize(document.size)} • {formatDate(document.createdAt)}</small>
+              </span>
+              <button type="button" onClick={() => onDownloadDocument(document)} disabled={Boolean(downloadingId)} className="brutal-link">
+                {downloadingId === document.id ? "Đang tải..." : "Tải xuống"}
+              </button>
+              <button type="button" onClick={() => onDeleteDocument(document)} disabled={Boolean(deletingId)} className="brutal-link text-red-700">
+                {deletingId === document.id ? "Đang xóa..." : "Xóa"}
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </BrutalCard>
   );
 }
@@ -411,4 +576,10 @@ function NeuronCustom({ neuron, editing, onPickImages, onPickAudio, onRemoveImag
 function formatDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "Không xác định" : new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(date);
+}
+
+function formatFileSize(size: number) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
