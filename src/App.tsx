@@ -286,6 +286,7 @@ export default function App() {
           subjects={subjects}
           loading={subjectsLoading}
           error={subjectsError}
+          neurons={neurons}
           onOpenSubject={openSubject}
           onCreateSubject={createSubject}
           onDeleteSubject={removeSubject}
@@ -299,6 +300,7 @@ export default function App() {
           subjects={subjects}
           loading={subjectsLoading}
           error={subjectsError}
+          neurons={neurons}
           onOpenSubject={openSubject}
           onCreateSubject={createSubject}
           onDeleteSubject={removeSubject}
