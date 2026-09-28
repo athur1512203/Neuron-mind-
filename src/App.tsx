@@ -263,9 +263,9 @@ export default function App() {
       await deleteConnectionApi(connectionId);
       setConnections((current) => current.filter((connection) => connection.id !== connectionId));
       if (selectedSubject) bumpCounts(selectedSubject.id, 0, -1);
-      setSelection(null);
     } catch (error) {
       setNotice(apiMessage(error, "Không xóa được liên kết."));
+      throw error;
     }
   };
 

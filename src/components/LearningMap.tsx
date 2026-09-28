@@ -1,5 +1,5 @@
-import { ArrowLeft, Link2, Maximize2, Minimize2, Plus, RotateCcw, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Link2, Maximize2, Minimize2, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject } from "../types";
 import { getConnectionCount } from "../utils/neuron";
 import { CreateNeuronModal } from "./CreateNeuronModal";
@@ -26,7 +26,7 @@ type LearningMapProps = {
   onSaveNote: (neuronId: string, note: string) => Promise<void>;
   onDeleteNeuron: (neuronId: string) => Promise<void>;
   onUpdateConnection: (connection: NeuronConnection) => void;
-  onDeleteConnection: (connectionId: string) => void;
+  onDeleteConnection: (connectionId: string) => Promise<void>;
 };
 
 const NEURON_SPACING_KEY = "neuromind_neuron_spacing";
@@ -61,6 +61,13 @@ export function LearningMap({
 }: LearningMapProps) {
   const [showCreateNeuron, setShowCreateNeuron] = useState(false);
   const [connectionMode, setConnectionMode] = useState(false);
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<NeuronConnection | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [toast, setToast] = useState("");
+  const deletingRef = useRef(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const [query, setQuery] = useState("");
   const [focusNeuronId, setFocusNeuronId] = useState<string | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
@@ -77,7 +84,60 @@ export function LearningMap({
   }, [neurons, query]);
 
   const selectedNeuron = selection?.type === "neuron" ? neurons.find((neuron) => neuron.id === selection.id) : null;
-  const selectedConnection = selection?.type === "connection" ? connections.find((connection) => connection.id === selection.id) : null;
+  const selectedConnection = connections.find((connection) => connection.id === selectedConnectionId) ?? null;
+
+  useEffect(() => {
+    setSelectedConnectionId(null);
+    setPendingDelete(null);
+    setToast("");
+  }, [subject.id]);
+
+  useEffect(() => {
+    if (!selectedConnection) setSelectedConnectionId(null);
+  }, [selectedConnection]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(""), 3000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  useEffect(() => {
+    if (pendingDelete) dialogRef.current?.showModal();
+    else dialogRef.current?.close();
+  }, [pendingDelete]);
+
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (event.defaultPrevented || event.repeat || event.isComposing || connectionMode || pendingDelete || !selectedConnection) return;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.closest("input, textarea, select, [contenteditable], [role='textbox'], dialog"))) return;
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      event.preventDefault();
+      setDeleteError("");
+      setPendingDelete(selectedConnection);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [selectedConnection, connectionMode, pendingDelete]);
+
+  const confirmDeleteConnection = async () => {
+    if (!pendingDelete || deletingRef.current) return;
+    deletingRef.current = true;
+    setDeleteBusy(true);
+    setDeleteError("");
+    try {
+      await onDeleteConnection(pendingDelete.id);
+      setSelectedConnectionId((current) => current === pendingDelete.id ? null : current);
+      setPendingDelete(null);
+      setToast("Đã xóa liên kết");
+    } catch {
+      setDeleteError("Không thể xóa liên kết. Vui lòng thử lại.");
+    } finally {
+      deletingRef.current = false;
+      setDeleteBusy(false);
+    }
+  };
   const focusNeuron = (neuronId: string) => {
     setFocusNeuronId(neuronId);
     onSelectNeuron(neuronId);
@@ -181,6 +241,12 @@ export function LearningMap({
               {mapExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
             <div className="relative h-full min-h-0">
+            {selectedConnection && !connectionMode ? (
+              <button type="button" className="brutal-button brutal-button-danger absolute left-2 top-2 z-10" onClick={() => { setDeleteError(""); setPendingDelete(selectedConnection); }}>
+                <Trash2 size={16} />Xóa liên kết
+              </button>
+            ) : null}
+            {toast ? <div role="status" className="pointer-events-none absolute bottom-4 left-4 z-20 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm text-slate-800 shadow">{toast}</div> : null}
             <NeuralCanvas
               neurons={neurons}
               connections={connections}
@@ -190,7 +256,7 @@ export function LearningMap({
               resetSignal={resetSignal}
               connectionMode={connectionMode}
               onSelectNeuron={onSelectNeuron}
-              onSelectConnection={onSelectConnection}
+              onSelectConnection={(id) => setSelectedConnectionId(id || null)}
               onLayoutSettled={onLayoutSettled}
               onCreateConnection={onCreateConnection}
               neuronSpacing={neuronSpacing}
@@ -248,6 +314,15 @@ export function LearningMap({
         </div>
       </section>
 
+      <dialog ref={dialogRef} aria-labelledby="delete-connection-title" className="brutal-dialog m-auto backdrop:bg-black/60" onCancel={(event) => { event.preventDefault(); if (!deleteBusy) setPendingDelete(null); }}>
+        <h2 id="delete-connection-title" className="text-xl font-bold">Xóa liên kết?</h2>
+        <p className="mt-3 break-words">Bạn có chắc muốn xóa liên kết giữa {neurons.find((neuron) => neuron.id === pendingDelete?.sourceNeuronId)?.name} và {neurons.find((neuron) => neuron.id === pendingDelete?.targetNeuronId)?.name}?</p>
+        {deleteError ? <p role="alert" className="mt-3 text-sm text-red-700">{deleteError}</p> : null}
+        <div className="mt-5 flex justify-end gap-3">
+          <button type="button" autoFocus disabled={deleteBusy} className="brutal-button" onClick={() => setPendingDelete(null)}>Hủy</button>
+          <button type="button" disabled={deleteBusy} className="brutal-button brutal-button-danger" onClick={() => void confirmDeleteConnection()}><Trash2 size={16} />{deleteBusy ? "Đang xóa..." : "Xóa liên kết"}</button>
+        </div>
+      </dialog>
       {showCreateNeuron && (
         <CreateNeuronModal
           subjectId={subject.id}

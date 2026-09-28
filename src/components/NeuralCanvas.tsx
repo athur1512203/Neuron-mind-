@@ -566,9 +566,12 @@ export function NeuralCanvas({
                   y2={target.y}
                   stroke="transparent"
                   strokeWidth={12}
+                  pointerEvents={connectionMode ? "none" : "stroke"}
                   vectorEffect="non-scaling-stroke"
+                  onPointerDown={(event) => event.stopPropagation()}
                   onClick={(event) => {
                     event.stopPropagation();
+                    if (connectionMode) return;
                     onSelectConnection(connection.id);
                   }}
                   className="cursor-pointer"

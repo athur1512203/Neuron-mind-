@@ -88,10 +88,6 @@ export function Dashboard({
                   }}
                 />
               ))}
-              <button type="button" className="nm-create-card" onClick={openCreate}>
-                <Plus size={28} />
-                Tạo không gian
-              </button>
             </div>
           </section>
 

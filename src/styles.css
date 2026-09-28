@@ -1983,24 +1983,6 @@ textarea:focus-visible {
   background: rgba(17, 17, 17, 0.06);
 }
 
-.nm-create-card {
-  display: grid;
-  min-height: 148px;
-  place-content: center;
-  gap: 8px;
-  border: 2px dashed var(--nm-black);
-  border-radius: 6px;
-  background: #fffdf4;
-  color: var(--nm-text);
-  font-weight: 800;
-  cursor: pointer;
-  transition: background 150ms ease;
-}
-
-.nm-create-card:hover {
-  background: var(--nm-blue);
-}
-
 .nm-activity-list {
   display: grid;
   gap: 10px;
