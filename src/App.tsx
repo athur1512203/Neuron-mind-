@@ -8,7 +8,6 @@ import type { ApiUser } from "./api/mappers";
 import { AuthScreen } from "./components/AuthScreen";
 import { Dashboard } from "./components/Dashboard";
 import { LearningMap } from "./components/LearningMap";
-import { NeuronConnections } from "./components/NeuronConnections";
 import { Settings } from "./components/Settings";
 import { Sidebar } from "./components/Sidebar";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject, ViewName } from "./types";
@@ -66,7 +65,7 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (!user || (activeView !== "map" && activeView !== "connections") || !selectedSubjectId) return;
+    if (!user || activeView !== "map" || !selectedSubjectId) return;
     let cancelled = false;
     setGraphLoading(true);
     setGraphError(null);
@@ -150,21 +149,22 @@ export default function App() {
     setNotice(null);
   };
 
-  const createConnection = async (sourceId: string, targetId: string, explanation: string) => {
+  const createConnection = async (sourceId: string, targetId: string) => {
     if (!selectedSubject || sourceId === targetId) return;
     const duplicate = subjectConnections.some((connection) =>
       areSameConnection(sourceId, targetId, connection.sourceNeuronId, connection.targetNeuronId),
     );
-    if (duplicate) throw new Error("Hai neuron này đã được liên kết.");
-    void explanation;
+    if (duplicate) {
+      setNotice("Neuron này đã được liên kết.");
+      return;
+    }
     try {
       const created = await createConnectionApi(selectedSubject.id, sourceId, targetId);
       setConnections((current) => [...current, created]);
       bumpCounts(selectedSubject.id, 0, 1);
-      setNotice(null);
+      setNotice("Đã tạo liên kết");
     } catch (error) {
       setNotice(apiMessage(error, "Không tạo được liên kết."));
-      throw error;
     }
   };
 
@@ -307,18 +307,6 @@ export default function App() {
         />
       );
     }
-    if (activeView === "connections") {
-      return (
-        <NeuronConnections
-          subject={selectedSubject}
-          neurons={subjectNeurons}
-          connections={subjectConnections}
-          loading={graphLoading}
-          error={graphError}
-          onCreateConnection={createConnection}
-        />
-      );
-    }
     return (
       <LearningMap
         subject={selectedSubject}
@@ -338,6 +326,7 @@ export default function App() {
         onSelectConnection={(connectionId) => setSelection(connectionId ? { type: "connection", id: connectionId } : null)}
         onLayoutSettled={persistLayout}
         onCreateNeuron={addNeuron}
+        onCreateConnection={createConnection}
         onUpdateNeuron={persistNeuron}
         onSaveNote={persistNote}
         onDeleteNeuron={deleteNeuron}

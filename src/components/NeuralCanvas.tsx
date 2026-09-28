@@ -21,6 +21,8 @@ type NeuralCanvasProps = {
   onSelectNeuron: (neuronId: string) => void;
   onSelectConnection: (connectionId: string) => void;
   onLayoutSettled: (positions: Record<string, Position3D>) => void;
+  onCreateConnection?: (sourceId: string, targetId: string) => void;
+  connectionMode?: boolean;
   neuronSpacing: number;
 };
 
@@ -66,6 +68,8 @@ export function NeuralCanvas({
   onSelectNeuron,
   onSelectConnection,
   onLayoutSettled,
+  onCreateConnection,
+  connectionMode = false,
   neuronSpacing,
 }: NeuralCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -88,9 +92,15 @@ export function NeuralCanvas({
   const initialFitRef = useRef(false);
   const panRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(null);
   const nodeDragRef = useRef<{ pointerId: number; nodeId: string } | null>(null);
+  const connectRef = useRef<{ pointerId: number; sourceId: string } | null>(null);
+  const previewLineRef = useRef<SVGLineElement | null>(null);
+  const connectionModeRef = useRef(connectionMode);
+  const onCreateConnectionRef = useRef(onCreateConnection);
   const persistTimerRef = useRef<number | null>(null);
 
   onLayoutSettledRef.current = onLayoutSettled;
+  connectionModeRef.current = connectionMode;
+  onCreateConnectionRef.current = onCreateConnection;
 
   const neuronTopology = useMemo(() => neurons.map((neuron) => neuron.id).join("|"), [neurons]);
   const connectionTopology = useMemo(
@@ -290,6 +300,25 @@ export function NeuralCanvas({
   }, [selectedConnectionId, selectedNeuronId]);
 
   useEffect(() => {
+    if (connectionMode) return;
+    connectRef.current = null;
+    previewLineRef.current?.setAttribute("opacity", "0");
+  }, [connectionMode]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      connectRef.current = null;
+      previewLineRef.current?.setAttribute("opacity", "0");
+      hoveredNodeIdRef.current = null;
+      applyHighlight(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     if (lastResetRef.current === resetSignal) return;
     lastResetRef.current = resetSignal;
     fitGraph();
@@ -315,6 +344,73 @@ export function NeuralCanvas({
       x: (clientX - rect.left - viewport.width / 2 - transform.x) / transform.k,
       y: (clientY - rect.top - viewport.height / 2 - transform.y) / transform.k,
     };
+  };
+
+  const findNodeAt = (x: number, y: number, excludeId?: string): GraphNode | null => {
+    let match: GraphNode | null = null;
+    let best = Infinity;
+    for (const node of nodesRef.current) {
+      if (node.id === excludeId) continue;
+      const distance = Math.hypot((node.x ?? 0) - x, (node.y ?? 0) - y);
+      const hitRadius = node.radius + 14;
+      if (distance <= hitRadius && distance < best) {
+        match = node;
+        best = distance;
+      }
+    }
+    return match;
+  };
+
+  const updatePreviewLine = (x1: number, y1: number, x2: number, y2: number, visible: boolean) => {
+    const line = previewLineRef.current;
+    if (!line) return;
+    line.setAttribute("x1", String(x1));
+    line.setAttribute("y1", String(y1));
+    line.setAttribute("x2", String(x2));
+    line.setAttribute("y2", String(y2));
+    line.setAttribute("opacity", visible ? "0.7" : "0");
+  };
+
+  const cancelConnect = () => {
+    connectRef.current = null;
+    updatePreviewLine(0, 0, 0, 0, false);
+    hoveredNodeIdRef.current = null;
+    applyHighlight(null);
+  };
+
+  const beginConnect = (event: ReactPointerEvent<SVGGElement>, nodeId: string) => {
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const source = nodesByIdRef.current.get(nodeId);
+    if (!source) return;
+    const point = pointerToGraph(event.clientX, event.clientY);
+    connectRef.current = { pointerId: event.pointerId, sourceId: nodeId };
+    hoveredNodeIdRef.current = nodeId;
+    applyHighlight(nodeId);
+    updatePreviewLine(source.x ?? 0, source.y ?? 0, point.x, point.y, true);
+  };
+
+  const moveConnect = (event: ReactPointerEvent<SVGGElement>, nodeId: string) => {
+    const drag = connectRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || drag.sourceId !== nodeId) return;
+    event.stopPropagation();
+    const source = nodesByIdRef.current.get(drag.sourceId);
+    if (!source) return;
+    const point = pointerToGraph(event.clientX, event.clientY);
+    const target = findNodeAt(point.x, point.y, drag.sourceId);
+    hoveredNodeIdRef.current = target?.id ?? drag.sourceId;
+    applyHighlight(hoveredNodeIdRef.current);
+    updatePreviewLine(source.x ?? 0, source.y ?? 0, target ? (target.x ?? point.x) : point.x, target ? (target.y ?? point.y) : point.y, true);
+  };
+
+  const endConnect = (event: ReactPointerEvent<SVGGElement>, nodeId: string) => {
+    const drag = connectRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || drag.sourceId !== nodeId) return;
+    event.stopPropagation();
+    const point = pointerToGraph(event.clientX, event.clientY);
+    const target = findNodeAt(point.x, point.y, drag.sourceId);
+    cancelConnect();
+    if (target) onCreateConnectionRef.current?.(drag.sourceId, target.id);
   };
 
   const beginPan = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -414,7 +510,7 @@ export function NeuralCanvas({
       <svg
         width="100%"
         height="100%"
-        className="block cursor-grab touch-none select-none active:cursor-grabbing"
+        className={`block touch-none select-none ${connectionMode ? "cursor-crosshair" : "cursor-grab active:cursor-grabbing"}`}
         onPointerDown={beginPan}
         onPointerMove={movePan}
         onPointerUp={endPan}
@@ -426,6 +522,18 @@ export function NeuralCanvas({
         }}
       >
         <g ref={viewportGroupRef}>
+          <line
+            ref={previewLineRef}
+            x1={0}
+            y1={0}
+            x2={0}
+            y2={0}
+            stroke="#2563eb"
+            strokeWidth={1.4}
+            opacity={0}
+            vectorEffect="non-scaling-stroke"
+            className="pointer-events-none"
+          />
           {connections.map((connection) => {
             const source = renderPositions[connection.sourceNeuronId] ?? { x: 0, y: 0 };
             const target = renderPositions[connection.targetNeuronId] ?? { x: 0, y: 0 };
@@ -481,22 +589,36 @@ export function NeuralCanvas({
                   else nodeElementRefs.current.delete(neuron.id);
                 }}
                 transform={`translate(${position.x} ${position.y})`}
-                className="cursor-grab active:cursor-grabbing"
+                className={connectionMode ? "cursor-crosshair" : "cursor-grab active:cursor-grabbing"}
                 onPointerEnter={() => {
+                  if (connectRef.current) return;
                   hoveredNodeIdRef.current = neuron.id;
                   applyHighlight(neuron.id);
                 }}
                 onPointerLeave={() => {
-                  if (nodeDragRef.current?.nodeId === neuron.id) return;
+                  if (nodeDragRef.current?.nodeId === neuron.id || connectRef.current) return;
                   hoveredNodeIdRef.current = null;
                   applyHighlight(null);
                 }}
-                onPointerDown={(event) => beginNodeDrag(event, neuron.id)}
-                onPointerMove={(event) => moveNodeDrag(event, neuron.id)}
-                onPointerUp={(event) => endNodeDrag(event, neuron.id)}
-                onPointerCancel={(event) => endNodeDrag(event, neuron.id)}
+                onPointerDown={(event) => {
+                  if (connectionModeRef.current) beginConnect(event, neuron.id);
+                  else beginNodeDrag(event, neuron.id);
+                }}
+                onPointerMove={(event) => {
+                  if (connectionModeRef.current) moveConnect(event, neuron.id);
+                  else moveNodeDrag(event, neuron.id);
+                }}
+                onPointerUp={(event) => {
+                  if (connectionModeRef.current) endConnect(event, neuron.id);
+                  else endNodeDrag(event, neuron.id);
+                }}
+                onPointerCancel={(event) => {
+                  if (connectionModeRef.current) endConnect(event, neuron.id);
+                  else endNodeDrag(event, neuron.id);
+                }}
                 onClick={(event) => {
                   event.stopPropagation();
+                  if (connectionModeRef.current) return;
                   onSelectNeuron(neuron.id);
                 }}
               >

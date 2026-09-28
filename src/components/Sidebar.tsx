@@ -1,4 +1,4 @@
-import { Brain, Home, Link2, Settings, Share2 } from "lucide-react";
+import { Brain, Home, Settings, Share2 } from "lucide-react";
 import type { ViewName } from "../types";
 
 type SidebarProps = {
@@ -9,7 +9,6 @@ type SidebarProps = {
 const items: Array<{ id: ViewName; label: string; icon: typeof Home }> = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "map", label: "Sơ đồ", icon: Share2 },
-  { id: "connections", label: "Liên kết", icon: Link2 },
   { id: "settings", label: "Cài đặt", icon: Settings },
 ];
 

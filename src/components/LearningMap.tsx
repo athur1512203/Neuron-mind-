@@ -1,4 +1,4 @@
-import { ArrowLeft, Maximize2, Minimize2, Plus, RotateCcw, Search } from "lucide-react";
+import { ArrowLeft, Link2, Maximize2, Minimize2, Plus, RotateCcw, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject } from "../types";
 import { getConnectionCount } from "../utils/neuron";
@@ -21,6 +21,7 @@ type LearningMapProps = {
   graphLoading?: boolean;
   graphError?: string | null;
   onCreateNeuron: (neuron: Neuron) => void | Promise<void>;
+  onCreateConnection: (sourceId: string, targetId: string) => void | Promise<void>;
   onUpdateNeuron: (neuron: Neuron) => void;
   onSaveNote: (neuronId: string, note: string) => Promise<void>;
   onDeleteNeuron: (neuronId: string) => Promise<void>;
@@ -51,6 +52,7 @@ export function LearningMap({
   onSelectConnection,
   onLayoutSettled,
   onCreateNeuron,
+  onCreateConnection,
   onUpdateNeuron,
   onSaveNote,
   onDeleteNeuron,
@@ -58,6 +60,7 @@ export function LearningMap({
   onDeleteConnection,
 }: LearningMapProps) {
   const [showCreateNeuron, setShowCreateNeuron] = useState(false);
+  const [connectionMode, setConnectionMode] = useState(false);
   const [query, setQuery] = useState("");
   const [focusNeuronId, setFocusNeuronId] = useState<string | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
@@ -142,6 +145,18 @@ export function LearningMap({
                 <span className="btn-front"><Plus />Tạo neuron</span>
               </button>
               <button
+                type="button"
+                onClick={() => setConnectionMode((value) => !value)}
+                className={`action-3d-button ${connectionMode ? "" : "secondary"}`}
+              >
+                <span className="btn-shadow" />
+                <span className="btn-edge" />
+                <span className="btn-front">
+                  <Link2 />
+                  {connectionMode ? "Đang tạo liên kết" : "Tạo liên kết"}
+                </span>
+              </button>
+              <button
                 onClick={() => setResetSignal((value) => value + 1)}
                 className="action-3d-button secondary"
               >
@@ -173,9 +188,11 @@ export function LearningMap({
               selectedConnectionId={selectedConnection?.id ?? null}
               focusNeuronId={focusNeuronId}
               resetSignal={resetSignal}
+              connectionMode={connectionMode}
               onSelectNeuron={onSelectNeuron}
               onSelectConnection={onSelectConnection}
               onLayoutSettled={onLayoutSettled}
+              onCreateConnection={onCreateConnection}
               neuronSpacing={neuronSpacing}
             />
             {graphLoading ? (
