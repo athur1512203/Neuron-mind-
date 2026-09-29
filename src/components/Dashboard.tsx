@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Layers, Plus, Search } from "lucide-react";
-import type { Neuron, Subject } from "../types";
+import type { Subject } from "../types";
 import { CreateSubjectModal } from "./CreateSubjectModal";
 import { DashboardStats } from "./DashboardStats";
 import { RecentActivity } from "./RecentActivity";
@@ -8,17 +8,15 @@ import { SubjectCard } from "./SubjectCard";
 
 type DashboardProps = {
   subjects: Subject[];
-  neurons?: Neuron[];
   loading?: boolean;
   error?: string | null;
   onOpenSubject: (subjectId: string) => void;
-  onCreateSubject: (payload: { name: string; description: string; color: string }) => Promise<void>;
+  onCreateSubject: (payload: { name: string; color: string }) => Promise<void>;
   onDeleteSubject: (subjectId: string) => Promise<void>;
 };
 
 export function Dashboard({
   subjects,
-  neurons = [],
   loading,
   error,
   onOpenSubject,
@@ -38,6 +36,7 @@ export function Dashboard({
   }, [subjects, query]);
 
   const openCreate = () => setShowCreate(true);
+  const isEmpty = !loading && subjects.length === 0;
 
   return (
     <main className="nm-dashboard flex-1 overflow-auto">
@@ -65,33 +64,45 @@ export function Dashboard({
                 <Layers size={18} />
                 Không gian của tôi
               </h2>
-              <label className="nm-search">
-                <Search size={16} aria-hidden="true" />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Tìm không gian..."
-                  aria-label="Tìm không gian"
-                />
-              </label>
+              {!isEmpty ? (
+                <label className="nm-search">
+                  <Search size={16} aria-hidden="true" />
+                  <input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Tìm không gian..."
+                    aria-label="Tìm không gian"
+                  />
+                </label>
+              ) : null}
             </div>
 
-            <div className="nm-workspace-grid">
-              {filteredSubjects.map((subject) => (
-                <SubjectCard
-                  key={subject.id}
-                  subject={subject}
-                  onOpen={onOpenSubject}
-                  onDelete={(item) => {
-                    setDeleteError("");
-                    setPendingDelete(item);
-                  }}
-                />
-              ))}
-            </div>
+            {isEmpty ? (
+              <div className="nm-workspace-empty">
+                <p className="nm-empty">Chưa có Không gian.</p>
+                <button type="button" onClick={openCreate} className="nm-create-button">
+                  <Plus size={18} />
+                  Tạo không gian
+                </button>
+              </div>
+            ) : (
+              <div className="nm-workspace-grid">
+                {filteredSubjects.map((subject) => (
+                  <SubjectCard
+                    key={subject.id}
+                    subject={subject}
+                    onOpen={onOpenSubject}
+                    onDelete={(item) => {
+                      setDeleteError("");
+                      setPendingDelete(item);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </section>
 
-          <RecentActivity neurons={neurons} subjects={subjects} onOpenSubject={onOpenSubject} />
+          {!isEmpty ? <RecentActivity subjects={subjects} onOpenSubject={onOpenSubject} /> : null}
         </div>
       </div>
 

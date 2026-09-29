@@ -2176,6 +2176,13 @@ textarea:focus-visible {
   gap: 16px;
 }
 
+.nm-workspace-empty {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding: 8px 0 12px;
+}
+
 .global-search-overlay {
   position: fixed;
   inset: 0;

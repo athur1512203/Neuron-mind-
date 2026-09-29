@@ -12,12 +12,11 @@ const subjectColors = [
 
 type CreateSubjectModalProps = {
   onClose: () => void;
-  onCreate: (payload: { name: string; description: string; color: string }) => void | Promise<void>;
+  onCreate: (payload: { name: string; color: string }) => void | Promise<void>;
 };
 
 export function CreateSubjectModal({ onClose, onCreate }: CreateSubjectModalProps) {
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [color, setColor] = useState(subjectColors[0].value);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,7 +40,7 @@ export function CreateSubjectModal({ onClose, onCreate }: CreateSubjectModalProp
     }
     setBusy(true);
     try {
-      await onCreate({ name: trimmedName, description: description.trim(), color });
+      await onCreate({ name: trimmedName, color });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Không tạo được không gian.");
     } finally {
@@ -72,17 +71,6 @@ export function CreateSubjectModal({ onClose, onCreate }: CreateSubjectModalProp
             placeholder="Ví dụ: Công việc, TMU, Dự án XMP..."
           />
           {error ? <p className="mt-1.5 text-sm font-semibold text-red-700">{error}</p> : null}
-        </label>
-
-        <label className="mt-4 block">
-          <span className="create-subject-label">Mô tả</span>
-          <textarea
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={3}
-            className="create-subject-field create-subject-textarea"
-            placeholder="Mô tả ngắn về không gian này..."
-          />
         </label>
 
         <div className="mt-4">

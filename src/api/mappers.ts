@@ -13,6 +13,7 @@ export type ApiSubject = {
   color: string | null;
   neuronCount?: number;
   connectionCount?: number;
+  updatedAt?: string;
 };
 
 export type ApiMedia = {
@@ -53,6 +54,7 @@ export function mapSubject(subject: ApiSubject): Subject {
     color: subject.color ?? "#22c55e",
     neuronCount: subject.neuronCount ?? 0,
     connectionCount: subject.connectionCount ?? 0,
+    updatedAt: subject.updatedAt ? String(subject.updatedAt) : "",
   };
 }
 

@@ -26,6 +26,8 @@ Trên PowerShell, có thể dùng `Copy-Item .env.example .env` thay cho `cp`.
 - `NODE_ENV`: `development` hoặc `production`.
 - `AI_PROVIDER`: `local` (mặc định, Neuro Chat V0), `mock` (test), hoặc `openai` (chưa bật; vẫn dùng local).
 - `AI_MODEL`: dành cho OpenAI sau này; không bắt buộc.
+- `AUTH_RATE_LIMIT_MAX`: số lần đăng nhập tối đa mỗi IP trong một cửa sổ (mặc định 20).
+- `AUTH_RATE_LIMIT_WINDOW_MS`: cửa sổ rate limit đăng nhập, mili giây (mặc định 900000 = 15 phút).
 
 ## Scripts
 

@@ -1,12 +1,8 @@
 import {
   Brain,
   Check,
-  Download,
   FileText,
-  Image as ImageIcon,
   MessageCircle,
-  MoreVertical,
-  Music2,
   Pencil,
   Plus,
   Settings,
@@ -68,8 +64,6 @@ export function NeuronDetailPanel({
   const [documentsUploading, setDocumentsUploading] = useState(false);
   const [documentDeletingId, setDocumentDeletingId] = useState<string | null>(null);
   const [documentDownloadingId, setDocumentDownloadingId] = useState<string | null>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const audioInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
   const quickNoteTimerRef = useRef<number | null>(null);
 
@@ -144,13 +138,6 @@ export function NeuronDetailPanel({
     if (quickNoteTimerRef.current !== null) window.clearTimeout(quickNoteTimerRef.current);
     quickNoteTimerRef.current = null;
     onUpdate({ ...neuron, textContent: quickNote, updatedAt: new Date().toISOString() });
-  };
-
-  const addLocalFiles = (files: FileList | null, kind: "images" | "audio") => {
-    if (!files?.length) return;
-    const urls = Array.from(files).map((file) => URL.createObjectURL(file));
-    setDraft((current) => ({ ...current, [kind]: [...current[kind], ...urls] }));
-    setEditing(true);
   };
 
   const refreshDocuments = async () => {
@@ -268,18 +255,9 @@ export function NeuronDetailPanel({
           ) : null}
           {tab === "markdown" ? <NeuronMarkdownEditor key={neuron.id} neuronId={neuron.id} /> : null}
           {tab === "chat" ? <NeuronChat key={neuron.id} neuronId={neuron.id} neuronName={neuron.name} /> : null}
-          {tab === "custom" ? (
-            <NeuronCustom
-              neuron={editing ? draft : neuron}
-              editing={editing}
-              onPickImages={() => imageInputRef.current?.click()}
-              onPickAudio={() => audioInputRef.current?.click()}
-              onRemoveImage={(index) => setDraft((current) => ({ ...current, images: current.images.filter((_, i) => i !== index) }))}
-              onRemoveAudio={(index) => setDraft((current) => ({ ...current, audio: current.audio.filter((_, i) => i !== index) }))}
-            />
-          ) : null}
+          {tab === "custom" ? <NeuronCustom /> : null}
 
-          {editing && tab !== "markdown" && tab !== "chat" ? (
+          {editing && tab !== "markdown" && tab !== "chat" && tab !== "custom" ? (
             <div className="flex justify-end gap-3 pb-2">
               <button type="button" className="brutal-button" onClick={() => { setDraft(neuron); setEditing(false); }}>Hủy</button>
               <button type="button" className="brutal-button brutal-button-primary" onClick={saveDraft}><Check size={16} />Lưu thay đổi</button>
@@ -298,8 +276,6 @@ export function NeuronDetailPanel({
             event.target.value = "";
           }}
         />
-        <input ref={imageInputRef} type="file" multiple accept="image/*" className="hidden" onChange={(event) => { addLocalFiles(event.target.files, "images"); event.target.value = ""; }} />
-        <input ref={audioInputRef} type="file" multiple accept="audio/*" className="hidden" onChange={(event) => { addLocalFiles(event.target.files, "audio"); event.target.value = ""; }} />
       </aside>
 
       {showDeleteConfirm ? (
@@ -585,23 +561,15 @@ function NeuronIdeas({ neuron, editing, onChange }: { neuron: Neuron; editing: b
   return <div className="space-y-5">{items.map((item) => <BrutalCard key={item.key} title={item.title}>{editing ? <textarea className="brutal-textarea" rows={6} value={neuron[item.key]} onChange={(event) => onChange({ ...neuron, [item.key]: event.target.value })} /> : <p className="whitespace-pre-wrap text-sm font-medium leading-7 text-[#323232]">{neuron[item.key] || "Chưa có nội dung."}</p>}</BrutalCard>)}</div>;
 }
 
-function NeuronCustom({ neuron, editing, onPickImages, onPickAudio, onRemoveImage, onRemoveAudio }: {
-  neuron: Neuron;
-  editing: boolean;
-  onPickImages: () => void;
-  onPickAudio: () => void;
-  onRemoveImage: (index: number) => void;
-  onRemoveAudio: (index: number) => void;
-}) {
+function NeuronCustom() {
   return (
     <div className="space-y-5">
-      <BrutalCard title="Hình ảnh" action={editing ? <button type="button" onClick={onPickImages} className="brutal-button brutal-button-compact"><ImageIcon size={15} />Thêm ảnh</button> : undefined}>
-        {neuron.images.length ? <div className="grid grid-cols-2 gap-3">{neuron.images.map((src, index) => <div key={`${src}-${index}`} className="brutal-media"><img src={src} alt={`${neuron.name} ${index + 1}`} />{editing ? <button type="button" onClick={() => onRemoveImage(index)} aria-label="Xóa ảnh"><X size={14} /></button> : null}</div>)}</div> : <p className="text-sm font-semibold text-[#666666]">Chưa có hình ảnh.</p>}
+      <BrutalCard title="Hình ảnh">
+        <p className="text-sm font-semibold text-[#666666]">Sắp có. Upload ảnh chưa được lưu trên máy chủ.</p>
       </BrutalCard>
-      <BrutalCard title="Âm thanh" action={editing ? <button type="button" onClick={onPickAudio} className="brutal-button brutal-button-compact"><Music2 size={15} />Thêm audio</button> : undefined}>
-        {neuron.audio.length ? <div className="space-y-3">{neuron.audio.map((src, index) => <div key={`${src}-${index}`} className="brutal-file-row"><Music2 size={18} /><audio controls src={src} className="min-w-0 flex-1" />{editing ? <button type="button" onClick={() => onRemoveAudio(index)}><Trash2 size={15} /></button> : null}</div>)}</div> : <p className="text-sm font-semibold text-[#666666]">Chưa có âm thanh.</p>}
+      <BrutalCard title="Âm thanh">
+        <p className="text-sm font-semibold text-[#666666]">Sắp có. Upload audio chưa được lưu trên máy chủ.</p>
       </BrutalCard>
-      <BrutalCard title="Tùy chọn"><div className="flex gap-3"><span className="brutal-file-row"><FileText size={17} />Dữ liệu neuron</span><span className="brutal-file-row"><Download size={17} />Xuất nội dung</span><button type="button" className="brutal-icon-button" aria-label="Thêm tùy chọn"><MoreVertical size={17} /></button></div></BrutalCard>
     </div>
   );
 }

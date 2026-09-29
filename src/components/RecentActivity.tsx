@@ -1,8 +1,7 @@
 import { ChevronRight } from "lucide-react";
-import type { Neuron, Subject } from "../types";
+import type { Subject } from "../types";
 
 type RecentActivityProps = {
-  neurons: Neuron[];
   subjects: Subject[];
   onOpenSubject: (subjectId: string) => void;
 };
@@ -15,36 +14,32 @@ function formatUpdatedAt(value: string) {
   return `Cập nhật ${time} ${day}`;
 }
 
-export function RecentActivity({ neurons, subjects, onOpenSubject }: RecentActivityProps) {
-  const recent = [...neurons]
-    .filter((neuron) => neuron.updatedAt)
+export function RecentActivity({ subjects, onOpenSubject }: RecentActivityProps) {
+  const recent = [...subjects]
+    .filter((subject) => subject.updatedAt)
     .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
     .slice(0, 5);
 
   return (
     <section className="nm-activity">
-      <h2 className="nm-panel-title">Hoạt động gần đây</h2>
+      <h2 className="nm-panel-title">Không gian cập nhật gần đây</h2>
       {recent.length === 0 ? (
-        <p className="nm-empty">Chưa có hoạt động gần đây.</p>
+        <p className="nm-empty">Chưa có không gian nào.</p>
       ) : (
         <ul className="nm-activity-list">
-          {recent.map((neuron) => {
-            const workspace = subjects.find((subject) => subject.id === neuron.subjectId);
-            return (
-              <li key={neuron.id}>
-                <button type="button" className="nm-activity-item" onClick={() => onOpenSubject(neuron.subjectId)}>
-                  <span className="nm-activity-copy">
-                    <strong>{neuron.name}</strong>
-                    <small>
-                      {workspace ? `${workspace.name} · ` : ""}
-                      {formatUpdatedAt(neuron.updatedAt)}
-                    </small>
-                  </span>
-                  <ChevronRight size={18} aria-hidden="true" />
-                </button>
-              </li>
-            );
-          })}
+          {recent.map((subject) => (
+            <li key={subject.id}>
+              <button type="button" className="nm-activity-item" onClick={() => onOpenSubject(subject.id)}>
+                <span className="nm-activity-copy">
+                  <strong>{subject.name}</strong>
+                  <small>
+                    {subject.neuronCount} neuron · {formatUpdatedAt(subject.updatedAt)}
+                  </small>
+                </span>
+                <ChevronRight size={18} aria-hidden="true" />
+              </button>
+            </li>
+          ))}
         </ul>
       )}
     </section>

@@ -16,6 +16,7 @@ export const app = express();
 const developmentOrigins = new Set(["http://localhost:5173", "http://127.0.0.1:5173"]);
 
 app.disable("x-powered-by");
+app.set("trust proxy", 1);
 app.use(
   cors({
     origin(origin, callback) {

@@ -3,10 +3,10 @@ import type { Neuron, NeuronConnection, Subject } from "../types";
 const now = new Date("2026-09-23T09:00:00.000Z").toISOString();
 
 export const subjects: Subject[] = [
-  { id: "microeconomics", name: "Kinh tế vi mô", color: "#22c55e", neuronCount: 35, connectionCount: 72 },
-  { id: "english", name: "English", color: "#3b82f6", neuronCount: 42, connectionCount: 86 },
-  { id: "javascript", name: "JavaScript", color: "#a855f7", neuronCount: 28, connectionCount: 51 },
-  { id: "research", name: "Nghiên cứu khoa học", color: "#f59e0b", neuronCount: 18, connectionCount: 25 },
+  { id: "microeconomics", name: "Kinh tế vi mô", color: "#22c55e", neuronCount: 35, connectionCount: 72, updatedAt: now },
+  { id: "english", name: "English", color: "#3b82f6", neuronCount: 42, connectionCount: 86, updatedAt: now },
+  { id: "javascript", name: "JavaScript", color: "#a855f7", neuronCount: 28, connectionCount: 51, updatedAt: now },
+  { id: "research", name: "Nghiên cứu khoa học", color: "#f59e0b", neuronCount: 18, connectionCount: 25, updatedAt: now },
 ];
 
 const neuronSeed: Array<[string, string, string, [number, number, number]]> = [

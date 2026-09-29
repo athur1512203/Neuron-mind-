@@ -138,7 +138,7 @@ export default function App() {
     );
   };
 
-  const createSubject = async (payload: { name: string; description: string; color: string }) => {
+  const createSubject = async (payload: { name: string; color: string }) => {
     const subject = await createSubjectApi({ name: payload.name, color: payload.color });
     setSubjects((current) => [subject, ...current]);
   };
@@ -248,7 +248,7 @@ export default function App() {
       });
       setNeurons((current) =>
         current.map((neuron) =>
-          neuron.id === saved.id ? { ...saved, position: updated.position, images: updated.images, audio: updated.audio } : neuron,
+          neuron.id === saved.id ? { ...saved, position: updated.position } : neuron,
         ),
       );
     } catch (error) {
@@ -329,7 +329,6 @@ export default function App() {
           subjects={subjects}
           loading={subjectsLoading}
           error={subjectsError}
-          neurons={neurons}
           onOpenSubject={openSubject}
           onCreateSubject={createSubject}
           onDeleteSubject={removeSubject}
@@ -343,7 +342,6 @@ export default function App() {
           subjects={subjects}
           loading={subjectsLoading}
           error={subjectsError}
-          neurons={neurons}
           onOpenSubject={openSubject}
           onCreateSubject={createSubject}
           onDeleteSubject={removeSubject}

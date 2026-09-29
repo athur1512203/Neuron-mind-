@@ -7,10 +7,10 @@ export type Position3D = {
 export type Subject = {
   id: string;
   name: string;
-  description?: string;
   color: string;
   neuronCount: number;
   connectionCount: number;
+  updatedAt: string;
 };
 
 export type Neuron = {
