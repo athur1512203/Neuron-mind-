@@ -35,7 +35,10 @@ export function NeuronChat({ neuronId, neuronName }: NeuronChatProps) {
     setTurns(nextTurns);
     try {
       const result = await askNeuronChat(neuronId, message, turns);
-      setTurns([...nextTurns, { role: "assistant", content: result.reply }]);
+      const content = result.found && result.answer
+        ? result.answer
+        : "Không tìm thấy thông tin liên quan trong kiến thức của neuron này.";
+      setTurns([...nextTurns, { role: "assistant", content }]);
     } catch (caught) {
       setError(apiMessage(caught, "Không gửi được câu hỏi."));
       setTurns(turns);
