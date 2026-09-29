@@ -1,7 +1,11 @@
 import { MessageCircle, Send } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { askNeuronChat, type NeuroChatTurn } from "../api/chat";
-import { apiMessage } from "../api/client";
+import {
+  askNeuronChat,
+  NEURO_CHAT_NETWORK_ERROR,
+  neuroChatAssistantFromResponse,
+  type NeuroChatTurn,
+} from "../api/chat";
 
 type NeuronChatProps = {
   neuronId: string;
@@ -31,16 +35,15 @@ export function NeuronChat({ neuronId, neuronName }: NeuronChatProps) {
     setDraft("");
     setError("");
     setSending(true);
-    const nextTurns = [...turns, { role: "user" as const, content: message }];
+    const nextTurns: NeuroChatTurn[] = [...turns, { role: "user", content: message }];
     setTurns(nextTurns);
     try {
       const result = await askNeuronChat(neuronId, message, turns);
-      const content = result.found && result.answer
-        ? result.answer
-        : "Không tìm thấy thông tin liên quan trong kiến thức của neuron này.";
-      setTurns([...nextTurns, { role: "assistant", content }]);
-    } catch (caught) {
-      setError(apiMessage(caught, "Không gửi được câu hỏi."));
+      const assistant = neuroChatAssistantFromResponse(result);
+      if (!assistant.content.trim()) return;
+      setTurns([...nextTurns, { role: "assistant", ...assistant }]);
+    } catch {
+      setError(NEURO_CHAT_NETWORK_ERROR);
       setTurns(turns);
       setDraft(message);
     } finally {
@@ -65,6 +68,15 @@ export function NeuronChat({ neuronId, neuronName }: NeuronChatProps) {
         {turns.map((turn, index) => (
           <article key={`${turn.role}-${index}`} className={`neuron-chat-bubble is-${turn.role}`}>
             <p>{turn.content}</p>
+            {turn.role === "assistant" && turn.sources && turn.sources.length > 0 ? (
+              <ul className="neuron-chat-sources">
+                {turn.sources.map((source) => (
+                  <li key={`${source.type}:${source.sourceId}`}>
+                    {source.title} ({source.type})
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </article>
         ))}
         {sending ? <p className="neuron-chat-status">Đang tìm trong kiến thức…</p> : null}
