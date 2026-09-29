@@ -47,6 +47,18 @@ test("Neuro Chat V0 grounded answers from KnowledgeContext", async (t) => {
     mockPrisma(prisma.document, method, () => assert.fail("Neuro Chat must not query documents"));
   }
 
+  const opportunityKnowledge = "Chi phí cơ hội là giá trị của phương án tốt nhất bị bỏ qua.";
+  const opportunityContext = {
+    neuronId: "a",
+    subjectId: "subject-a",
+    sources: [{
+      type: "MARKDOWN", sourceId: "note-opp", neuronId: "a", subjectId: "subject-a", title: "Chi phí",
+      content: opportunityKnowledge,
+      updatedAt: updatedAt.toISOString(),
+      provenance: { sourceType: "MARKDOWN", sourceId: "note-opp", neuronId: "a", subjectId: "subject-a" },
+    }],
+  };
+
   await t.test("extracts matching passages and citations without inventing extra facts", () => {
     const result = answerFromKnowledge({
       neuronId: "a",
@@ -58,28 +70,42 @@ test("Neuro Chat V0 grounded answers from KnowledgeContext", async (t) => {
         provenance: { sourceType: "NEURON", sourceId: "a", neuronId: "a", subjectId: "subject-a" },
       }],
     }, "ngân sách tháng là gì");
-    assert.equal(result.grounded, true);
-    assert.match(result.reply, /Lập ngân sách tháng/);
-    assert.equal(result.reply.includes("không có trong nguồn"), false);
-    assert.deepEqual(result.citations, [{
+    assert.equal(result.found, true);
+    assert.match(result.answer, /Lập ngân sách tháng/);
+    assert.deepEqual(result.sources, [{
       type: "NEURON", sourceId: "a", title: "Thu nhập", neuronId: "a", subjectId: "subject-a",
     }]);
   });
 
-  await t.test("unmatched questions do not quote unrelated knowledge", () => {
-    const result = answerFromKnowledge({
-      neuronId: "a",
-      subjectId: "subject-a",
-      sources: [{
-        type: "NEURON", sourceId: "a", neuronId: "a", subjectId: "subject-a", title: "Thu nhập",
-        content: "Thu nhập là tiền nhận được từ công việc.",
-        updatedAt: updatedAt.toISOString(),
-        provenance: { sourceType: "NEURON", sourceId: "a", neuronId: "a", subjectId: "subject-a" },
-      }],
-    }, "quantum entanglement");
-    assert.equal(result.citations.length, 0);
-    assert.match(result.reply, /không tìm thấy/i);
-    assert.equal(result.reply.includes("Thu nhập là tiền"), false);
+  await t.test("chi phí cơ hội queries still retrieve the markdown definition", () => {
+    for (const question of ["chi phí cơ hội là gì", "chi phí cơ hội", "cơ hội là gì"]) {
+      const result = answerFromKnowledge(opportunityContext, question);
+      assert.equal(result.found, true, question);
+      assert.equal(result.answer, opportunityKnowledge);
+      assert.deepEqual(result.sources.map((item) => item.sourceId), ["note-opp"]);
+    }
+  });
+
+  await t.test("unrelated employee-count query does not fall back to existing knowledge", () => {
+    const result = answerFromKnowledge(
+      opportunityContext,
+      "công ty này có bao nhiêu nhân viên",
+      [{ role: "user", content: "chi phí cơ hội là gì" }, { role: "assistant", content: opportunityKnowledge }],
+    );
+    assert.equal(result.found, false);
+    assert.equal(result.answer, null);
+    assert.deepEqual(result.sources, []);
+    assert.equal(JSON.stringify(result).includes("Chi phí cơ hội"), false);
+  });
+
+  await t.test("other unrelated queries also miss without quoting knowledge", () => {
+    for (const question of ["quantum entanglement", "thời tiết hôm nay như thế nào"]) {
+      const result = answerFromKnowledge(opportunityContext, question);
+      assert.equal(result.found, false, question);
+      assert.equal(result.answer, null);
+      assert.deepEqual(result.sources, []);
+      assert.equal(String(result.answer ?? "").includes("Chi phí cơ hội"), false);
+    }
   });
 
   const server = app.listen(0, "127.0.0.1");
@@ -101,9 +127,9 @@ test("Neuro Chat V0 grounded answers from KnowledgeContext", async (t) => {
       const body = await response.json();
       assert.equal(body.neuronId, "a");
       assert.equal(body.subjectId, "subject-a");
-      assert.equal(body.grounded, true);
-      assert.match(body.reply, /nhu cầu và tiết kiệm/);
-      assert.ok(body.citations.some((item) => item.type === "MARKDOWN" && item.sourceId === "note-a"));
+      assert.equal(body.found, true);
+      assert.match(body.answer, /nhu cầu và tiết kiệm/);
+      assert.ok(body.sources.some((item) => item.type === "MARKDOWN" && item.sourceId === "note-a"));
       const serialized = JSON.stringify(body);
       assert.equal(serialized.includes("Bí mật của Bob"), false);
     });
