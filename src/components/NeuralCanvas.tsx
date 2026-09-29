@@ -90,8 +90,9 @@ export function NeuralCanvas({
   const lastFocusRef = useRef<string | null>(null);
   const lastResetRef = useRef(resetSignal);
   const initialFitRef = useRef(false);
-  const panRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number } | null>(null);
-  const nodeDragRef = useRef<{ pointerId: number; nodeId: string } | null>(null);
+  const panRef = useRef<{ pointerId: number; startX: number; startY: number; originX: number; originY: number; moved: boolean } | null>(null);
+  const nodeDragRef = useRef<{ pointerId: number; nodeId: string; startX: number; startY: number; moved: boolean } | null>(null);
+  const suppressNodeClickRef = useRef(false);
   const connectRef = useRef<{ pointerId: number; sourceId: string } | null>(null);
   const previewLineRef = useRef<SVGLineElement | null>(null);
   const connectionModeRef = useRef(connectionMode);
@@ -423,19 +424,23 @@ export function NeuralCanvas({
       startY: event.clientY,
       originX: transform.x,
       originY: transform.y,
+      moved: false,
     };
   };
 
   const movePan = (event: ReactPointerEvent<SVGSVGElement>) => {
     const pan = panRef.current;
     if (!pan || pan.pointerId !== event.pointerId) return;
+    pan.moved ||= Math.hypot(event.clientX - pan.startX, event.clientY - pan.startY) > 5;
     transformRef.current.x = pan.originX + event.clientX - pan.startX;
     transformRef.current.y = pan.originY + event.clientY - pan.startY;
     applyViewportTransform();
   };
 
   const endPan = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (panRef.current?.pointerId === event.pointerId) panRef.current = null;
+    const pan = panRef.current;
+    if (!pan || pan.pointerId !== event.pointerId) return;
+    panRef.current = null;
   };
 
   const zoomGraph = (event: WheelEvent<SVGSVGElement>) => {
@@ -457,6 +462,7 @@ export function NeuralCanvas({
 
   const beginNodeDrag = (event: ReactPointerEvent<SVGGElement>, nodeId: string) => {
     event.stopPropagation();
+    suppressNodeClickRef.current = false;
     event.currentTarget.setPointerCapture(event.pointerId);
     const node = nodesByIdRef.current.get(nodeId);
     if (!node) return;
@@ -465,7 +471,7 @@ export function NeuralCanvas({
     node.fy = point.y;
     node.x = point.x;
     node.y = point.y;
-    nodeDragRef.current = { pointerId: event.pointerId, nodeId };
+    nodeDragRef.current = { pointerId: event.pointerId, nodeId, startX: event.clientX, startY: event.clientY, moved: false };
     hoveredNodeIdRef.current = nodeId;
     applyHighlight(nodeId);
     renderGraphFrame();
@@ -476,6 +482,7 @@ export function NeuralCanvas({
     const drag = nodeDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId || drag.nodeId !== nodeId) return;
     event.stopPropagation();
+    drag.moved ||= Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 5;
     const node = nodesByIdRef.current.get(nodeId);
     if (!node) return;
     const point = pointerToGraph(event.clientX, event.clientY);
@@ -487,6 +494,9 @@ export function NeuralCanvas({
     const drag = nodeDragRef.current;
     if (!drag || drag.pointerId !== event.pointerId || drag.nodeId !== nodeId) return;
     event.stopPropagation();
+    // Keep the gesture result until click: pointerup precedes the browser's click.
+    suppressNodeClickRef.current = drag.moved || event.type === "pointercancel" ||
+      Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 5;
     const node = nodesByIdRef.current.get(nodeId);
     if (node) {
       node.fx = null;
@@ -516,10 +526,6 @@ export function NeuralCanvas({
         onPointerUp={endPan}
         onPointerCancel={endPan}
         onWheel={zoomGraph}
-        onClick={() => {
-          onSelectNeuron("");
-          onSelectConnection("");
-        }}
       >
         <g ref={viewportGroupRef}>
           <line
@@ -622,6 +628,10 @@ export function NeuralCanvas({
                 onClick={(event) => {
                   event.stopPropagation();
                   if (connectionModeRef.current) return;
+                  if (suppressNodeClickRef.current) {
+                    suppressNodeClickRef.current = false;
+                    return;
+                  }
                   onSelectNeuron(neuron.id);
                 }}
               >

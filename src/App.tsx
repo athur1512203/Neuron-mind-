@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getMe } from "./api/auth";
 import { apiMessage, clearToken, getToken, setUnauthorizedHandler } from "./api/client";
 import { createConnection as createConnectionApi, deleteConnection as deleteConnectionApi } from "./api/connections";
@@ -15,6 +15,7 @@ import { Settings } from "./components/Settings";
 import { Sidebar } from "./components/Sidebar";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject, ViewName } from "./types";
 import { areSameConnection } from "./utils/neuron";
+import { clearNavigation, readNavigation, restoreNavigation, saveNavigation } from "./utils/navigation";
 
 export default function App() {
   const [user, setUser] = useState<ApiUser | null>(null);
@@ -34,66 +35,136 @@ export default function App() {
   const [detailInitialTab, setDetailInitialTab] = useState<DetailTab>("overview");
   const [searchOpen, setSearchOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [navigationUserId, setNavigationUserId] = useState<string | null>(null);
+  const sessionVersion = useRef(0);
+  const restoredGraph = useRef<string | null>(null);
+  const userIdRef = useRef<string | null>(null);
+  userIdRef.current = user?.id ?? null;
+
+  const resetSession = () => {
+    sessionVersion.current++;
+    clearNavigation(userIdRef.current);
+    setUser(null);
+    setNavigationUserId(null);
+    setSubjects([]);
+    setNeurons([]);
+    setConnections([]);
+    setActiveView("dashboard");
+    setSelectedSubjectId(null);
+    setSelection(null);
+    setPendingNeuronSelection(null);
+    setSearchOpen(false);
+    setMapExpanded(false);
+    setNotice(null);
+    restoredGraph.current = null;
+  };
 
   useEffect(() => {
-    setUnauthorizedHandler(() => {
-      setUser(null);
-      setSubjects([]);
-      setNeurons([]);
-      setConnections([]);
-    });
+    let cancelled = false;
+    setUnauthorizedHandler(resetSession);
     const token = getToken();
     if (!token) {
+      clearNavigation(userIdRef.current);
       setAuthReady(true);
-      return;
+      return () => { cancelled = true; setUnauthorizedHandler(null); };
     }
     getMe()
-      .then(setUser)
+      .then((next) => { if (!cancelled) setUser(next); })
       .catch(() => {
+        if (cancelled) return;
         clearToken();
-        setUser(null);
+        resetSession();
       })
-      .finally(() => setAuthReady(true));
-    return () => setUnauthorizedHandler(null);
+      .finally(() => { if (!cancelled) setAuthReady(true); });
+    return () => { cancelled = true; setUnauthorizedHandler(null); };
   }, []);
 
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
+    const version = sessionVersion.current;
+    const current = () => !cancelled && version === sessionVersion.current;
+    setNavigationUserId(null);
     setSubjectsLoading(true);
     setSubjectsError(null);
     listSubjects()
-      .then((next) => {
+      .then(async (next) => {
+        if (!current()) return;
+        const restored = await restoreNavigation(readNavigation(user.id), next, getSubjectGraph);
+        if (!current()) return;
+        const navigation = restored.navigation;
         setSubjects(next);
-        setSelectedSubjectId((current) => current ?? next[0]?.id ?? null);
+        setSelectedSubjectId(navigation.selectedSubjectId);
+        if (restored.graph) {
+          setNeurons(restored.graph.neurons);
+          setConnections(restored.graph.connections);
+          restoredGraph.current = restored.graph.subject.id;
+        } else {
+          setNeurons([]);
+          setConnections([]);
+          restoredGraph.current = null;
+        }
+        if (navigation.selectedNeuronId) {
+          setDetailInitialTab("overview");
+          setSelection({ type: "neuron", id: navigation.selectedNeuronId });
+        } else {
+          setSelection(null);
+          setPendingNeuronSelection(null);
+        }
+        setActiveView(navigation.activeView);
+        saveNavigation(user.id, navigation);
       })
-      .catch((error) => setSubjectsError(apiMessage(error, "Không tải được danh sách môn học.")))
-      .finally(() => setSubjectsLoading(false));
+      .catch((error) => {
+        if (!current()) return;
+        setSubjects([]);
+        setSelectedSubjectId(null);
+        setSubjectsError(apiMessage(error, "Không tải được danh sách môn học."));
+      })
+      .finally(() => {
+        if (!current()) return;
+        setSubjectsLoading(false);
+        setNavigationUserId(user.id);
+      });
+    return () => { cancelled = true; };
   }, [user]);
 
+  const selectedNeuronId = pendingNeuronSelection?.neuronId ?? (selection?.type === "neuron" ? selection.id : null);
   useEffect(() => {
-    if (!user || activeView !== "map" || !selectedSubjectId) return;
+    if (!user || navigationUserId !== user.id) return;
+    saveNavigation(user.id, { activeView, selectedSubjectId, selectedNeuronId });
+  }, [user, navigationUserId, activeView, selectedSubjectId, selectedNeuronId]);
+
+  useEffect(() => {
+    if (!user || navigationUserId !== user.id || (activeView !== "map" && activeView !== "connections") || !selectedSubjectId) return;
+    if (restoredGraph.current === selectedSubjectId) {
+      restoredGraph.current = null;
+      setGraphLoading(false);
+      setGraphError(null);
+      return;
+    }
     let cancelled = false;
+    const version = sessionVersion.current;
     setGraphLoading(true);
     setGraphError(null);
     getSubjectGraph(selectedSubjectId)
       .then((graph) => {
-        if (cancelled) return;
+        if (cancelled || version !== sessionVersion.current) return;
         setNeurons(graph.neurons);
         setConnections(graph.connections);
       })
       .catch((error) => {
-        if (cancelled) return;
+        if (cancelled || version !== sessionVersion.current) return;
         setNeurons([]);
         setConnections([]);
         setGraphError(apiMessage(error, "Không tải được sơ đồ học."));
       })
       .finally(() => {
-        if (!cancelled) setGraphLoading(false);
+        if (!cancelled && version === sessionVersion.current) setGraphLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [user, activeView, selectedSubjectId]);
+  }, [user, navigationUserId, activeView, selectedSubjectId]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -150,6 +221,11 @@ export default function App() {
       setNeurons((current) => current.filter((neuron) => neuron.subjectId !== subjectId));
       setConnections((current) => current.filter((connection) => connection.subjectId !== subjectId));
       setSelectedSubjectId((current) => (current === subjectId ? null : current));
+      if (selectedSubjectId === subjectId) {
+        setActiveView("dashboard");
+        setSelection(null);
+        setPendingNeuronSelection(null);
+      }
     } catch (error) {
       setSubjectsError(apiMessage(error, "Không xóa được môn học."));
       throw error;
@@ -183,6 +259,7 @@ export default function App() {
   };
 
   const selectNeuron = (neuronId: string) => {
+    setPendingNeuronSelection(null);
     if (!neuronId) {
       setSelection(null);
       return;
@@ -314,12 +391,7 @@ export default function App() {
 
   const logout = () => {
     clearToken();
-    setUser(null);
-    setSubjects([]);
-    setNeurons([]);
-    setConnections([]);
-    setActiveView("dashboard");
-    setSelectedSubjectId(null);
+    resetSession();
   };
 
   const renderView = () => {
@@ -363,9 +435,14 @@ export default function App() {
         onBack={() => {
           setMapExpanded(false);
           setActiveView("dashboard");
+          setSelection(null);
+          setPendingNeuronSelection(null);
         }}
         onSelectNeuron={selectNeuron}
-        onSelectConnection={(connectionId) => setSelection(connectionId ? { type: "connection", id: connectionId } : null)}
+        onSelectConnection={(connectionId) => {
+          if (!connectionId) return;
+          setSelection({ type: "connection", id: connectionId });
+        }}
         onLayoutSettled={persistLayout}
         onCreateNeuron={addNeuron}
         onCreateConnection={createConnection}
@@ -383,9 +460,13 @@ export default function App() {
   const navigate = (view: ViewName) => {
     setActiveView(view);
     if (view !== "map") setMapExpanded(false);
+    if (view !== "map" && view !== "connections") {
+      setSelection(null);
+      setPendingNeuronSelection(null);
+    }
   };
 
-  if (!authReady) {
+  if (!authReady || (user && navigationUserId !== user.id)) {
     return (
       <div className="nm-auth-page nm-auth-loading">Đang kiểm tra phiên đăng nhập...</div>
     );
