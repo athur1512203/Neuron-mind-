@@ -9,6 +9,7 @@ test("Neuro Chat V0 grounded answers from KnowledgeContext", async (t) => {
   };
 
   process.env.JWT_SECRET = "test-only-neuro-chat-secret";
+  process.env.AI_PROVIDER = "local";
   const { prisma } = require("../dist/lib/prisma");
   const { answerFromKnowledge } = require("../dist/services/neuro.service");
   const { app } = require("../dist/app");

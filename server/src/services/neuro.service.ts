@@ -1,5 +1,8 @@
+import { resolveAIProvider } from "../ai/resolve";
+import type { AIGenerateResult, AIProvider } from "../ai/types";
 import type { KnowledgeContext, KnowledgeSource } from "../knowledge/types";
 import { knowledgeService } from "./knowledge.service";
+import type { KnowledgeService } from "./knowledge.service";
 
 export type NeuroChatMessage = {
   role: "user" | "assistant";
@@ -134,15 +137,55 @@ export function answerFromKnowledge(
   };
 }
 
+function fromAIResult(context: KnowledgeContext, generated: AIGenerateResult): NeuroChatResult {
+  if (generated.found === false || generated.answer == null) {
+    return miss(context);
+  }
+  return {
+    neuronId: context.neuronId,
+    subjectId: context.subjectId,
+    found: true,
+    answer: generated.answer,
+    sources: generated.sources,
+  };
+}
+
+export class NeuroService {
+  constructor(
+    private readonly knowledge: Pick<KnowledgeService, "getKnowledgeContext"> = knowledgeService,
+    private readonly aiProvider: AIProvider | null = null,
+  ) {}
+
+  async ask(input: {
+    neuronId: string;
+    userId: string;
+    message: string;
+    history?: NeuroChatMessage[];
+  }): Promise<NeuroChatResult> {
+    const context = await this.knowledge.getKnowledgeContext({
+      neuronId: input.neuronId,
+      userId: input.userId,
+    });
+    if (!this.aiProvider) {
+      return answerFromKnowledge(context, input.message, input.history ?? []);
+    }
+    return fromAIResult(
+      context,
+      await this.aiProvider.generate({
+        question: input.message,
+        context,
+      }),
+    );
+  }
+}
+
+export const neuroService = new NeuroService(knowledgeService, resolveAIProvider());
+
 export async function askNeuron(input: {
   neuronId: string;
   userId: string;
   message: string;
   history?: NeuroChatMessage[];
 }): Promise<NeuroChatResult> {
-  const context = await knowledgeService.getKnowledgeContext({
-    neuronId: input.neuronId,
-    userId: input.userId,
-  });
-  return answerFromKnowledge(context, input.message, input.history ?? []);
+  return neuroService.ask(input);
 }
