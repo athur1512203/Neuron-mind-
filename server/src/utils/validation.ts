@@ -53,6 +53,19 @@ export const upsertMarkdownNoteSchema = z.object({
   content: z.string(),
 });
 
+export const neuroChatSchema = z.object({
+  message: z.string().trim().min(1).max(4_000),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().max(8_000),
+      }),
+    )
+    .max(10)
+    .optional(),
+});
+
 export const createConnectionSchema = z.object({
   sourceNeuronId: z.string().min(1),
   targetNeuronId: z.string().min(1),

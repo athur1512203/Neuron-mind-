@@ -2408,6 +2408,105 @@ textarea:focus-visible {
   background: rgba(17, 17, 17, 0.06);
 }
 
+.neuron-chat {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border: 2px solid #111111;
+  border-radius: 7px;
+  background: #fffdf3;
+  box-shadow: 4px 4px 0 #111111;
+}
+
+.neuron-chat-header {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 2px solid #111111;
+}
+
+.neuron-chat-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.neuron-chat-header p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.neuron-chat-log {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 16px;
+}
+
+.neuron-chat-empty,
+.neuron-chat-status,
+.neuron-chat-error {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.neuron-chat-error {
+  padding: 0 16px 8px;
+  color: #991b1b;
+}
+
+.neuron-chat-bubble {
+  max-width: 92%;
+  padding: 10px 12px;
+  border: 2px solid #111111;
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 #111111;
+  white-space: pre-wrap;
+}
+
+.neuron-chat-bubble p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.neuron-chat-bubble.is-user {
+  justify-self: end;
+  background: #dbeafe;
+}
+
+.neuron-chat-bubble.is-assistant {
+  justify-self: start;
+  background: #ecfccb;
+}
+
+.neuron-chat-composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  padding: 12px;
+  border-top: 2px solid #111111;
+}
+
+.neuron-chat-composer textarea {
+  resize: none;
+  padding: 8px 10px;
+  border: 2px solid #111111;
+  border-radius: 6px;
+  background: #ffffff;
+  font: inherit;
+  font-weight: 650;
+}
+
 .nm-activity-list {
   display: grid;
   gap: 10px;
