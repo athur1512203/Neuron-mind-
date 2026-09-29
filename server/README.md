@@ -2,6 +2,8 @@
 
 REST API độc lập cho NeuroMind, dùng Express, TypeScript, Prisma, PostgreSQL và JWT.
 
+Knowledge foundation (MVP): xem [architecture, contract và validation](KNOWLEDGE_ARCHITECTURE.md).
+
 ## Cài đặt
 
 ```bash
