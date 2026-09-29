@@ -11,9 +11,9 @@ export type NeuroChatCitation = {
 export type NeuroChatResponse = {
   neuronId: string;
   subjectId: string;
-  reply: string;
-  citations: NeuroChatCitation[];
-  grounded: true;
+  found: boolean;
+  answer: string | null;
+  sources: NeuroChatCitation[];
 };
 
 export type NeuroChatTurn = {
