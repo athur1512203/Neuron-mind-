@@ -2479,6 +2479,13 @@ textarea:focus-visible {
   line-height: 1.5;
 }
 
+.neuron-chat-sources {
+  margin: 8px 0 0;
+  padding: 0 0 0 18px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .neuron-chat-bubble.is-user {
   justify-self: end;
   background: #dbeafe;
