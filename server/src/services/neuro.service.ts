@@ -17,9 +17,9 @@ export type NeuroCitation = {
 export type NeuroChatResult = {
   neuronId: string;
   subjectId: string;
-  reply: string;
-  citations: NeuroCitation[];
-  grounded: true;
+  found: boolean;
+  answer: string | null;
+  sources: NeuroCitation[];
 };
 
 const STOPWORDS = new Set([
@@ -49,10 +49,10 @@ function splitPassages(content: string): string[] {
 
 function scorePassage(passage: string, queryTokens: string[]): number {
   if (!queryTokens.length) return 0;
-  const haystack = passage.toLowerCase();
+  const passageTokens = new Set(tokens(passage));
   let score = 0;
   for (const token of queryTokens) {
-    if (haystack.includes(token)) score += 1;
+    if (passageTokens.has(token)) score += 1;
   }
   return score;
 }
@@ -67,74 +67,70 @@ function cite(source: KnowledgeSource): NeuroCitation {
   };
 }
 
-function emptyReply(context: KnowledgeContext, reason: "empty" | "unmatched"): NeuroChatResult {
-  const reply =
-    reason === "empty"
-      ? "Neuron này chưa có nội dung kiến thức để trả lời. Hãy thêm text hoặc markdown rồi hỏi lại."
-      : "Tôi không tìm thấy đoạn kiến thức nào khớp câu hỏi trong neuron này. Hãy hỏi lại bằng từ khóa có trong ghi chú.";
+function miss(context: KnowledgeContext): NeuroChatResult {
   return {
     neuronId: context.neuronId,
     subjectId: context.subjectId,
-    reply,
-    citations: [],
-    grounded: true,
+    found: false,
+    answer: null,
+    sources: [],
   };
 }
 
 export function answerFromKnowledge(
   context: KnowledgeContext,
   message: string,
-  history: NeuroChatMessage[] = [],
+  _history: NeuroChatMessage[] = [],
 ): NeuroChatResult {
   const usableSources = context.sources.filter((source) => typeof source.content === "string" && source.content.trim());
-  if (!usableSources.length) return emptyReply(context, "empty");
+  if (!usableSources.length) return miss(context);
 
-  const historyUserText = history
-    .filter((item) => item.role === "user")
-    .slice(-4)
-    .map((item) => item.content)
-    .join(" ");
-  const queryTokens = [...new Set(tokens(`${historyUserText} ${message}`))];
+  // Retrieval uses only the current question. Prior turns must not leak relevance.
+  const queryTokens = [...new Set(tokens(message))];
+  if (!queryTokens.length) return miss(context);
 
   const ranked: Array<{ source: KnowledgeSource; passage: string; score: number }> = [];
   for (const source of usableSources) {
     const passages = splitPassages(source.content ?? "");
     const chunks = passages.length ? passages : [source.content ?? ""];
     for (const passage of chunks) {
-      ranked.push({ source, passage, score: scorePassage(passage, queryTokens) });
+      const score = scorePassage(passage, queryTokens);
+      if (score > 0) ranked.push({ source, passage, score });
     }
   }
   ranked.sort((a, b) => b.score - a.score);
 
-  const selected = ranked.filter((item) => item.score > 0).slice(0, MAX_PASSAGES);
-  if (!selected.length) return emptyReply(context, "unmatched");
+  const selected = ranked.slice(0, MAX_PASSAGES);
+  if (!selected.length) return miss(context);
 
-  const citations: NeuroCitation[] = [];
+  const sources: NeuroCitation[] = [];
   const seen = new Set<string>();
-  const sections: string[] = ["Dựa trên kiến thức đã lưu của neuron này:"];
-  let used = sections[0].length;
+  const sections: string[] = [];
+  let used = 0;
 
   for (const item of selected) {
     const excerpt = item.passage.length > MAX_PASSAGE_CHARS
       ? `${item.passage.slice(0, MAX_PASSAGE_CHARS).trimEnd()}…`
       : item.passage;
-    const block = `\n\n${excerpt}\n\nNguồn: ${item.source.title} (${item.source.type})`;
+    const block = sections.length ? `\n\n${excerpt}` : excerpt;
     if (used + block.length > MAX_REPLY_CHARS) break;
     sections.push(block);
     used += block.length;
     const key = `${item.source.type}:${item.source.sourceId}`;
     if (!seen.has(key)) {
       seen.add(key);
-      citations.push(cite(item.source));
+      sources.push(cite(item.source));
     }
   }
+
+  if (!sections.length) return miss(context);
 
   return {
     neuronId: context.neuronId,
     subjectId: context.subjectId,
-    reply: sections.join(""),
-    citations,
-    grounded: true,
+    found: true,
+    answer: sections.join(""),
+    sources,
   };
 }
 
