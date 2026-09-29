@@ -387,7 +387,7 @@ export default function App() {
 
   if (!authReady) {
     return (
-      <div className="dashboard-main flex min-h-screen items-center justify-center text-sm text-[#8b9a93]">Đang kiểm tra phiên đăng nhập...</div>
+      <div className="nm-auth-page nm-auth-loading">Đang kiểm tra phiên đăng nhập...</div>
     );
   }
 

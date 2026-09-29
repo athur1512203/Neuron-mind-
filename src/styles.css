@@ -1,8 +1,32 @@
 @font-face {
-  font-family: "Guttenberg";
-   src: url("./assets/fonts/MinecraftBold-4.ttf") format("truetype");
-  font-weight: normal;
+  font-family: "Ganh Type";
+  src: url("./assets/fonts/ganh-type-regular.otf") format("opentype");
   font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Ganh Type";
+  src: url("./assets/fonts/ganh-type-regularitalic.otf") format("opentype");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Ganh Type";
+  src: url("./assets/fonts/ganh-type-thin.otf") format("opentype");
+  font-style: normal;
+  font-weight: 100;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Ganh Type";
+  src: url("./assets/fonts/ganh-type-thinitalic.otf") format("opentype");
+  font-style: italic;
+  font-weight: 100;
   font-display: swap;
 }
 
@@ -13,7 +37,7 @@
 :root {
   color: #172033;
   background: #f4f6f8;
-  font-synthesis: none;
+  font-synthesis: weight;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -26,7 +50,7 @@
 html,
 body,
 #root {
-   font-family: "MinecraftBold", sans-serif;
+  font-family: "Ganh Type", Arial, sans-serif;
 }
 
 body {
@@ -51,7 +75,7 @@ button {
 }
 
 h1 {
-  font-family: "Guttenberg", sans-serif;
+  font-family: inherit;
   font-weight: 800;
   letter-spacing: -0.035em;
 }
@@ -59,13 +83,13 @@ h1 {
 h2,
 h3,
 h4 {
-  font-family: "Guttenberg", sans-serif;
+  font-family: inherit;
   font-weight: 700;
   letter-spacing: -0.015em;
 }
 
 .font-fancy {
-  font-family: "Guttenberg", sans-serif;
+  font-family: inherit;
   font-weight: 400;
 }
 
@@ -1501,7 +1525,7 @@ textarea:focus-visible {
   border: 0;
   background: #fffdf3;
   padding: 12px 14px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: inherit;
   font-size: 13px;
   line-height: 1.6;
   resize: none;
@@ -2052,6 +2076,267 @@ textarea:focus-visible {
 .nm-create-button:active {
   transform: translate(3px, 3px);
   box-shadow: 0 0 0 var(--nm-black);
+}
+
+.nm-graph-empty-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.nm-graph-empty-card {
+  width: calc(100% - 32px);
+  max-width: 380px;
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+  padding: 28px;
+  border: 2px solid var(--nm-black, #111);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 5px 5px 0 var(--nm-black, #111);
+  color: var(--nm-black, #111);
+  text-align: center;
+  pointer-events: auto;
+}
+
+.nm-graph-empty-icon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  place-items: center;
+  border: 2px solid var(--nm-black, #111);
+  border-radius: 10px;
+  background: var(--nm-blue, #add8e6);
+  box-shadow: 3px 3px 0 var(--nm-black, #111);
+}
+
+.nm-graph-empty-card h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.3;
+}
+
+.nm-graph-empty-card p {
+  margin: 12px 0 24px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.nm-graph-empty-button {
+  max-width: 100%;
+  justify-content: center;
+  border-color: var(--nm-black, #111);
+  border-radius: 9px;
+  background: var(--nm-blue, #add8e6);
+  box-shadow: 3px 3px 0 var(--nm-black, #111);
+  color: var(--nm-black, #111);
+  font-size: 14px;
+}
+
+.nm-graph-empty-button svg {
+  flex-shrink: 0;
+}
+
+.nm-graph-empty-button:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 var(--nm-black, #111);
+}
+
+.nm-graph-empty-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--nm-black, #111);
+}
+
+.nm-graph-empty-button:focus-visible {
+  outline: 2px solid var(--nm-black, #111);
+  outline-offset: 5px;
+}
+
+.nm-auth-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 16px;
+  background: #f7f7f5;
+  color: #323232;
+}
+
+.nm-auth-loading {
+  color: #666666;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.nm-auth-card {
+  width: min(420px, 100%);
+  padding: 28px 24px 24px;
+  border: 2px solid #111111;
+  border-radius: 16px;
+  background: #f5f0dc;
+  box-shadow: 6px 6px 0 #111111;
+}
+
+.nm-auth-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.nm-auth-logo {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 2px solid #111111;
+  border-radius: 8px;
+  background: #add8e6;
+  box-shadow: 3px 3px 0 #111111;
+  color: #111111;
+}
+
+.nm-auth-product {
+  margin: 0;
+  color: #111111;
+  font-family: inherit;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.nm-auth-tagline {
+  margin: 6px 0 0;
+  color: #666666;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.nm-auth-title {
+  margin: 0;
+  color: #111111;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.nm-auth-subtitle {
+  margin: 8px 0 0;
+  color: #666666;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.nm-auth-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.nm-auth-field {
+  display: grid;
+  gap: 6px;
+}
+
+.nm-auth-field span {
+  color: #111111;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.nm-auth-field input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border: 2px solid #111111;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #111111;
+  outline: none;
+}
+
+.nm-auth-field input:focus {
+  border-color: #2d8cf0;
+  box-shadow: 3px 3px 0 #111111;
+}
+
+.nm-auth-field input:disabled {
+  opacity: 0.7;
+}
+
+.nm-auth-error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 2px solid #111111;
+  border-radius: 8px;
+  background: #ffe1e7;
+  color: #7f1d1d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.nm-auth-submit {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 4px;
+  border: 2px solid #111111;
+  border-radius: 8px;
+  background: #add8e6;
+  box-shadow: 3px 3px 0 #111111;
+  color: #111111;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.nm-auth-submit:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 #111111;
+}
+
+.nm-auth-submit:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 #111111;
+}
+
+.nm-auth-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.nm-auth-switch {
+  margin: 18px 0 0;
+  color: #666666;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.nm-auth-switch button {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: #111111;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.nm-auth-switch button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .nm-status {

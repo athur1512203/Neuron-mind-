@@ -1,3 +1,4 @@
+import { Brain } from "lucide-react";
 import { useState } from "react";
 import { apiMessage } from "../api/client";
 import { login, register } from "../api/auth";
@@ -37,52 +38,75 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
     }
   };
 
+  const isLogin = mode === "login";
+
   return (
-    <main className="dashboard-main flex min-h-screen flex-1 items-center justify-center px-4">
-      <section className="w-full max-w-md rounded-xl border border-[#1f2a26] bg-[#0b1210] p-6 text-white shadow-2xl">
-        <h1 className="font-fancy text-3xl text-white">NeuroMind</h1>
-        <p className="mt-2 text-sm text-[#8b9a93]">{mode === "login" ? "Đăng nhập để mở bộ não của bạn." : "Tạo tài khoản mới."}</p>
+    <main className="nm-auth-page">
+      <section className="nm-auth-card" aria-labelledby="nm-auth-title">
+        <header className="nm-auth-brand">
+          <span className="nm-auth-logo" aria-hidden="true">
+            <Brain size={22} />
+          </span>
+          <div>
+            <p className="nm-auth-product">NeuroMind</p>
+            <p className="nm-auth-tagline">Siêu trợ lý AI hỗ trợ các tác vụ của bạn.</p>
+          </div>
+        </header>
 
-        <label className="mt-6 block">
-          <span className="mb-1.5 block text-sm font-medium text-slate-300">Email</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className="w-full rounded-lg border border-[#2a3a34] bg-[#07110e] px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-500"
-            autoComplete="email"
-          />
-        </label>
+        <h1 id="nm-auth-title" className="nm-auth-title">{isLogin ? "Chào mừng trở lại" : "Tạo tài khoản"}</h1>
+        <p className="nm-auth-subtitle">
+          {isLogin ? "Đăng nhập để tiếp tục với NeuroMind." : "Bắt đầu xây dựng bộ não thứ hai của bạn."}
+        </p>
 
-        <label className="mt-4 block">
-          <span className="mb-1.5 block text-sm font-medium text-slate-300">Mật khẩu</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-lg border border-[#2a3a34] bg-[#07110e] px-3 py-2.5 text-sm text-white outline-none focus:border-emerald-500"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-          />
-        </label>
-
-        {error ? <p className="mt-3 text-sm text-red-400">{error}</p> : null}
-
-        <button type="button" onClick={handleSubmit} disabled={busy} className="action-3d-button dashboard-add-button mt-6 w-full">
-          <span className="btn-shadow" />
-          <span className="btn-edge" />
-          <span className="btn-front">{busy ? "Đang xử lý..." : mode === "login" ? "Đăng nhập" : "Đăng ký"}</span>
-        </button>
-
-        <button
-          type="button"
-          className="mt-4 w-full text-sm text-[#8b9a93] hover:text-white"
-          onClick={() => {
-            setMode(mode === "login" ? "register" : "login");
-            setError("");
+        <form
+          className="nm-auth-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!busy) void handleSubmit();
           }}
         >
-          {mode === "login" ? "Chưa có tài khoản? Đăng ký" : "Đã có tài khoản? Đăng nhập"}
-        </button>
+          <label className="nm-auth-field">
+            <span>Email</span>
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
+              disabled={busy}
+            />
+          </label>
+
+          <label className="nm-auth-field">
+            <span>Mật khẩu</span>
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete={isLogin ? "current-password" : "new-password"}
+              disabled={busy}
+            />
+          </label>
+
+          {error ? <p className="nm-auth-error" role="alert">{error}</p> : null}
+
+          <button type="submit" disabled={busy} className="nm-auth-submit">
+            {busy ? "Đang xử lý..." : isLogin ? "Đăng nhập" : "Tạo tài khoản"}
+          </button>
+        </form>
+
+        <p className="nm-auth-switch">
+          {isLogin ? "Chưa có tài khoản? " : "Đã có tài khoản? "}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setMode(isLogin ? "register" : "login");
+              setError("");
+            }}
+          >
+            {isLogin ? "Đăng ký" : "Đăng nhập"}
+          </button>
+        </p>
       </section>
     </main>
   );

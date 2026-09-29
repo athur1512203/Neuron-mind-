@@ -1,4 +1,4 @@
-import { ArrowLeft, Link2, Maximize2, Minimize2, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
+import { ArrowLeft, Brain, Link2, Maximize2, Minimize2, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject } from "../types";
 import { getConnectionCount } from "../utils/neuron";
@@ -274,23 +274,20 @@ export function LearningMap({
               </div>
             ) : null}
             {!graphLoading && neurons.length === 0 && (
-              <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center p-6">
-                <div className="pointer-events-auto max-w-sm rounded-xl border border-slate-700/80 bg-slate-950/90 px-6 py-5 text-center shadow-xl">
-                  <h3 className="text-lg font-semibold text-white">Chưa có neuron nào</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-400">
-                    Thêm kiến thức đầu tiên để bắt đầu xây dựng mạng neuron.
+              <div className="nm-graph-empty-overlay">
+                <div className="nm-graph-empty-card">
+                  <span className="nm-graph-empty-icon" aria-hidden="true"><Brain size={28} /></span>
+                  <h3>Không gian này chưa có neuron</h3>
+                  <p>
+                    Tạo neuron đầu tiên để bắt đầu xây dựng mạng lưới kiến thức của bạn.
                   </p>
                   <button
                     type="button"
                     onClick={() => setShowCreateNeuron(true)}
-                    className="action-3d-button dashboard-add-button mt-4"
+                    className="nm-create-button nm-graph-empty-button"
                   >
-                    <span className="btn-shadow" />
-                    <span className="btn-edge" />
-                    <span className="btn-front">
-                      <Plus />
-                      Tạo neuron đầu tiên
-                    </span>
+                    <Plus size={18} aria-hidden="true" />
+                    Tạo neuron đầu tiên
                   </button>
                 </div>
               </div>
