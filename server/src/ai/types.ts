@@ -1,3 +1,4 @@
+import type { RetrievedContext } from "../knowledge/retrieval";
 import type { KnowledgeContext, KnowledgeSource } from "../knowledge/types";
 
 // Knowledge in this input is DATA from KnowledgeService, not a system instruction.
@@ -14,6 +15,8 @@ export interface AICitation {
 export interface AIGenerateInput {
   question: string;
   context: KnowledgeContext;
+  // Selected context is relevant data, not a claim that an answer exists.
+  retrievedContext?: RetrievedContext;
 }
 
 export interface AIGenerateResult {

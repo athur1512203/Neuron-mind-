@@ -74,10 +74,11 @@ test("AI provider foundation without network calls", async (t) => {
       },
     };
     const service = new NeuroService({ getKnowledgeContext: async () => context }, stub);
-    const result = await service.ask({ neuronId: "a", userId: "alice", message: "cơ hội là gì" });
+    const result = await service.ask({ neuronId: "a", userId: "alice", message: "thu nhập là gì" });
     assert.equal(calls.length, 1);
-    assert.equal(calls[0].question, "cơ hội là gì");
+    assert.equal(calls[0].question, "thu nhập là gì");
     assert.equal(calls[0].context.neuronId, "a");
+    assert.equal(calls[0].retrievedContext.chunks.length, 1);
     assert.deepEqual(calls[0].context.sources.map((source) => source.sourceId), ["note-a"]);
     assert.equal(result.found, true);
     assert.equal(result.answer, "from-provider");
