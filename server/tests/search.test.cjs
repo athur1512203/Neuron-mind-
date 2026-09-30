@@ -42,16 +42,26 @@ test("Global Search HTTP regression with mocked Prisma", async (t) => {
     document("doc-foreign", "alpha", { neuronId: "n-foreign", neuron: neurons[4] }),
   ];
   const calls = [];
+  mockPrisma(prisma.subject, "findMany", async ({ where, take }) => {
+    assert.equal(where.userId, "alice");
+    assert.ok(take <= 100);
+    return [{ id: subject.id }];
+  });
   const match = (row, clause) => Object.entries(clause).every(([field, filter]) => {
     assert.equal(filter.mode, "insensitive");
     return String(row[field] ?? "").toLowerCase().includes(filter.contains.toLowerCase());
   });
   for (const [type, delegate, rows] of [["neuron", prisma.neuron, neurons], ["markdown", prisma.markdownNote, notes], ["document", prisma.document, documents]]) {
-    mockPrisma(delegate, "findMany", async ({ where, orderBy, take }) => {
+    mockPrisma(delegate, "findMany", async ({ where, orderBy, take, select }) => {
+      if (type === "neuron" && select?.id && Object.keys(select).length === 1) {
+        assert.equal(where.subject.userId, "alice");
+        assert.deepEqual(where.subjectId.in, [subject.id]);
+        return neurons.filter((row) => row.subject.userId === where.subject.userId).map(({ id }) => ({ id }));
+      }
       calls.push({ type, where, take });
       const userId = type === "neuron" ? where.subject.userId : where.neuron.subject.userId;
       assert.equal(typeof userId, "string");
-      assert.deepEqual(orderBy, { updatedAt: "desc" });
+      assert.deepEqual(orderBy, [{ updatedAt: "desc" }, { id: "asc" }]);
       return rows.filter((row) => (type === "neuron" ? row.subject : row.neuron.subject).userId === userId)
         .filter((row) => type === "markdown" ? match(row, { content: where.content }) : where.OR.some((clause) => match(row, clause)))
         .sort((a, b) => b.updatedAt - a.updatedAt).slice(0, take);
