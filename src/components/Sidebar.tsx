@@ -24,12 +24,12 @@ export function Sidebar({ activeView, onNavigate, onSearch }: SidebarProps) {
       <nav className="sidebar-navigation" aria-label="Điều hướng chính">
         <button
           type="button"
-          aria-label="Neuro Chat"
+          aria-label="Tìm kiếm"
           onClick={onSearch}
           className="sidebar-nav-item"
         >
           <Search size={22} aria-hidden="true" />
-          <span className="sidebar-tooltip" aria-hidden="true">Neuro Chat</span>
+          <span className="sidebar-tooltip" aria-hidden="true">Tìm kiếm</span>
         </button>
         {items.map((item) => {
           const Icon = item.icon;

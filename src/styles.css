@@ -2480,6 +2480,8 @@ textarea:focus-visible {
 }
 
 .global-search-palette {
+  display: flex;
+  flex-direction: column;
   width: min(720px, 100%);
   max-height: min(720px, calc(100vh - 96px));
   overflow: hidden;
@@ -2488,6 +2490,45 @@ textarea:focus-visible {
   background: #fffdf4;
   box-shadow: 7px 7px 0 #111111;
   color: #111111;
+}
+
+.global-search-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 2px solid #111111;
+  background: #f5f1df;
+}
+
+.global-search-top h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.global-search-modes {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px 0;
+}
+
+.global-search-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 2px solid #111111;
+  border-radius: 5px;
+  background: #fffdf4;
+  box-shadow: 2px 2px 0 #111111;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.global-search-mode.is-on {
+  background: #ddf8e8;
 }
 
 .global-search-input {
@@ -2605,6 +2646,111 @@ textarea:focus-visible {
   -webkit-line-clamp: 2;
 }
 
+.global-search-plan-editor {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 2px solid #111111;
+}
+
+.global-search-plan-editor textarea {
+  min-height: 140px;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 2px solid #111111;
+  border-radius: 6px;
+  background: #ffffff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 650;
+  outline: none;
+}
+
+.global-search-run {
+  justify-self: end;
+  height: 34px;
+  padding: 0 12px;
+  border: 2px solid #111111;
+  border-radius: 5px;
+  background: #111111;
+  color: #fffdf4;
+  box-shadow: 2px 2px 0 #111111;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.global-search-run:disabled {
+  opacity: 0.45;
+}
+
+.global-search-plan-kicker,
+.global-search-plan-head,
+.global-search-plan-query,
+.global-search-plan-meta,
+.global-search-plan-score {
+  margin: 0;
+  font-weight: 800;
+}
+
+.global-search-plan-kicker {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.global-search-plan-request {
+  margin-top: 10px;
+}
+
+.global-search-plan-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.global-search-plan-query {
+  margin: 4px 0 8px;
+  color: #4b5563;
+  font-size: 12px;
+}
+
+.global-search-plan-hit {
+  margin-top: 8px;
+  padding: 8px;
+  border: 2px solid #111111;
+  background: #fffdf4;
+}
+
+.global-search-plan-meta,
+.global-search-plan-score {
+  font-size: 12px;
+}
+
+.global-search-plan-body {
+  margin: 8px 0;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: pre-wrap;
+}
+
+.global-search-raw-toggle {
+  margin-top: 8px;
+  border: 2px solid #111111;
+  background: #fffdf4;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+}
+
+.global-search-raw {
+  margin: 8px 0 0;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 11px;
+  white-space: pre-wrap;
+}
+
 .nm-workspace-card {
   position: relative;
   min-width: 0;
@@ -2698,211 +2844,6 @@ textarea:focus-visible {
 
 .nm-workspace-menu-list button:hover {
   background: rgba(17, 17, 17, 0.06);
-}
-
-.neuro-chat-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 120;
-  display: grid;
-  align-items: end;
-  justify-items: center;
-  padding: 24px 16px 20px;
-  background: rgba(15, 23, 42, 0.45);
-}
-
-.neuro-chat-panel {
-  display: flex;
-  flex-direction: column;
-  width: min(720px, 100%);
-  max-height: min(640px, calc(100vh - 40px));
-  overflow: hidden;
-  border: 2px solid #111111;
-  border-radius: 7px;
-  background: #fffdf4;
-  box-shadow: 7px 7px 0 #111111;
-}
-
-.neuro-chat-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-bottom: 2px solid #111111;
-  background: #f5f1df;
-}
-
-.neuro-chat-top h2 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 900;
-}
-
-.neuro-chat-log {
-  min-height: 160px;
-  flex: 1;
-  overflow-y: auto;
-  display: grid;
-  align-content: start;
-  gap: 10px;
-  padding: 14px;
-}
-
-.neuro-chat-empty {
-  margin: 0;
-  color: #666666;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.neuro-chat-bubble {
-  max-width: 94%;
-  padding: 10px 12px;
-  border: 2px solid #111111;
-  border-radius: 8px;
-  box-shadow: 3px 3px 0 #111111;
-  white-space: pre-wrap;
-}
-
-.neuro-chat-bubble p {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.5;
-}
-
-.neuro-chat-bubble.is-user {
-  justify-self: end;
-  background: #dbeafe;
-}
-
-.neuro-chat-bubble.is-assistant {
-  justify-self: start;
-  background: #ecfccb;
-}
-
-.neuro-chat-bubble.is-error {
-  justify-self: start;
-  background: #fee2e2;
-}
-
-.neuro-chat-search-title {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 900;
-}
-
-.neuro-chat-request {
-  margin-top: 10px;
-}
-
-.neuro-chat-request-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.neuro-chat-request-query {
-  margin: 4px 0 8px;
-  color: #4b5563;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.neuro-chat-hit {
-  margin-top: 8px;
-  padding: 8px;
-  border: 2px solid #111111;
-  background: #fffdf4;
-}
-
-.neuro-chat-hit-meta,
-.neuro-chat-hit-score {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.neuro-chat-hit-body {
-  margin: 8px 0;
-  font-size: 13px;
-  font-weight: 650;
-  white-space: pre-wrap;
-}
-
-.neuro-chat-raw-toggle {
-  margin-top: 8px;
-  border: 2px solid #111111;
-  background: #fffdf4;
-  font-size: 11px;
-  font-weight: 800;
-  padding: 4px 8px;
-}
-
-.neuro-chat-raw {
-  margin: 8px 0 0;
-  max-height: 220px;
-  overflow: auto;
-  font-size: 11px;
-  white-space: pre-wrap;
-}
-
-.neuro-chat-bar {
-  border-top: 2px solid #111111;
-  background: #fffdf4;
-  padding: 10px 12px 12px;
-}
-
-.neuro-chat-bar textarea {
-  width: 100%;
-  resize: none;
-  padding: 10px 12px;
-  border: 2px solid #111111;
-  border-radius: 6px;
-  background: #ffffff;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 650;
-  outline: none;
-}
-
-.neuro-chat-tools {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.neuro-chat-tool,
-.neuro-chat-send {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 10px;
-  border: 2px solid #111111;
-  border-radius: 5px;
-  background: #fffdf4;
-  box-shadow: 2px 2px 0 #111111;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.neuro-chat-tool.is-on {
-  background: #ddf8e8;
-}
-
-.neuro-chat-tool:disabled {
-  opacity: 0.45;
-}
-
-.neuro-chat-send {
-  margin-left: auto;
-  background: #111111;
-  color: #fffdf4;
 }
 
 .nm-activity-list {
