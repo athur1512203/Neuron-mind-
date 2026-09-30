@@ -60,6 +60,69 @@ test("Neuro Chat V0 grounded answers from KnowledgeContext", async (t) => {
     }],
   };
 
+  const contextFor = (content) => ({ ...opportunityContext,
+    sources: [{ ...opportunityContext.sources[0], content }] });
+  const cases = [
+    ["A", "quỳnh chi sinh năm 2003", "quỳnh chi sinh năm bao nhiêu", true],
+    ["B", "quỳnh chi sinh năm 2003", "ngọc anh sinh năm bao nhiêu", false],
+    ["C", "nguyễn văn minh sinh năm 2001", "trần ngọc lan sinh năm bao nhiêu", false],
+    ["D", "công ty ABC có 25 nhân viên", "công ty ABC có bao nhiêu nhân viên", true],
+    ["E", "công ty ABC có 25 nhân viên", "công ty XYZ có bao nhiêu nhân viên", false],
+    ["F", "công ty ABC bán sách", "công ty này có bao nhiêu nhân viên", false],
+    ["G", opportunityKnowledge, "thời tiết hôm nay thế nào", false],
+    ["H", "quỳnh chi sinh năm 2003", "ngọc anh sinh năm bao nhiêu", false],
+  ];
+  for (const [label, content, question, found] of cases) {
+    await t.test(`CASE ${label}: distinctive relevance`, async () => {
+      const context = contextFor(content);
+      const { NeuroService } = require("../dist/services/neuro.service");
+      let knowledgeCalls = 0;
+      const service = new NeuroService({ getKnowledgeContext: async () => {
+        knowledgeCalls++;
+        return context;
+      } });
+      const result = await service.ask({ neuronId: "a", userId: "alice", message: question,
+        history: label === "H" ? [{ role: "user", content: "quỳnh chi" }] : [] });
+      assert.equal(knowledgeCalls, 1);
+      assert.equal(result.found, found);
+      if (found) {
+        assert.equal(result.answer, content);
+        assert.deepEqual(result.sources.map((source) => source.sourceId), ["note-opp"]);
+      } else {
+        assert.deepEqual(result, { neuronId: "a", subjectId: "subject-a",
+          found: false, answer: null, sources: [] });
+      }
+    });
+  }
+
+  await t.test("Unicode, punctuation, case and single-character identifiers", () => {
+    const result = answerFromKnowledge(contextFor("Quỳnh Chi sinh năm 2003".normalize("NFD")),
+      "  QUỲNH,  CHI sinh năm bao nhiêu? ");
+    assert.equal(result.found, true);
+    assert.equal(answerFromKnowledge(contextFor("sản phẩm X giá 25"), "sản phẩm X giá bao nhiêu").found, true);
+  });
+
+  await t.test("partial identities, generic-only questions and absent attributes miss", () => {
+    for (const question of ["quỳnh anh sinh năm bao nhiêu", "sinh năm bao nhiêu", "cho tôi biết là gì"]) {
+      assert.equal(answerFromKnowledge(contextFor("quỳnh chi sinh năm 2003"), question).found, false);
+    }
+    assert.equal(answerFromKnowledge(contextFor("công ty ABC bán sách"), "công ty ABC có bao nhiêu nhân viên").found, false);
+    assert.equal(answerFromKnowledge(contextFor("dự án Alpha ra mắt tháng 5"), "dự án Beta ra mắt khi nào").found, false);
+  });
+
+  await t.test("duplicate provider passages appear once and citations have stable identities", () => {
+    const content = "quỳnh chi sinh năm 2003";
+    const context = contextFor(`## Text\n${content}\n\n## Note\n${content}`);
+    context.sources.push({ ...context.sources[0], type: "NEURON", sourceId: "a", content });
+    context.sources.push({ ...context.sources[0] });
+    const result = answerFromKnowledge(context, "quỳnh chi sinh năm bao nhiêu");
+    assert.equal(result.answer.split(content).length - 1, 1);
+    assert.equal(result.sources.length, 1);
+    const multiple = answerFromKnowledge(contextFor(`${content}\n\nquỳnh chi sinh năm 2003 tại Hà Nội`), "quỳnh chi sinh năm bao nhiêu");
+    assert.equal(multiple.sources.length, 1);
+    assert.match(multiple.answer, /Hà Nội/);
+  });
+
   await t.test("extracts matching passages and citations without inventing extra facts", () => {
     const result = answerFromKnowledge({
       neuronId: "a",

@@ -30,17 +30,30 @@ const STOPWORDS = new Set([
   "of", "on", "or", "that", "the", "this", "to", "what", "when", "where", "which", "who", "why",
   "với", "của", "và", "là", "các", "những", "một", "trong", "cho", "được", "có", "không",
   "này", "kia", "thì", "về", "như", "hay", "hỏi", "giải", "thích",
+  "gì", "bao", "nhiêu", "ở", "đâu", "khi", "nào", "tôi", "biết", "thế",
 ]);
+
+// Match whole phrases, not individual syllables that may also occur in names/concepts.
+const DOMAIN_PHRASES = ["sinh năm", "nhân viên", "công ty", "dự án", "sản phẩm"];
 
 const MAX_PASSAGES = 3;
 const MAX_PASSAGE_CHARS = 900;
 const MAX_REPLY_CHARS = 4000;
 
+function normalize(text: string): string {
+  return text.normalize("NFC").toLowerCase()
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, " ").trim().replace(/\s+/g, " ");
+}
+
 function tokens(text: string): string[] {
-  return text
-    .toLowerCase()
-    .split(/[^\p{L}\p{N}]+/u)
-    .filter((token) => token.length >= 2 && !STOPWORDS.has(token));
+  return normalize(text).split(" ").filter((token) => token && !STOPWORDS.has(token));
+}
+
+function queryTerms(message: string) {
+  let distinctive = ` ${normalize(message)} `;
+  const phrases = DOMAIN_PHRASES.filter((phrase) => distinctive.includes(` ${phrase} `));
+  for (const phrase of phrases) distinctive = distinctive.split(` ${phrase} `).join(" ");
+  return { distinctive: [...new Set(tokens(distinctive))], phrases };
 }
 
 function splitPassages(content: string): string[] {
@@ -50,14 +63,15 @@ function splitPassages(content: string): string[] {
     .filter(Boolean);
 }
 
-function scorePassage(passage: string, queryTokens: string[]): number {
-  if (!queryTokens.length) return 0;
+function scorePassage(passage: string, query: ReturnType<typeof queryTerms>): number {
+  if (!query.distinctive.length) return 0;
   const passageTokens = new Set(tokens(passage));
-  let score = 0;
-  for (const token of queryTokens) {
-    if (passageTokens.has(token)) score += 1;
-  }
-  return score;
+  // Conservative V0: partial entity matches and generic-only overlap must miss.
+  if (!query.distinctive.every((token) => passageTokens.has(token))) return 0;
+  const normalized = ` ${normalize(passage)} `;
+  if (!query.phrases.every((phrase) => normalized.includes(` ${phrase} `))) return 0;
+  const phraseBonus = normalized.includes(` ${query.distinctive.join(" ")} `) ? 2 : 0;
+  return query.distinctive.length * 4 + phraseBonus + query.phrases.length;
 }
 
 function cite(source: KnowledgeSource): NeuroCitation {
@@ -89,21 +103,29 @@ export function answerFromKnowledge(
   if (!usableSources.length) return miss(context);
 
   // Retrieval uses only the current question. Prior turns must not leak relevance.
-  const queryTokens = [...new Set(tokens(message))];
-  if (!queryTokens.length) return miss(context);
+  const query = queryTerms(message);
+  if (!query.distinctive.length) return miss(context);
 
   const ranked: Array<{ source: KnowledgeSource; passage: string; score: number }> = [];
   for (const source of usableSources) {
     const passages = splitPassages(source.content ?? "");
     const chunks = passages.length ? passages : [source.content ?? ""];
     for (const passage of chunks) {
-      const score = scorePassage(passage, queryTokens);
+      const score = scorePassage(passage, query);
       if (score > 0) ranked.push({ source, passage, score });
     }
   }
   ranked.sort((a, b) => b.score - a.score);
 
-  const selected = ranked.slice(0, MAX_PASSAGES);
+  // Providers can expose the same text under different section headings/source IDs.
+  // Deduplicate before limiting, so repeats cannot crowd out unique relevant passages.
+  const seenPassages = new Set<string>();
+  const selected = ranked.filter(({ passage }) => {
+    const key = normalize(passage.replace(/^#{1,6}\s+.*$/gm, ""));
+    if (seenPassages.has(key)) return false;
+    seenPassages.add(key);
+    return true;
+  }).slice(0, MAX_PASSAGES);
   if (!selected.length) return miss(context);
 
   const sources: NeuroCitation[] = [];

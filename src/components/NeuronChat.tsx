@@ -18,6 +18,7 @@ export function NeuronChat({ neuronId, neuronName }: NeuronChatProps) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
+  const inFlight = useRef(false);
 
   useEffect(() => {
     setTurns([]);
@@ -31,7 +32,8 @@ export function NeuronChat({ neuronId, neuronName }: NeuronChatProps) {
 
   const send = async () => {
     const message = draft.trim();
-    if (!message || sending) return;
+    if (!message || inFlight.current) return;
+    inFlight.current = true;
     setDraft("");
     setError("");
     setSending(true);
@@ -47,6 +49,7 @@ export function NeuronChat({ neuronId, neuronName }: NeuronChatProps) {
       setTurns(turns);
       setDraft(message);
     } finally {
+      inFlight.current = false;
       setSending(false);
     }
   };
