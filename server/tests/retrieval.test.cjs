@@ -2,7 +2,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { chunkMarkdown } = require('../dist/knowledge/chunking');
 const { retrieveContext, selectedKnowledgeContext, serializeRetrievedContext, TOP_K } = require('../dist/knowledge/retrieval');
-const { NeuroService } = require('../dist/services/neuro.service');
 
 const fixture = `Nguyễn Minh Anh đang làm việc tại phòng Marketing của công ty Nova.
 Minh Anh phụ trách chiến dịch quảng cáo sản phẩm mới trong tháng 10.
@@ -68,16 +67,18 @@ test('negative questions may retrieve related context, but never assert an answe
     const result = retrieveContext(context(source()), question);
     assert.ok(result.chunks.some((chunk) => chunk.content.includes('Hùng')));
     assert.equal('answer' in result, false);
-    // Retrieval cannot establish age/framework facts. The provider must judge sufficiency.
-    const service = new NeuroService({ getKnowledgeContext: async () => context(source()) }, {
-      name: 'mock', generate: async (input) => {
+    const generated = await ({
+      generate: async (input) => {
         assert.deepEqual(input.retrievedContext, result);
         return { found: false, answer: null, sources: [], provider: 'mock', model: 'test' };
       },
+    }).generate({
+      question,
+      context: selectedKnowledgeContext(result),
+      retrievedContext: result,
     });
-    assert.deepEqual(await service.ask({ neuronId: 'a', userId: 'alice', message: question }), {
-      neuronId: 'a', subjectId: 'subject-a', found: false, answer: null, sources: [],
-    });
+    assert.equal(generated.found, false);
+    assert.equal(generated.answer, null);
   }
 });
 
@@ -111,14 +112,12 @@ test('provider receives only selected allowlisted content, not documents, secret
   assert.equal(result.chunks.length, 1);
   const serialized = serializeRetrievedContext(result, 'backend');
   assert.match(serialized, /KNOWLEDGE CONTEXT[\s\S]*Type: MARKDOWN[\s\S]*QUESTION:\nbackend/);
-  const service = new NeuroService({ getKnowledgeContext: async (scope) => {
-    assert.deepEqual(scope, { neuronId: 'a', userId: 'alice' });
-    return input;
-  } }, { name: 'mock', generate: async (received) => {
-    const data = JSON.stringify(received);
-    for (const forbidden of ['SECRET_STORAGE', 'SECRET_KEY', 'UNRELATED_PRIVATE_TEXT', 'backend document']) assert.equal(data.includes(forbidden), false);
-    assert.deepEqual(received.retrievedContext, result);
-    return { found: false, answer: null, sources: [], provider: 'mock', model: 'test' };
-  } });
-  await service.ask({ neuronId: 'a', userId: 'alice', message: 'backend', history: [{ role: 'user', content: 'UNRELATED_PRIVATE_TEXT' }] });
+  const received = {
+    question: 'backend',
+    context: selectedKnowledgeContext(result),
+    retrievedContext: result,
+  };
+  const data = JSON.stringify(received);
+  for (const forbidden of ['SECRET_STORAGE', 'SECRET_KEY', 'UNRELATED_PRIVATE_TEXT', 'backend document']) assert.equal(data.includes(forbidden), false);
+  assert.deepEqual(received.retrievedContext, result);
 });

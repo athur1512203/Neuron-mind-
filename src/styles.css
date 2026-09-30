@@ -2700,63 +2700,63 @@ textarea:focus-visible {
   background: rgba(17, 17, 17, 0.06);
 }
 
-.neuron-chat {
+.neuro-chat-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  align-items: end;
+  justify-items: center;
+  padding: 24px 16px 20px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.neuro-chat-panel {
   display: flex;
-  min-height: 0;
-  flex: 1;
   flex-direction: column;
+  width: min(720px, 100%);
+  max-height: min(640px, calc(100vh - 40px));
   overflow: hidden;
   border: 2px solid #111111;
   border-radius: 7px;
-  background: #fffdf3;
-  box-shadow: 4px 4px 0 #111111;
+  background: #fffdf4;
+  box-shadow: 7px 7px 0 #111111;
 }
 
-.neuron-chat-header {
+.neuro-chat-top {
   display: flex;
-  gap: 12px;
-  padding: 14px 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
   border-bottom: 2px solid #111111;
+  background: #f5f1df;
 }
 
-.neuron-chat-header h3 {
+.neuro-chat-top h2 {
   margin: 0;
   font-size: 16px;
   font-weight: 900;
 }
 
-.neuron-chat-header p {
-  margin: 4px 0 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: #334155;
-}
-
-.neuron-chat-log {
-  min-height: 0;
+.neuro-chat-log {
+  min-height: 160px;
   flex: 1;
   overflow-y: auto;
   display: grid;
   align-content: start;
   gap: 10px;
-  padding: 16px;
+  padding: 14px;
 }
 
-.neuron-chat-empty,
-.neuron-chat-status,
-.neuron-chat-error {
+.neuro-chat-empty {
   margin: 0;
+  color: #666666;
   font-size: 13px;
   font-weight: 700;
 }
 
-.neuron-chat-error {
-  padding: 0 16px 8px;
-  color: #991b1b;
-}
-
-.neuron-chat-bubble {
-  max-width: 92%;
+.neuro-chat-bubble {
+  max-width: 94%;
   padding: 10px 12px;
   border: 2px solid #111111;
   border-radius: 8px;
@@ -2764,46 +2764,145 @@ textarea:focus-visible {
   white-space: pre-wrap;
 }
 
-.neuron-chat-bubble p {
+.neuro-chat-bubble p {
   margin: 0;
   font-size: 13px;
   font-weight: 650;
   line-height: 1.5;
 }
 
-.neuron-chat-sources {
-  margin: 8px 0 0;
-  padding: 0 0 0 18px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.neuron-chat-bubble.is-user {
+.neuro-chat-bubble.is-user {
   justify-self: end;
   background: #dbeafe;
 }
 
-.neuron-chat-bubble.is-assistant {
+.neuro-chat-bubble.is-assistant {
   justify-self: start;
   background: #ecfccb;
 }
 
-.neuron-chat-composer {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-  padding: 12px;
-  border-top: 2px solid #111111;
+.neuro-chat-bubble.is-error {
+  justify-self: start;
+  background: #fee2e2;
 }
 
-.neuron-chat-composer textarea {
+.neuro-chat-search-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.neuro-chat-request {
+  margin-top: 10px;
+}
+
+.neuro-chat-request-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.neuro-chat-request-query {
+  margin: 4px 0 8px;
+  color: #4b5563;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.neuro-chat-hit {
+  margin-top: 8px;
+  padding: 8px;
+  border: 2px solid #111111;
+  background: #fffdf4;
+}
+
+.neuro-chat-hit-meta,
+.neuro-chat-hit-score {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.neuro-chat-hit-body {
+  margin: 8px 0;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: pre-wrap;
+}
+
+.neuro-chat-raw-toggle {
+  margin-top: 8px;
+  border: 2px solid #111111;
+  background: #fffdf4;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+}
+
+.neuro-chat-raw {
+  margin: 8px 0 0;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 11px;
+  white-space: pre-wrap;
+}
+
+.neuro-chat-bar {
+  border-top: 2px solid #111111;
+  background: #fffdf4;
+  padding: 10px 12px 12px;
+}
+
+.neuro-chat-bar textarea {
+  width: 100%;
   resize: none;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border: 2px solid #111111;
   border-radius: 6px;
   background: #ffffff;
   font: inherit;
+  font-size: 14px;
   font-weight: 650;
+  outline: none;
+}
+
+.neuro-chat-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.neuro-chat-tool,
+.neuro-chat-send {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 10px;
+  border: 2px solid #111111;
+  border-radius: 5px;
+  background: #fffdf4;
+  box-shadow: 2px 2px 0 #111111;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.neuro-chat-tool.is-on {
+  background: #ddf8e8;
+}
+
+.neuro-chat-tool:disabled {
+  opacity: 0.45;
+}
+
+.neuro-chat-send {
+  margin-left: auto;
+  background: #111111;
+  color: #fffdf4;
 }
 
 .nm-activity-list {

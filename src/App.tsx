@@ -3,13 +3,12 @@ import { getMe } from "./api/auth";
 import { apiMessage, clearToken, getToken, setUnauthorizedHandler } from "./api/client";
 import { createConnection as createConnectionApi, deleteConnection as deleteConnectionApi } from "./api/connections";
 import { createNeuron as createNeuronApi, deleteNeuron as deleteNeuronApi, updateNeuron as updateNeuronApi } from "./api/neurons";
-import type { SearchResult } from "./api/search";
 import { createSubject as createSubjectApi, deleteSubject as deleteSubjectApi, getSubjectGraph, listSubjects } from "./api/subjects";
 import type { ApiUser } from "./api/mappers";
 import { AuthScreen } from "./components/AuthScreen";
 import { Dashboard } from "./components/Dashboard";
-import { GlobalSearchPalette } from "./components/GlobalSearchPalette";
 import { LearningMap } from "./components/LearningMap";
+import { NeuroChat } from "./components/NeuroChat";
 import type { DetailTab } from "./components/NeuronDetailPanel";
 import { SearchCoreDebug, isSearchCoreDebugPath } from "./components/SearchCoreDebug";
 import { Settings } from "./components/Settings";
@@ -252,22 +251,6 @@ export default function App() {
     setNotice(null);
   };
 
-  const openNeuron = (subjectId: string, neuronId: string, tab: DetailTab = "overview") => {
-    setSelectedSubjectId(subjectId);
-    setActiveView("map");
-    setMapExpanded(false);
-    setSelection(null);
-    setDetailInitialTab(tab);
-    setPendingNeuronSelection({ neuronId, tab });
-    setNotice(null);
-  };
-
-  const openSearchResult = (result: SearchResult) => {
-    if (!result.subjectId || !result.neuronId) return;
-    const tab: DetailTab = result.type === "markdown" ? "markdown" : "overview";
-    openNeuron(result.subjectId, result.neuronId, tab);
-  };
-
   const selectNeuron = (neuronId: string) => {
     setPendingNeuronSelection(null);
     if (!neuronId) {
@@ -491,7 +474,7 @@ export default function App() {
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 md:h-screen md:flex-row">
       {!(activeView === "map" && mapExpanded) && <Sidebar activeView={activeView} onNavigate={navigate} onSearch={() => setSearchOpen(true)} />}
       {renderView()}
-      <GlobalSearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} onOpenResult={openSearchResult} />
+      <NeuroChat open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }

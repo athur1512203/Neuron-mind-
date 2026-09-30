@@ -2,7 +2,6 @@ import {
   Brain,
   Check,
   FileText,
-  MessageCircle,
   Pencil,
   Plus,
   Settings,
@@ -21,10 +20,9 @@ import {
   type DocumentMeta,
 } from "../api/documents";
 import type { Neuron, NeuronConnection } from "../types";
-import { NeuronChat } from "./NeuronChat";
 import { NeuronMarkdownEditor } from "./NeuronMarkdownEditor";
 
-export type DetailTab = "overview" | "markdown" | "chat" | "custom";
+export type DetailTab = "overview" | "markdown" | "custom";
 
 type NeuronDetailPanelProps = {
   neuron: Neuron;
@@ -226,7 +224,7 @@ export function NeuronDetailPanel({
         />
         <NeuronTabs tab={tab} onChange={setTab} />
 
-        <div className={`neuron-workspace-scroll${tab === "markdown" || tab === "chat" ? " is-markdown" : ""}`}>
+        <div className={`neuron-workspace-scroll${tab === "markdown" ? " is-markdown" : ""}`}>
           {tab === "overview" ? (
             <NeuronOverview
               neuron={neuron}
@@ -254,10 +252,9 @@ export function NeuronDetailPanel({
             />
           ) : null}
           {tab === "markdown" ? <NeuronMarkdownEditor key={neuron.id} neuronId={neuron.id} /> : null}
-          {tab === "chat" ? <NeuronChat key={neuron.id} neuronId={neuron.id} neuronName={neuron.name} /> : null}
           {tab === "custom" ? <NeuronCustom /> : null}
 
-          {editing && tab !== "markdown" && tab !== "chat" && tab !== "custom" ? (
+          {editing && tab !== "markdown" && tab !== "custom" ? (
             <div className="flex justify-end gap-3 pb-2">
               <button type="button" className="brutal-button" onClick={() => { setDraft(neuron); setEditing(false); }}>Hủy</button>
               <button type="button" className="brutal-button brutal-button-primary" onClick={saveDraft}><Check size={16} />Lưu thay đổi</button>
@@ -327,7 +324,6 @@ function NeuronTabs({ tab, onChange }: { tab: DetailTab; onChange: (tab: DetailT
   const tabs: Array<{ id: DetailTab; label: string; icon: typeof Brain }> = [
     { id: "overview", label: "Tổng quan", icon: Brain },
     { id: "markdown", label: "Note Markdown", icon: FileText },
-    { id: "chat", label: "Neuro Chat", icon: MessageCircle },
     { id: "custom", label: "Tùy chỉnh", icon: Settings },
   ];
   return (

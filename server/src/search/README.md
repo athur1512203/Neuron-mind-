@@ -12,7 +12,6 @@ not generate answers, interpret `purpose`, call AI, or read document binaries.
 - `core.ts`: plan validation, multiple requests, canonical source identities,
   allowlisted output, and the navigation ranking profile for the existing palette.
 - `KnowledgeService`: loads owned sources; does not search across the hierarchy.
-- `local-answer.ts`: legacy local V0 answer compatibility only, outside Search Core.
 
 `SearchRepository` can be replaced without changing plan consumers. A future
 planner must attach the authenticated user ID on the server, never trust a user

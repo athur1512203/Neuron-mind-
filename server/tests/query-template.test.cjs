@@ -2,7 +2,6 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { buildRetrievalTemplate, extractKnownTerms } = require('../dist/knowledge/query');
 const { retrieveContext } = require('../dist/knowledge/retrieval');
-const { NeuroService } = require('../dist/services/neuro.service');
 
 const cases = [
   ['Phần nào của website chưa hoàn thành?', 'Phần ... website chưa hoàn thành', ['phần', 'website', 'chưa', 'hoàn', 'thành'], 'Phần backend của website chưa hoàn thành.'],
@@ -58,15 +57,15 @@ test('Unicode and spacing normalize without changing original question', () => {
 
 test('AIProvider receives original question, never the retrieval template', async () => {
   const original = '  Ai phụ trách backend?  ';
+  const retrieved = retrieveContext(context('Backend do Hùng phụ trách.'), original);
   let calls = 0;
-  const service = new NeuroService({ getKnowledgeContext: async () => context('Backend do Hùng phụ trách.') }, {
-    name: 'mock', generate: async (input) => {
+  await ({
+    generate: async (input) => {
       calls++;
       assert.equal(input.question, original);
       assert.equal(input.retrievedContext.chunks.length, 1);
       return { found: false, answer: null, sources: [], provider: 'mock', model: 'test' };
     },
-  });
-  await service.ask({ neuronId: 'a', userId: 'alice', message: original });
+  }).generate({ question: original, retrievedContext: retrieved });
   assert.equal(calls, 1);
 });

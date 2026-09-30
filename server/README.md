@@ -51,7 +51,6 @@ npm run prisma:deploy
 - `GET /api/subjects/:subjectId/graph`
 - `GET|POST /api/subjects/:subjectId/neurons`
 - `GET|PATCH|DELETE /api/neurons/:id`
-- `POST /api/neurons/:neuronId/chat`
 - `GET|POST /api/neurons/:neuronId/documents`
 - `GET /api/documents/:documentId/download`
 - `DELETE /api/documents/:documentId`

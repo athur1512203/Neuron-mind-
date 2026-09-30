@@ -13,7 +13,7 @@ test("AI provider foundation without network calls", async (t) => {
   const { OpenAIProvider } = require("../dist/ai/openai.provider");
   const { readAIProviderName } = require("../dist/ai/config");
   const { resolveAIProvider } = require("../dist/ai/resolve");
-  const { NeuroService } = require("../dist/services/neuro.service");
+  const { retrieveContext, selectedKnowledgeContext } = require("../dist/knowledge/retrieval");
   const { knowledgeService } = require("../dist/services/knowledge.service");
   const { prisma } = require("../dist/lib/prisma");
 
@@ -58,7 +58,7 @@ test("AI provider foundation without network calls", async (t) => {
     }
   });
 
-  await t.test("NeuroService calls AIProvider through the abstraction", async () => {
+  await t.test("AIProvider generate receives retrieved context through the abstraction", async () => {
     const calls = [];
     const stub = {
       name: "mock",
@@ -73,8 +73,12 @@ test("AI provider foundation without network calls", async (t) => {
         };
       },
     };
-    const service = new NeuroService({ getKnowledgeContext: async () => context }, stub);
-    const result = await service.ask({ neuronId: "a", userId: "alice", message: "thu nhập là gì" });
+    const retrieved = retrieveContext(context, "thu nhập là gì");
+    const result = await stub.generate({
+      question: "thu nhập là gì",
+      context: selectedKnowledgeContext(retrieved),
+      retrievedContext: retrieved,
+    });
     assert.equal(calls.length, 1);
     assert.equal(calls[0].question, "thu nhập là gì");
     assert.equal(calls[0].context.neuronId, "a");
@@ -115,14 +119,9 @@ test("AI provider foundation without network calls", async (t) => {
   });
   mockPrisma(prisma.markdownNote, "findFirst", async () => null);
 
-  await t.test("foreign neuron never reaches AIProvider or other-user knowledge", async () => {
-    const provider = {
-      name: "mock",
-      generate: async () => assert.fail("AIProvider must not run for unauthorized knowledge"),
-    };
-    const service = new NeuroService(knowledgeService, provider);
+  await t.test("foreign neuron never reaches other-user knowledge", async () => {
     await assert.rejects(
-      service.ask({ neuronId: "b", userId: "alice", message: "hello" }),
+      knowledgeService.getKnowledgeContext({ neuronId: "b", userId: "alice" }),
       { status: 404, code: "NEURON_NOT_FOUND" },
     );
     const allowed = await knowledgeService.getKnowledgeContext({ neuronId: "a", userId: "alice" });
