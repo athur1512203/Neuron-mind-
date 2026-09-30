@@ -11,6 +11,7 @@ import { Dashboard } from "./components/Dashboard";
 import { GlobalSearchPalette } from "./components/GlobalSearchPalette";
 import { LearningMap } from "./components/LearningMap";
 import type { DetailTab } from "./components/NeuronDetailPanel";
+import { SearchCoreDebug, isSearchCoreDebugPath } from "./components/SearchCoreDebug";
 import { Settings } from "./components/Settings";
 import { Sidebar } from "./components/Sidebar";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject, ViewName } from "./types";
@@ -474,6 +475,10 @@ export default function App() {
 
   if (!user) {
     return <AuthScreen onAuthenticated={setUser} />;
+  }
+
+  if (isSearchCoreDebugPath()) {
+    return <SearchCoreDebug />;
   }
 
   return (
