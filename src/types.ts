@@ -40,7 +40,7 @@ export type NeuronConnection = {
   updatedAt: string;
 };
 
-export type ViewName = "dashboard" | "map" | "connections" | "settings";
+export type ViewName = "dashboard" | "map" | "connections" | "settings" | "searchCoreTest";
 
 export type Selection =
   | { type: "neuron"; id: string }

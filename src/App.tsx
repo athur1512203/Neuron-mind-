@@ -39,6 +39,7 @@ export default function App() {
   const [navigationUserId, setNavigationUserId] = useState<string | null>(null);
   const sessionVersion = useRef(0);
   const restoredGraph = useRef<string | null>(null);
+  const persistableViewRef = useRef<ViewName>("dashboard");
   const userIdRef = useRef<string | null>(null);
   userIdRef.current = user?.id ?? null;
 
@@ -131,9 +132,17 @@ export default function App() {
 
   const selectedNeuronId = pendingNeuronSelection?.neuronId ?? (selection?.type === "neuron" ? selection.id : null);
   useEffect(() => {
+    if (activeView !== "searchCoreTest") persistableViewRef.current = activeView;
+  }, [activeView]);
+  useEffect(() => {
     if (!user || navigationUserId !== user.id) return;
-    saveNavigation(user.id, { activeView, selectedSubjectId, selectedNeuronId });
+    const persistView = activeView === "searchCoreTest" ? persistableViewRef.current : activeView;
+    saveNavigation(user.id, { activeView: persistView, selectedSubjectId, selectedNeuronId });
   }, [user, navigationUserId, activeView, selectedSubjectId, selectedNeuronId]);
+  useEffect(() => {
+    if (!user || navigationUserId !== user.id) return;
+    if (isSearchCoreDebugPath()) setActiveView("searchCoreTest");
+  }, [user, navigationUserId]);
 
   useEffect(() => {
     if (!user || navigationUserId !== user.id || (activeView !== "map" && activeView !== "connections") || !selectedSubjectId) return;
@@ -408,6 +417,7 @@ export default function App() {
         />
       );
     }
+    if (activeView === "searchCoreTest") return <SearchCoreDebug />;
     if (activeView === "settings") return <Settings email={user?.email} onLogout={logout} />;
     if (!selectedSubject) {
       return (
@@ -461,7 +471,7 @@ export default function App() {
   const navigate = (view: ViewName) => {
     setActiveView(view);
     if (view !== "map") setMapExpanded(false);
-    if (view !== "map" && view !== "connections") {
+    if (view !== "map" && view !== "connections" && view !== "searchCoreTest") {
       setSelection(null);
       setPendingNeuronSelection(null);
     }
@@ -475,10 +485,6 @@ export default function App() {
 
   if (!user) {
     return <AuthScreen onAuthenticated={setUser} />;
-  }
-
-  if (isSearchCoreDebugPath()) {
-    return <SearchCoreDebug />;
   }
 
   return (

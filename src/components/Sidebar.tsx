@@ -1,4 +1,4 @@
-import { Brain, Home, Search, Settings, Share2 } from "lucide-react";
+import { Brain, Home, Search, Settings, Share2, SquareTerminal } from "lucide-react";
 import type { ViewName } from "../types";
 
 type SidebarProps = {
@@ -11,6 +11,7 @@ const items: Array<{ id: ViewName; label: string; icon: typeof Home }> = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "map", label: "Sơ đồ", icon: Share2 },
   { id: "settings", label: "Cài đặt", icon: Settings },
+  { id: "searchCoreTest", label: "Search Core Test", icon: SquareTerminal },
 ];
 
 export function Sidebar({ activeView, onNavigate, onSearch }: SidebarProps) {

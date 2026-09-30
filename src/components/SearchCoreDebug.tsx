@@ -1,213 +1,181 @@
-import { useState } from "react";
+import { useCallback, useState, type KeyboardEvent } from "react";
 import { ApiError } from "../api/client";
-import {
-  debugSearchCore,
-  type RetrievedInformation,
-  type SearchDebugRequest,
-  type SearchSourceType,
-} from "../api/search";
+import { debugSearchCore, type SearchDebugRequest } from "../api/search";
 
-const SOURCE_OPTIONS: Array<SearchSourceType | ""> = ["", "NEURON", "MARKDOWN", "DOCUMENT"];
+export const SEARCH_CORE_EXAMPLE = `{
+  "space": {
+    "query": "công việc"
+  },
+  "neuron": {
+    "query": "Kinh doanh"
+  },
+  "requests": [
+    {
+      "id": "main",
+      "query": "ai phụ trách backend",
+      "sources": ["MARKDOWN"]
+    }
+  ]
+}`;
 
-type RequestRow = { key: string; id: string; query: string; source: SearchSourceType | "" };
+type ConsoleOutput = {
+  status: string;
+  timeMs: number | null;
+  body: string;
+};
 
-let rowKey = 1;
+function stripClientUserId(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const { userId: _ignored, ...rest } = value as Record<string, unknown>;
+  return rest;
+}
 
-function fieldClass() {
-  return "mt-1 w-full border-2 border-black bg-white px-3 py-2 text-sm";
+function describeError(error: unknown): { status: string; body: string } {
+  if (error instanceof ApiError) {
+    if (error.status === 404) {
+      return { status: "404", body: "Search Core debug endpoint is disabled." };
+    }
+    if (error.status === 401) {
+      return { status: "401", body: "Authentication required" };
+    }
+    if (error.status === 400) {
+      return { status: "400", body: "SearchPlan validation failed" };
+    }
+    if (error.status === 403) {
+      return { status: "403", body: error.message };
+    }
+    if (error.status === 500) {
+      return { status: "500", body: error.message };
+    }
+    return { status: String(error.status), body: error.message };
+  }
+  return { status: "500", body: "Request failed" };
 }
 
 export function SearchCoreDebug() {
-  const [spaceQuery, setSpaceQuery] = useState("Tài liệu học TMU");
-  const [spaceId, setSpaceId] = useState("");
-  const [neuronQuery, setNeuronQuery] = useState("Nghiên cứu khoa học");
-  const [neuronId, setNeuronId] = useState("");
-  const [rows, setRows] = useState<RequestRow[]>([
-    { key: "r0", id: "main", query: "nghiên cứu khoa học", source: "" },
-  ]);
-  const [sent, setSent] = useState<SearchDebugRequest | null>(null);
-  const [result, setResult] = useState<RetrievedInformation | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [script, setScript] = useState(SEARCH_CORE_EXAMPLE);
   const [busy, setBusy] = useState(false);
-  const [rawOpen, setRawOpen] = useState(false);
+  const [output, setOutput] = useState<ConsoleOutput | null>(null);
 
-  const buildBody = (): SearchDebugRequest => {
-    const space: SearchDebugRequest["space"] = {};
-    if (spaceQuery.trim()) space.query = spaceQuery.trim();
-    if (spaceId.trim()) space.id = spaceId.trim();
-    const neuron: SearchDebugRequest["neuron"] = {};
-    if (neuronQuery.trim()) neuron.query = neuronQuery.trim();
-    if (neuronId.trim()) neuron.id = neuronId.trim();
-    return {
-      ...(Object.keys(space).length ? { space } : {}),
-      ...(Object.keys(neuron).length ? { neuron } : {}),
-      requests: rows.map((row) => ({
-        id: row.id.trim(),
-        query: row.query,
-        ...(row.source ? { sources: [row.source] } : {}),
-      })),
-    };
-  };
-
-  const run = async () => {
-    const body = buildBody();
-    setSent(body);
-    setBusy(true);
-    setError(null);
+  const run = useCallback(async () => {
+    let parsed: unknown;
     try {
-      setResult(await debugSearchCore(body));
-    } catch (caught) {
-      setResult(null);
-      if (caught instanceof ApiError) {
-        setError(`${caught.status} ${caught.code}: ${caught.message}`);
-      } else {
-        setError("500 UNKNOWN: Request failed");
-      }
+      parsed = JSON.parse(script);
+    } catch (error) {
+      const detail = error instanceof SyntaxError ? error.message : "Invalid JSON";
+      setOutput({ status: "INVALID JSON", timeMs: null, body: detail });
+      return;
+    }
+    const body = stripClientUserId(parsed) as SearchDebugRequest;
+    const started = performance.now();
+    setBusy(true);
+    try {
+      const result = await debugSearchCore(body);
+      setOutput({
+        status: "200",
+        timeMs: Math.round(performance.now() - started),
+        body: JSON.stringify(result, null, 2),
+      });
+    } catch (error) {
+      const described = describeError(error);
+      setOutput({
+        status: described.status,
+        timeMs: Math.round(performance.now() - started),
+        body: described.body,
+      });
     } finally {
       setBusy(false);
     }
+  }, [script]);
+
+  const formatJson = () => {
+    try {
+      setScript(JSON.stringify(JSON.parse(script), null, 2));
+    } catch (error) {
+      const detail = error instanceof SyntaxError ? error.message : "Invalid JSON";
+      setOutput({ status: "INVALID JSON", timeMs: null, body: detail });
+    }
   };
 
-  const namesBySpace = new Map<string, string>();
-  const namesByNeuron = new Map<string, string>();
-  for (const source of result?.sources ?? []) {
-    if (source.subjectName) namesBySpace.set(source.subjectId, source.subjectName);
-    if (source.title) namesByNeuron.set(source.neuronId, source.title);
-  }
-  for (const request of result?.requests ?? []) {
-    for (const item of request.results) {
-      if (item.subjectName) namesBySpace.set(item.subjectId, item.subjectName);
-      if (item.title) namesByNeuron.set(item.neuronId, item.title);
+  const onEditorKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      event.preventDefault();
+      if (!busy) void run();
     }
-  }
+  };
+
+  const copyOutput = async () => {
+    if (!output) return;
+    try {
+      await navigator.clipboard.writeText(output.body);
+    } catch {
+      /* Clipboard can be denied. */
+    }
+  };
 
   return (
-    <main className="min-h-screen flex-1 overflow-auto bg-slate-50 p-6 text-slate-900">
-      <h1 className="text-xl font-black">Search Core Debug (temporary)</h1>
-      <p className="mt-1 text-sm text-slate-600">Uses the logged-in account. userId is not sent from this page.</p>
-
-      <section className="mt-6 max-w-3xl border-2 border-black bg-white p-4">
-        <h2 className="font-bold">Space</h2>
-        <label className="mt-2 block text-sm font-semibold">Space query
-          <input className={fieldClass()} value={spaceQuery} onChange={(event) => setSpaceQuery(event.target.value)} />
-        </label>
-        <label className="mt-2 block text-sm font-semibold">Space ID (optional)
-          <input className={fieldClass()} value={spaceId} onChange={(event) => setSpaceId(event.target.value)} />
-        </label>
-
-        <h2 className="mt-4 font-bold">Neuron</h2>
-        <label className="mt-2 block text-sm font-semibold">Neuron query
-          <input className={fieldClass()} value={neuronQuery} onChange={(event) => setNeuronQuery(event.target.value)} />
-        </label>
-        <label className="mt-2 block text-sm font-semibold">Neuron ID (optional)
-          <input className={fieldClass()} value={neuronId} onChange={(event) => setNeuronId(event.target.value)} />
-        </label>
-
-        <h2 className="mt-4 font-bold">Requests</h2>
-        {rows.map((row, index) => (
-          <div key={row.key} className="mt-3 border-2 border-black p-3">
-            <label className="block text-sm font-semibold">request ID
-              <input className={fieldClass()} value={row.id} onChange={(event) => {
-                const next = [...rows];
-                next[index] = { ...row, id: event.target.value };
-                setRows(next);
-              }} />
-            </label>
-            <label className="mt-2 block text-sm font-semibold">query
-              <input className={fieldClass()} value={row.query} onChange={(event) => {
-                const next = [...rows];
-                next[index] = { ...row, query: event.target.value };
-                setRows(next);
-              }} />
-            </label>
-            <label className="mt-2 block text-sm font-semibold">source filter (optional)
-              <select className={fieldClass()} value={row.source} onChange={(event) => {
-                const next = [...rows];
-                next[index] = { ...row, source: event.target.value as SearchSourceType | "" };
-                setRows(next);
-              }}>
-                {SOURCE_OPTIONS.map((option) => (
-                  <option key={option || "all"} value={option}>{option || "all"}</option>
-                ))}
-              </select>
-            </label>
-            <button type="button" className="mt-2 border-2 border-black px-3 py-1 text-sm" onClick={() => setRows(rows.filter((_, i) => i !== index))} disabled={rows.length === 1}>
-              Remove request
-            </button>
-          </div>
-        ))}
-        <button type="button" className="mt-3 border-2 border-black bg-yellow-200 px-3 py-2 text-sm font-bold" onClick={() => setRows([...rows, { key: `r${rowKey++}`, id: `req-${rows.length + 1}`, query: "", source: "" }])}>
-          Add request
-        </button>
-        <button type="button" className="ml-2 mt-3 border-2 border-black bg-emerald-200 px-3 py-2 text-sm font-bold" onClick={() => void run()} disabled={busy}>
+    <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50">
+      <header className="flex shrink-0 items-center justify-between border-b-2 border-black bg-white px-6 py-4">
+        <div>
+          <h1 className="text-xl font-black">Search Core Test</h1>
+          <p className="text-sm text-slate-600">Test SearchPlan directly against Search Core</p>
+        </div>
+        <button
+          type="button"
+          className="border-2 border-black bg-emerald-200 px-3 py-2 text-sm font-bold disabled:opacity-60"
+          onClick={() => void run()}
+          disabled={busy}
+        >
           {busy ? "Running…" : "Run Search Core"}
         </button>
-      </section>
+      </header>
 
-      {error && (
-        <section className="mt-6 max-w-3xl border-2 border-red-600 bg-red-50 p-4">
-          <h2 className="font-bold">Error</h2>
-          <p className="mt-1 font-mono text-sm">{error}</p>
+      <div className="grid min-h-0 flex-1 grid-rows-2 gap-0 lg:grid-cols-2 lg:grid-rows-1">
+        <section className="flex min-h-0 flex-col border-b-2 border-black bg-white lg:border-b-0 lg:border-r-2">
+          <div className="flex items-center justify-between border-b-2 border-black px-4 py-2">
+            <h2 className="text-xs font-black tracking-wide">SEARCH PLAN</h2>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="border-2 border-black px-2 py-1 text-xs font-bold" onClick={formatJson}>
+                Format JSON
+              </button>
+              <button type="button" className="border-2 border-black px-2 py-1 text-xs font-bold" onClick={() => setScript(SEARCH_CORE_EXAMPLE)}>
+                Reset Example
+              </button>
+              <button type="button" className="border-2 border-black px-2 py-1 text-xs font-bold" onClick={() => setOutput(null)}>
+                Clear Output
+              </button>
+              <button type="button" className="border-2 border-black px-2 py-1 text-xs font-bold" onClick={() => void copyOutput()} disabled={!output}>
+                Copy Output
+              </button>
+            </div>
+          </div>
+          <textarea
+            className="min-h-0 flex-1 resize-none bg-white p-4 font-mono text-sm leading-6 outline-none"
+            spellCheck={false}
+            value={script}
+            onChange={(event) => setScript(event.target.value)}
+            onKeyDown={onEditorKeyDown}
+            aria-label="SearchPlan JSON"
+          />
         </section>
-      )}
 
-      {sent && (
-        <section className="mt-6 max-w-4xl border-2 border-black bg-white p-4">
-          <h2 className="font-bold">A. Search Plan</h2>
-          <pre className="mt-2 overflow-auto text-xs">{JSON.stringify(sent, null, 2)}</pre>
-        </section>
-      )}
-
-      {result && (
-        <>
-          <section className="mt-6 max-w-4xl border-2 border-black bg-white p-4">
-            <h2 className="font-bold">B. Resolved scope</h2>
-            <ul className="mt-2 text-sm">
-              {result.plan.resolvedSpaceIds.map((id) => (
-                <li key={id}>Space {id}{namesBySpace.get(id) ? ` — ${namesBySpace.get(id)}` : ""}</li>
-              ))}
-              {result.plan.resolvedNeuronIds.map((id) => (
-                <li key={id}>Neuron {id}{namesByNeuron.get(id) ? ` — ${namesByNeuron.get(id)}` : ""}</li>
-              ))}
-            </ul>
-            {!result.plan.resolvedSpaceIds.length && !result.plan.resolvedNeuronIds.length && (
-              <p className="mt-2 text-sm">No resolved Space/Neuron IDs.</p>
+        <section className="flex min-h-0 flex-col bg-slate-50">
+          <div className="border-b-2 border-black bg-white px-4 py-2">
+            <h2 className="text-xs font-black tracking-wide">OUTPUT</h2>
+            {output ? (
+              <p className="mt-1 font-mono text-xs">
+                STATUS: {output.status}
+                {output.timeMs != null ? `    TIME: ${output.timeMs} ms` : ""}
+              </p>
+            ) : (
+              <p className="mt-1 font-mono text-xs text-slate-500">No output yet.</p>
             )}
-          </section>
-
-          <section className="mt-6 max-w-4xl">
-            <h2 className="font-bold">C. Request results</h2>
-            {result.requests.map((request) => (
-              <div key={request.requestId} className="mt-3 border-2 border-black bg-white p-4">
-                <p className="font-mono text-sm">requestId: {request.requestId}</p>
-                <p className="text-sm">query: {request.query}</p>
-                <p className="mt-1 font-black">{request.found ? "FOUND" : "NOT FOUND"}</p>
-                <p className="text-sm">result count: {request.results.length}</p>
-                {request.results.map((item) => (
-                  <div key={item.id} className="mt-3 border-2 border-slate-400 p-3 text-sm">
-                    <p>sourceType: {item.sourceType}</p>
-                    <p>title: {item.title}</p>
-                    <p>heading: {item.heading}</p>
-                    <p className="whitespace-pre-wrap">content: {item.content}</p>
-                    {item.snippet ? <p>snippet: {item.snippet}</p> : null}
-                    <p>score: {item.score}</p>
-                    <p>subjectId: {item.subjectId}</p>
-                    <p>neuronId: {item.neuronId}</p>
-                    <pre className="mt-1 overflow-auto text-xs">{JSON.stringify({ provenance: item.provenance, metadata: item.metadata }, null, 2)}</pre>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </section>
-
-          <section className="mt-6 max-w-4xl border-2 border-black bg-white p-4">
-            <button type="button" className="font-bold" onClick={() => setRawOpen((open) => !open)}>
-              {rawOpen ? "Hide" : "Show"} D. Raw RetrievedInformation
-            </button>
-            {rawOpen && <pre className="mt-2 overflow-auto text-xs">{JSON.stringify(result, null, 2)}</pre>}
-          </section>
-        </>
-      )}
+          </div>
+          <pre className="min-h-0 flex-1 overflow-auto p-4 font-mono text-xs leading-5">
+            {output?.body ?? ""}
+          </pre>
+        </section>
+      </div>
     </main>
   );
 }
