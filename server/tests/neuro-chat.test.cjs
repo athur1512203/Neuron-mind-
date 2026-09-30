@@ -62,6 +62,59 @@ test("Neuro Chat V0 grounded answers from KnowledgeContext", async (t) => {
 
   const contextFor = (content) => ({ ...opportunityContext,
     sources: [{ ...opportunityContext.sources[0], content }] });
+  const people = "quỳnh chi sinh năm 2003\nhải như học lớp 10";
+  const companies = "công ty ABC có 25 nhân viên\ncông ty XYZ có doanh thu 2 tỷ";
+  const passageCases = [
+    ["A", people, "hải như học lớp nào", "hải như học lớp 10"],
+    ["B", people, "quỳnh chi sinh năm bao nhiêu", "quỳnh chi sinh năm 2003"],
+    ["C", people, "ngọc anh sinh năm bao nhiêu", null],
+    ["D", people, "minh anh học lớp nào", null],
+    ["E", people, "thời tiết hôm nay thế nào", null],
+    ["F", companies, "công ty ABC có bao nhiêu nhân viên", "công ty ABC có 25 nhân viên"],
+    ["G", companies, "công ty XYZ có bao nhiêu nhân viên", null],
+    ["H", "Nguyễn Văn Minh sinh năm 2001\nTrần Ngọc Lan học lớp 12", "Trần Ngọc Lan học lớp nào", "Trần Ngọc Lan học lớp 12"],
+  ];
+  for (const [label, content, question, answer] of passageCases) {
+    await t.test(`Passage CASE ${label}`, () => {
+      const result = answerFromKnowledge(contextFor(content), question,
+        [{ role: "user", content: "quỳnh chi sinh năm bao nhiêu" }]);
+      assert.deepEqual(result, {
+        neuronId: "a", subjectId: "subject-a", found: answer !== null, answer,
+        sources: answer === null ? [] : [{ type: "MARKDOWN", sourceId: "note-opp",
+          title: "Chi phí", neuronId: "a", subjectId: "subject-a" }],
+      });
+    });
+  }
+
+  await t.test("splitter handles LF, CRLF, CR, whitespace and blank lines", () => {
+    const { splitPassages } = require("../dist/knowledge/passages");
+    assert.deepEqual(splitPassages(" \r\n first \r second\n\n third \n"), ["first", "second", "third"]);
+    assert.deepEqual(splitPassages(" \r\n\t"), []);
+    for (const newline of ["\n", "\r\n", "\r"]) {
+      assert.equal(answerFromKnowledge(contextFor(people.replace("\n", newline)), "hải như học lớp nào").answer,
+        "hải như học lớp 10");
+    }
+  });
+
+  await t.test("highest score wins across sources; ties retain source then line order", () => {
+    const context = contextFor("chi phí của cơ hội là giá trị bỏ qua");
+    context.sources.push({ ...context.sources[0], sourceId: "best", content: opportunityKnowledge });
+    context.sources.push({ ...context.sources[1] });
+    const result = answerFromKnowledge(context, "chi phí cơ hội là gì");
+    assert.equal(result.answer, opportunityKnowledge);
+    assert.deepEqual(result.sources.map((source) => source.sourceId), ["best"]);
+    const tie = contextFor("chi phí cơ hội là phương án bỏ qua\nchi phí cơ hội là giá trị bỏ qua");
+    tie.sources.push({ ...tie.sources[0], sourceId: "later" });
+    assert.equal(answerFromKnowledge(tie, "chi phí cơ hội").answer, "chi phí cơ hội là phương án bỏ qua");
+    assert.equal(answerFromKnowledge(tie, "chi phí cơ hội").sources[0].sourceId, "note-opp");
+  });
+
+  await t.test("no pooling across sources or generic school-class matches", () => {
+    const context = contextFor("công ty ABC có 25 nhân viên");
+    context.sources.push({ ...context.sources[0], sourceId: "other", content: "công ty XYZ có doanh thu 2 tỷ" });
+    assert.equal(answerFromKnowledge(context, "công ty XYZ có bao nhiêu nhân viên").found, false);
+    assert.equal(answerFromKnowledge(contextFor(people), "học lớp nào").found, false);
+  });
   const cases = [
     ["A", "quỳnh chi sinh năm 2003", "quỳnh chi sinh năm bao nhiêu", true],
     ["B", "quỳnh chi sinh năm 2003", "ngọc anh sinh năm bao nhiêu", false],
@@ -120,7 +173,7 @@ test("Neuro Chat V0 grounded answers from KnowledgeContext", async (t) => {
     assert.equal(result.sources.length, 1);
     const multiple = answerFromKnowledge(contextFor(`${content}\n\nquỳnh chi sinh năm 2003 tại Hà Nội`), "quỳnh chi sinh năm bao nhiêu");
     assert.equal(multiple.sources.length, 1);
-    assert.match(multiple.answer, /Hà Nội/);
+    assert.equal(multiple.answer, content);
   });
 
   await t.test("extracts matching passages and citations without inventing extra facts", () => {

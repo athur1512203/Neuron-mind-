@@ -1,3 +1,4 @@
+import { splitPassages } from "../knowledge/passages";
 import { resolveAIProvider } from "../ai/resolve";
 import type { AIGenerateResult, AIProvider } from "../ai/types";
 import type { KnowledgeContext, KnowledgeSource } from "../knowledge/types";
@@ -34,11 +35,9 @@ const STOPWORDS = new Set([
 ]);
 
 // Match whole phrases, not individual syllables that may also occur in names/concepts.
-const DOMAIN_PHRASES = ["sinh năm", "nhân viên", "công ty", "dự án", "sản phẩm"];
+const DOMAIN_PHRASES = ["sinh năm", "học lớp", "nhân viên", "công ty", "dự án", "sản phẩm"];
 
-const MAX_PASSAGES = 3;
 const MAX_PASSAGE_CHARS = 900;
-const MAX_REPLY_CHARS = 4000;
 
 function normalize(text: string): string {
   return text.normalize("NFC").toLowerCase()
@@ -54,13 +53,6 @@ function queryTerms(message: string) {
   const phrases = DOMAIN_PHRASES.filter((phrase) => distinctive.includes(` ${phrase} `));
   for (const phrase of phrases) distinctive = distinctive.split(` ${phrase} `).join(" ");
   return { distinctive: [...new Set(tokens(distinctive))], phrases };
-}
-
-function splitPassages(content: string): string[] {
-  return content
-    .split(/\n{2,}/)
-    .map((part) => part.trim())
-    .filter(Boolean);
 }
 
 function scorePassage(passage: string, query: ReturnType<typeof queryTerms>): number {
@@ -106,56 +98,28 @@ export function answerFromKnowledge(
   const query = queryTerms(message);
   if (!query.distinctive.length) return miss(context);
 
-  const ranked: Array<{ source: KnowledgeSource; passage: string; score: number }> = [];
+  let best: { source: KnowledgeSource; passage: string; score: number } | undefined;
   for (const source of usableSources) {
-    const passages = splitPassages(source.content ?? "");
-    const chunks = passages.length ? passages : [source.content ?? ""];
-    for (const passage of chunks) {
+    for (const passage of splitPassages(source.content ?? "")) {
       const score = scorePassage(passage, query);
-      if (score > 0) ranked.push({ source, passage, score });
+      // Strict comparison preserves original source/line order on ties.
+      // Each line must qualify independently; never pool tokens across lines.
+      if (score > 0 && (!best || score > best.score)) best = { source, passage, score };
     }
   }
-  ranked.sort((a, b) => b.score - a.score);
+  if (!best) return miss(context);
 
-  // Providers can expose the same text under different section headings/source IDs.
-  // Deduplicate before limiting, so repeats cannot crowd out unique relevant passages.
-  const seenPassages = new Set<string>();
-  const selected = ranked.filter(({ passage }) => {
-    const key = normalize(passage.replace(/^#{1,6}\s+.*$/gm, ""));
-    if (seenPassages.has(key)) return false;
-    seenPassages.add(key);
-    return true;
-  }).slice(0, MAX_PASSAGES);
-  if (!selected.length) return miss(context);
-
-  const sources: NeuroCitation[] = [];
-  const seen = new Set<string>();
-  const sections: string[] = [];
-  let used = 0;
-
-  for (const item of selected) {
-    const excerpt = item.passage.length > MAX_PASSAGE_CHARS
-      ? `${item.passage.slice(0, MAX_PASSAGE_CHARS).trimEnd()}…`
-      : item.passage;
-    const block = sections.length ? `\n\n${excerpt}` : excerpt;
-    if (used + block.length > MAX_REPLY_CHARS) break;
-    sections.push(block);
-    used += block.length;
-    const key = `${item.source.type}:${item.source.sourceId}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      sources.push(cite(item.source));
-    }
-  }
-
-  if (!sections.length) return miss(context);
+  const answer = best.passage.length > MAX_PASSAGE_CHARS
+    ? `${best.passage.slice(0, MAX_PASSAGE_CHARS).trimEnd()}…`
+    : best.passage;
 
   return {
     neuronId: context.neuronId,
     subjectId: context.subjectId,
     found: true,
-    answer: sections.join(""),
-    sources,
+    answer,
+    // One winning passage means exactly one parent citation, even for duplicate sources.
+    sources: [cite(best.source)],
   };
 }
 
