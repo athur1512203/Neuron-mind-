@@ -1,4 +1,4 @@
-import { Brain, MoreHorizontal, PanelLeft, Plus, Search, Settings, Share2, X } from "lucide-react";
+import { Brain, MoreHorizontal, Plus, Search, Settings, Share2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { LayoutMode } from "../hooks/useMediaQuery";
 import type { Subject, ViewName } from "../types";
@@ -13,7 +13,6 @@ type SidebarProps = {
   layoutMode: LayoutMode;
   open?: boolean;
   onClose?: () => void;
-  onOpen?: () => void;
   onNavigate: (view: ViewName) => void;
   onSearch: () => void;
   onSelectSpace: (subjectId: string) => void;
@@ -29,7 +28,6 @@ export function Sidebar({
   layoutMode,
   open = true,
   onClose,
-  onOpen,
   onNavigate,
   onSearch,
   onSelectSpace,
@@ -42,13 +40,12 @@ export function Sidebar({
   const restoreRef = useRef<HTMLElement | null>(null);
   const initials = userLabel.trim().slice(0, 1).toUpperCase() || "N";
   const overlayOpen = layoutMode !== "desktop" && open;
-  const rail = layoutMode === "tablet";
 
   useEffect(() => {
     if (!overlayOpen) return;
     restoreRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
-    if (layoutMode === "mobile") document.body.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
     const closeButton = asideRef.current?.querySelector<HTMLButtonElement>("[data-sidebar-close]");
     closeButton?.focus();
 
@@ -58,7 +55,7 @@ export function Sidebar({
         onClose?.();
         return;
       }
-      if (event.key !== "Tab" || layoutMode !== "mobile") return;
+      if (event.key !== "Tab") return;
       const items = Array.from(asideRef.current?.querySelectorAll<HTMLElement>("button, [href], input") ?? []);
       if (!items.length) return;
       event.preventDefault();
@@ -81,9 +78,9 @@ export function Sidebar({
   return (
     <aside
       ref={asideRef}
-      className={`app-sidebar${open ? " is-open" : ""}${rail ? " is-rail" : ""}`}
-      role={layoutMode === "mobile" && open ? "dialog" : undefined}
-      aria-modal={layoutMode === "mobile" && open ? true : undefined}
+      className={`app-sidebar${open ? " is-open" : ""}`}
+      role={overlayOpen ? "dialog" : undefined}
+      aria-modal={overlayOpen ? true : undefined}
       aria-label="Điều hướng"
     >
       <div className="sidebar-brand">
@@ -159,15 +156,9 @@ export function Sidebar({
         <span className="sidebar-avatar" aria-hidden="true">{initials}</span>
         <span className="sidebar-user-name">{userLabel}</span>
         <div className="sidebar-user-menu">
-          {layoutMode === "tablet" && !open ? (
-            <Button variant="icon" className="sidebar-expand" aria-label="Mở rộng menu" onClick={onOpen}>
-              <PanelLeft size={16} />
-            </Button>
-          ) : (
-            <Button variant="icon" className="sidebar-more" aria-label="Tài khoản" onClick={() => setMenuOpen((openMenu) => !openMenu)}>
-              <MoreHorizontal size={16} />
-            </Button>
-          )}
+          <Button variant="icon" className="sidebar-more" aria-label="Tài khoản" onClick={() => setMenuOpen((openMenu) => !openMenu)}>
+            <MoreHorizontal size={16} />
+          </Button>
           {menuOpen ? (
             <div className="sidebar-popover">
               <button type="button" onClick={() => { setMenuOpen(false); onNavigate("settings"); afterChoose(); }}>Cài đặt</button>

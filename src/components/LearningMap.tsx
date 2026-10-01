@@ -242,12 +242,12 @@ export function LearningMap({
               <Button variant="icon" title="Vừa khung" aria-label="Vừa khung" onClick={() => canvasRef.current?.fit()}>
                 <Maximize2 size={16} />
               </Button>
+              {selectedConnection && !connectionMode ? (
+                <Button variant="danger" size="sm" className="nm-graph-delete" onClick={() => { setDeleteError(""); setPendingDelete(selectedConnection); }}>
+                  <Trash2 size={16} />Xóa liên kết
+                </Button>
+              ) : null}
             </div>
-            {selectedConnection && !connectionMode ? (
-              <Button variant="danger" size="sm" className="nm-graph-delete" onClick={() => { setDeleteError(""); setPendingDelete(selectedConnection); }}>
-                <Trash2 size={16} />Xóa liên kết
-              </Button>
-            ) : null}
             {toast ? <div role="status" className="nm-toast">{toast}</div> : null}
             <NeuralCanvas
               ref={canvasRef}

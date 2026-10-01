@@ -460,7 +460,7 @@ export default function App() {
           onReplayOnboarding={() => {
             setActiveView("map");
             setMapExpanded(false);
-            setSidebarOpen(layoutMode === "desktop" || layoutMode === "tablet");
+            setSidebarOpen(layoutMode === "desktop");
             setSearchOpen(false);
             setOnboardingOpen(true);
           }}
@@ -531,7 +531,7 @@ export default function App() {
 
   return (
     <div className="nm-shell" data-layout={layoutMode}>
-      {layoutMode === "mobile" ? (
+      {layoutMode !== "desktop" ? (
         <header className="nm-mobile-top">
           <Button variant="icon" aria-label="Menu" onClick={() => setSidebarOpen(true)}>
             <Menu size={18} />
@@ -555,7 +555,6 @@ export default function App() {
             layoutMode={layoutMode}
             open={sidebarOpen}
             onClose={() => setSidebarOpen(false)}
-            onOpen={() => setSidebarOpen(true)}
             onNavigate={navigate}
             onSearch={() => setSearchOpen(true)}
             onSelectSpace={openSubject}
