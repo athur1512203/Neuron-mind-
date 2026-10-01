@@ -282,7 +282,8 @@ export default function App() {
 
   const openSearchResult = (result: SearchResult) => {
     if (!result.subjectId || !result.neuronId) return;
-    const tab: DetailTab = result.type === "markdown" ? "markdown" : "overview";
+    const tab: DetailTab =
+      result.type === "markdown" ? "markdown" : result.type === "document" ? "documents" : "overview";
     openNeuron(result.subjectId, result.neuronId, tab);
   };
 
@@ -303,6 +304,7 @@ export default function App() {
       return;
     }
 
+    setMapExpanded(false);
     setSelection({ type: "neuron", id: neuronId });
     setNotice(null);
   };
@@ -327,7 +329,7 @@ export default function App() {
   };
 
   const addNeuron = async (draft: Neuron) => {
-    if (!selectedSubject) return;
+    if (!selectedSubject) throw new Error("Chưa chọn không gian.");
     const created = await createNeuronApi(selectedSubject.id, {
       name: draft.name,
       color: draft.color,
@@ -342,13 +344,7 @@ export default function App() {
     setNeurons((current) => [...current, created]);
     bumpCounts(selectedSubject.id, 1, 0);
     setSelection({ type: "neuron", id: created.id });
-  };
-
-  const persistNote = async (neuronId: string, note: string) => {
-    const saved = await updateNeuronApi(neuronId, { note });
-    setNeurons((current) => current.map((neuron) =>
-      neuron.id === neuronId ? { ...neuron, note: saved.note, updatedAt: saved.updatedAt } : neuron,
-    ));
+    return created;
   };
 
   const persistNeuron = async (updated: Neuron) => {
@@ -465,7 +461,6 @@ export default function App() {
         onCreateNeuron={addNeuron}
         onCreateConnection={createConnection}
         onUpdateNeuron={persistNeuron}
-        onSaveNote={persistNote}
         onDeleteNeuron={deleteNeuron}
         onUpdateConnection={() => {
           setNotice("Backend chưa có endpoint cập nhật mô tả liên kết.");
@@ -496,7 +491,7 @@ export default function App() {
 
   return (
     <div className="nm-shell">
-      {!(activeView === "map" && mapExpanded) ? (
+      {!(activeView === "map" && mapExpanded && !selectedNeuronId) ? (
         <Sidebar
           activeView={activeView}
           subjects={subjects}

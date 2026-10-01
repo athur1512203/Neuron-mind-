@@ -1,11 +1,9 @@
 import {
-  Brain,
   Check,
   FileText,
+  Menu,
   Plus,
-  Settings,
   Trash2,
-  Upload,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -21,7 +19,7 @@ import {
 import type { Neuron, NeuronConnection } from "../types";
 import { NeuronMarkdownEditor } from "./NeuronMarkdownEditor";
 
-export type DetailTab = "overview" | "markdown" | "custom";
+export type DetailTab = "overview" | "markdown" | "documents" | "custom";
 
 type NeuronDetailPanelProps = {
   neuron: Neuron;
@@ -31,8 +29,8 @@ type NeuronDetailPanelProps = {
   onClose: () => void;
   onDelete: (neuronId: string) => Promise<void>;
   onUpdate: (neuron: Neuron) => void;
-  onSaveNote: (neuronId: string, note: string) => Promise<void>;
   onSelectNeuron: (neuronId: string) => void;
+  onToggleSidebar?: () => void;
   initialTab?: DetailTab;
 };
 
@@ -44,14 +42,13 @@ export function NeuronDetailPanel({
   onClose,
   onDelete,
   onUpdate,
-  onSaveNote,
   onSelectNeuron,
+  onToggleSidebar,
   initialTab = "overview",
 }: NeuronDetailPanelProps) {
   const [tab, setTab] = useState<DetailTab>(initialTab);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(neuron);
-  const [quickNote, setQuickNote] = useState(neuron.textContent);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -62,7 +59,6 @@ export function NeuronDetailPanel({
   const [documentDeletingId, setDocumentDeletingId] = useState<string | null>(null);
   const [documentDownloadingId, setDocumentDownloadingId] = useState<string | null>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
-  const quickNoteTimerRef = useRef<number | null>(null);
 
   const directConnections = useMemo(
     () => connections.filter((connection) => connection.sourceNeuronId === neuron.id || connection.targetNeuronId === neuron.id),
@@ -83,12 +79,10 @@ export function NeuronDetailPanel({
     setTab(initialTab);
     setEditing(false);
     setDraft(neuron);
-    setQuickNote(neuron.textContent);
     setShowDeleteConfirm(false);
     setDeleting(false);
     setDeleteError("");
     setDocumentNotice("");
-    if (quickNoteTimerRef.current !== null) window.clearTimeout(quickNoteTimerRef.current);
   }, [initialTab, neuron.id]);
 
   useEffect(() => {
@@ -120,21 +114,6 @@ export function NeuronDetailPanel({
   const saveDraft = () => {
     onUpdate({ ...draft, updatedAt: new Date().toISOString() });
     setEditing(false);
-  };
-
-  const updateQuickNote = (value: string) => {
-    setQuickNote(value);
-    if (quickNoteTimerRef.current !== null) window.clearTimeout(quickNoteTimerRef.current);
-    quickNoteTimerRef.current = window.setTimeout(() => {
-      onUpdate({ ...neuron, textContent: value, updatedAt: new Date().toISOString() });
-      quickNoteTimerRef.current = null;
-    }, 900);
-  };
-
-  const saveQuickNote = () => {
-    if (quickNoteTimerRef.current !== null) window.clearTimeout(quickNoteTimerRef.current);
-    quickNoteTimerRef.current = null;
-    onUpdate({ ...neuron, textContent: quickNote, updatedAt: new Date().toISOString() });
   };
 
   const refreshDocuments = async () => {
@@ -220,6 +199,7 @@ export function NeuronDetailPanel({
           neuron={neuron}
           connectionCount={connectionCount}
           editing={editing}
+          onToggleSidebar={onToggleSidebar}
           onEdit={() => (editing ? saveDraft() : setEditing(true))}
           onDelete={() => setShowDeleteConfirm(true)}
           onClose={onClose}
@@ -230,36 +210,36 @@ export function NeuronDetailPanel({
           {tab === "overview" ? (
             <NeuronOverview
               neuron={neuron}
-              onSaveNote={onSaveNote}
               draft={draft}
               editing={editing}
               connectionCount={connectionCount}
               linkedNeurons={linkedNeurons}
               allConnections={connections}
-              quickNote={quickNote}
-              documentNotice={documentNotice}
-              documents={documents}
-              documentsLoading={documentsLoading}
-              documentsUploading={documentsUploading}
-              documentDeletingId={documentDeletingId}
-              documentDownloadingId={documentDownloadingId}
               onDraftChange={setDraft}
               onSelectNeuron={onSelectNeuron}
-              onQuickNoteChange={updateQuickNote}
-              onSaveQuickNote={saveQuickNote}
+            />
+          ) : null}
+          {tab === "markdown" ? <NeuronMarkdownEditor key={neuron.id} neuronId={neuron.id} /> : null}
+          {tab === "documents" ? (
+            <NeuronDocuments
+              notice={documentNotice}
+              documents={documents}
+              loading={documentsLoading}
+              uploading={documentsUploading}
+              deletingId={documentDeletingId}
+              downloadingId={documentDownloadingId}
               onPickDocuments={() => documentInputRef.current?.click()}
               onDocumentFiles={uploadDocuments}
               onDownloadDocument={downloadDocument}
               onDeleteDocument={removeDocument}
             />
           ) : null}
-          {tab === "markdown" ? <NeuronMarkdownEditor key={neuron.id} neuronId={neuron.id} /> : null}
           {tab === "custom" ? <NeuronCustom /> : null}
 
-          {editing && tab !== "markdown" && tab !== "custom" ? (
-            <div className="flex justify-end gap-3 pb-2">
-              <button type="button" className="brutal-button" onClick={() => { setDraft(neuron); setEditing(false); }}>Hủy</button>
-              <button type="button" className="brutal-button brutal-button-primary" onClick={saveDraft}><Check size={16} />Lưu thay đổi</button>
+          {editing && tab === "overview" ? (
+            <div className="nm-overview-actions">
+              <button type="button" className="nm-btn nm-btn-secondary" onClick={() => { setDraft(neuron); setEditing(false); }}>Hủy</button>
+              <button type="button" className="nm-btn nm-btn-primary" onClick={saveDraft}><Check size={16} />Lưu thay đổi</button>
             </div>
           ) : null}
         </div>
@@ -295,10 +275,11 @@ export function NeuronDetailPanel({
   );
 }
 
-function NeuronDetailHeader({ neuron, connectionCount, editing, onEdit, onDelete, onClose }: {
+function NeuronDetailHeader({ neuron, connectionCount, editing, onToggleSidebar, onEdit, onDelete, onClose }: {
   neuron: Neuron;
   connectionCount: number;
   editing: boolean;
+  onToggleSidebar?: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onClose: () => void;
@@ -306,6 +287,11 @@ function NeuronDetailHeader({ neuron, connectionCount, editing, onEdit, onDelete
   return (
     <header className="neuron-workspace-header">
       <div className="flex min-w-0 items-center gap-3">
+        {onToggleSidebar ? (
+          <button type="button" className="nm-icon-btn nm-toolbar-menu" aria-label="Menu" onClick={onToggleSidebar}>
+            <Menu size={18} />
+          </button>
+        ) : null}
         <span className="nm-neuron-swatch" style={{ backgroundColor: neuron.color }} />
         <div className="min-w-0">
           <h2 className="truncate text-lg font-semibold text-[#191515]">{neuron.name}</h2>
@@ -322,75 +308,47 @@ function NeuronDetailHeader({ neuron, connectionCount, editing, onEdit, onDelete
 }
 
 function NeuronTabs({ tab, onChange }: { tab: DetailTab; onChange: (tab: DetailTab) => void }) {
-  const tabs: Array<{ id: DetailTab; label: string; icon: typeof Brain }> = [
-    { id: "overview", label: "Tổng quan", icon: Brain },
-    { id: "markdown", label: "Note Markdown", icon: FileText },
-    { id: "custom", label: "Tùy chỉnh", icon: Settings },
+  const tabs: Array<{ id: DetailTab; label: string }> = [
+    { id: "overview", label: "Tổng quan" },
+    { id: "markdown", label: "Note Markdown" },
+    { id: "documents", label: "Tài liệu" },
+    { id: "custom", label: "Tùy chỉnh" },
   ];
   return (
     <nav className="neuron-workspace-tabs" aria-label="Chi tiết neuron">
-      {tabs.map((item) => {
-        const Icon = item.icon;
-        return <button key={item.id} type="button" onClick={() => onChange(item.id)} className={`nm-tab ${tab === item.id ? "is-active" : ""}`}><Icon size={14} />{item.label}</button>;
-      })}
+      {tabs.map((item) => (
+        <button key={item.id} type="button" onClick={() => onChange(item.id)} className={`nm-tab ${tab === item.id ? "is-active" : ""}`}>
+          {item.label}
+        </button>
+      ))}
     </nav>
   );
 }
 
-function NeuronOverview({ neuron, onSaveNote, draft, editing, connectionCount, linkedNeurons, allConnections, quickNote, documentNotice, documents, documentsLoading, documentsUploading, documentDeletingId, documentDownloadingId, onDraftChange, onSelectNeuron, onQuickNoteChange, onSaveQuickNote, onPickDocuments, onDocumentFiles, onDownloadDocument, onDeleteDocument }: {
+function NeuronOverview({ neuron, draft, editing, connectionCount, linkedNeurons, allConnections, onDraftChange, onSelectNeuron }: {
   neuron: Neuron;
-  onSaveNote: (neuronId: string, note: string) => Promise<void>;
   draft: Neuron;
   editing: boolean;
   connectionCount: number;
   linkedNeurons: Neuron[];
   allConnections: NeuronConnection[];
-  quickNote: string;
-  documentNotice: string;
-  documents: DocumentMeta[];
-  documentsLoading: boolean;
-  documentsUploading: boolean;
-  documentDeletingId: string | null;
-  documentDownloadingId: string | null;
   onDraftChange: (neuron: Neuron) => void;
   onSelectNeuron: (id: string) => void;
-  onQuickNoteChange: (value: string) => void;
-  onSaveQuickNote: () => void;
-  onPickDocuments: () => void;
-  onDocumentFiles: (files: FileList | null) => void;
-  onDownloadDocument: (document: DocumentMeta) => void;
-  onDeleteDocument: (document: DocumentMeta) => void;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="nm-overview">
       <BrutalCard title="Thông tin cơ bản">
         <dl className="brutal-info-list">
-          <InfoRow label="Tên neuron" value={editing ? <input className="brutal-input" value={draft.name} onChange={(event) => onDraftChange({ ...draft, name: event.target.value })} /> : neuron.name} />
+          <InfoRow label="Tên neuron" value={editing ? <input className="nm-input" value={draft.name} onChange={(event) => onDraftChange({ ...draft, name: event.target.value })} /> : neuron.name} />
           <InfoRow label="Số kết nối" value={String(connectionCount)} />
           <InfoRow label="Ngày tạo" value={formatDate(neuron.createdAt)} />
           <InfoRow label="Cập nhật cuối" value={formatDate(neuron.updatedAt)} />
         </dl>
       </BrutalCard>
 
-      <NeuronNote key={neuron.id} neuron={neuron} onSave={onSaveNote} />
-
       <BrutalCard title="Neuron liên kết">
         <LinkedNeuronList linkedNeurons={linkedNeurons} allConnections={allConnections} onSelectNeuron={onSelectNeuron} />
       </BrutalCard>
-
-      <NeuronDocuments
-        notice={documentNotice}
-        documents={documents}
-        loading={documentsLoading}
-        uploading={documentsUploading}
-        deletingId={documentDeletingId}
-        downloadingId={documentDownloadingId}
-        onPickDocuments={onPickDocuments}
-        onDocumentFiles={onDocumentFiles}
-        onDownloadDocument={onDownloadDocument}
-        onDeleteDocument={onDeleteDocument}
-      />
-      <QuickNote value={quickNote} onChange={onQuickNoteChange} onSave={onSaveQuickNote} />
     </div>
   );
 }
@@ -401,55 +359,6 @@ function BrutalCard({ title, action, children }: { title: string; action?: React
 
 function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   return <div><dt>{label}</dt><dd>{value}</dd></div>;
-}
-
-function NeuronNote({ neuron, onSave }: { neuron: Neuron; onSave: (id: string, note: string) => Promise<void> }) {
-  const [value, setValue] = useState(neuron.note ?? "");
-  const [savedValue, setSavedValue] = useState(neuron.note ?? "");
-  const [saving, setSaving] = useState(false);
-  const [feedback, setFeedback] = useState("");
-
-  useEffect(() => {
-    const nextValue = neuron.note ?? "";
-    setValue((current) => current === savedValue ? nextValue : current);
-    setSavedValue(nextValue);
-  }, [neuron.note]);
-
-  const save = async () => {
-    if (saving || value === savedValue) return;
-    setSaving(true);
-    setFeedback("");
-    try {
-      await onSave(neuron.id, value);
-      setSavedValue(value);
-      setFeedback("Đã lưu");
-    } catch {
-      setFeedback("Không thể lưu ghi chú");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <BrutalCard title="NOTE">
-      <textarea
-        aria-label="NOTE"
-        className="nm-note-input"
-        style={{ minHeight: 140 }}
-        placeholder="Ghi chú kiến thức, việc cần nhớ..."
-        maxLength={100_000}
-        value={value}
-        disabled={saving}
-        onChange={(event) => { setValue(event.target.value); setFeedback(""); }}
-      />
-      <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
-        <span role="status" className="text-xs font-semibold">{feedback}</span>
-        <button type="button" className="nm-btn nm-btn-primary" disabled={saving || value === savedValue} onClick={() => void save()}>
-          <Check size={16} />{saving ? "Đang lưu..." : "Lưu ghi chú"}
-        </button>
-      </div>
-    </BrutalCard>
-  );
 }
 
 function LinkedNeuronList({ linkedNeurons, allConnections, onSelectNeuron, full = false }: { linkedNeurons: Neuron[]; allConnections: NeuronConnection[]; onSelectNeuron: (id: string) => void; full?: boolean }) {
@@ -497,70 +406,62 @@ function NeuronDocuments({
   onDeleteDocument: (document: DocumentMeta) => void;
 }) {
   return (
-    <BrutalCard title="Tài liệu" action={<button type="button" onClick={onPickDocuments} className="brutal-button brutal-button-compact"><Plus size={15} />Thêm tài liệu</button>}>
-      <button
-        type="button"
-        onClick={onPickDocuments}
+    <div className="nm-docs">
+      <header className="nm-docs-head">
+        <div>
+          <h3>Tài liệu</h3>
+          <p>Các tài liệu liên quan đến neuron.</p>
+        </div>
+        <button type="button" className="nm-btn nm-btn-primary" onClick={onPickDocuments}>
+          <Plus size={15} /> Thêm tài liệu
+        </button>
+      </header>
+      <div
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => {
           event.preventDefault();
           onDocumentFiles(event.dataTransfer.files);
         }}
-        className="brutal-upload-zone"
       >
-        <Upload size={28} />
-        <strong>Kéo thả tài liệu vào đây</strong>
-        <span>PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, MD</span>
-        <small>Tối đa 50MB</small>
-      </button>
-      {uploading ? <p className="mt-3 border-2 border-black bg-white p-3 text-xs font-bold">Uploading...</p> : null}
-      {notice ? <p className="mt-3 border-2 border-black bg-amber-100 p-3 text-xs font-bold">{notice}</p> : null}
-      {loading ? <div className="mt-4 text-sm font-semibold text-[#666666]">Đang tải tài liệu...</div> : null}
-      {!loading && !documents.length ? <div className="mt-4 text-sm font-semibold text-[#666666]">Chưa có tài liệu.</div> : null}
-      {!loading && documents.length ? (
-        <div className="mt-4 space-y-3">
-          {documents.map((document) => (
-            <div key={document.id} className="brutal-file-row">
-              <FileText size={18} />
-              <span className="min-w-0 flex-1">
-                <strong className="block truncate">{document.originalName}</strong>
-                <small className="block text-xs text-[#666666]">{formatFileSize(document.size)} • {formatDate(document.createdAt)}</small>
-              </span>
-              <button type="button" onClick={() => onDownloadDocument(document)} disabled={Boolean(downloadingId)} className="brutal-link">
-                {downloadingId === document.id ? "Đang tải..." : "Tải xuống"}
-              </button>
-              <button type="button" onClick={() => onDeleteDocument(document)} disabled={Boolean(deletingId)} className="brutal-link text-red-700">
-                {deletingId === document.id ? "Đang xóa..." : "Xóa"}
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </BrutalCard>
+        {uploading ? <p className="nm-docs-status">Uploading...</p> : null}
+        {notice ? <p className="nm-docs-status">{notice}</p> : null}
+        {loading ? <p className="nm-docs-status">Đang tải tài liệu...</p> : null}
+        {!loading && !documents.length ? (
+          <div className="nm-docs-empty">
+            <p>Chưa có tài liệu</p>
+            <p>Thêm tài liệu để lưu cùng neuron này.</p>
+            <button type="button" className="nm-btn nm-btn-primary" onClick={onPickDocuments}>
+              <Plus size={15} /> Thêm tài liệu
+            </button>
+          </div>
+        ) : null}
+        {!loading && documents.length ? (
+          <div className="nm-docs-list">
+            {documents.map((document) => (
+              <div key={document.id} className="nm-doc-row">
+                <FileText size={18} />
+                <span className="min-w-0 flex-1">
+                  <strong className="block truncate">{document.originalName}</strong>
+                  <small>{formatType(document)} • {formatFileSize(document.size)}</small>
+                </span>
+                <button type="button" onClick={() => onDownloadDocument(document)} disabled={Boolean(downloadingId)} className="nm-doc-action">
+                  {downloadingId === document.id ? "Đang tải..." : "Tải xuống"}
+                </button>
+                <button type="button" onClick={() => onDeleteDocument(document)} disabled={Boolean(deletingId)} className="nm-doc-action is-danger">
+                  {deletingId === document.id ? "Đang xóa..." : "Xóa"}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
-}
-
-function QuickNote({ value, onChange, onSave }: { value: string; onChange: (value: string) => void; onSave: () => void }) {
-  return (
-    <BrutalCard title="Ghi chú nhanh">
-      <textarea className="brutal-textarea" rows={6} value={value} onChange={(event) => onChange(event.target.value)} />
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><p className="text-xs font-semibold text-[#666666]">Ghi chú này sẽ được lưu tự động</p><button type="button" onClick={onSave} className="brutal-button brutal-button-primary">Lưu ghi chú</button></div>
-    </BrutalCard>
-  );
-}
-
-function NeuronIdeas({ neuron, editing, onChange }: { neuron: Neuron; editing: boolean; onChange: (neuron: Neuron) => void }) {
-  const items = [
-    { key: "keyPoints" as const, title: "Trọng tâm kiến thức" },
-    { key: "memoryMethod" as const, title: "Cách ghi nhớ" },
-    { key: "application" as const, title: "Áp dụng" },
-  ];
-  return <div className="space-y-5">{items.map((item) => <BrutalCard key={item.key} title={item.title}>{editing ? <textarea className="brutal-textarea" rows={6} value={neuron[item.key]} onChange={(event) => onChange({ ...neuron, [item.key]: event.target.value })} /> : <p className="whitespace-pre-wrap text-sm font-medium leading-7 text-[#323232]">{neuron[item.key] || "Chưa có nội dung."}</p>}</BrutalCard>)}</div>;
 }
 
 function NeuronCustom() {
   return (
-    <div className="space-y-5">
+    <div className="nm-custom-page">
       <BrutalCard title="Hình ảnh">
         <p className="text-sm font-semibold text-[#666666]">Sắp có. Upload ảnh chưa được lưu trên máy chủ.</p>
       </BrutalCard>
@@ -569,6 +470,13 @@ function NeuronCustom() {
       </BrutalCard>
     </div>
   );
+}
+
+function formatType(document: DocumentMeta) {
+  const ext = document.extension.replace(/^\./, "").toUpperCase();
+  if (ext) return ext;
+  const subtype = document.mimeType.split("/")[1];
+  return subtype ? subtype.toUpperCase() : document.mimeType;
 }
 
 function formatDate(value: string) {

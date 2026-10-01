@@ -21,10 +21,9 @@ type LearningMapProps = {
   graphLoading?: boolean;
   graphError?: string | null;
   detailInitialTab?: DetailTab;
-  onCreateNeuron: (neuron: Neuron) => void | Promise<void>;
+  onCreateNeuron: (neuron: Neuron) => Promise<Neuron>;
   onCreateConnection: (sourceId: string, targetId: string) => void | Promise<void>;
   onUpdateNeuron: (neuron: Neuron) => void;
-  onSaveNote: (neuronId: string, note: string) => Promise<void>;
   onDeleteNeuron: (neuronId: string) => Promise<void>;
   onUpdateConnection: (connection: NeuronConnection) => void;
   onDeleteConnection: (connectionId: string) => Promise<void>;
@@ -56,7 +55,6 @@ export function LearningMap({
   onCreateNeuron,
   onCreateConnection,
   onUpdateNeuron,
-  onSaveNote,
   onDeleteNeuron,
   onUpdateConnection,
   onDeleteConnection,
@@ -148,7 +146,7 @@ export function LearningMap({
   };
 
   return (
-    <main className="nm-workspace">
+    <main className={`nm-workspace${selectedNeuron ? " is-neuron-detail" : ""}`}>
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="nm-toolbar">
           {onToggleSidebar ? (
@@ -253,8 +251,8 @@ export function LearningMap({
                 onClose={() => onSelectNeuron("")}
                 onDelete={onDeleteNeuron}
                 onUpdate={onUpdateNeuron}
-                onSaveNote={onSaveNote}
                 onSelectNeuron={focusNeuron}
+                onToggleSidebar={onToggleSidebar}
                 initialTab={detailInitialTab}
               />
             </div>
@@ -276,10 +274,7 @@ export function LearningMap({
           subjectId={subject.id}
           neuronCount={neurons.length}
           onClose={() => setShowCreateNeuron(false)}
-          onCreate={async (neuron) => {
-            await onCreateNeuron(neuron);
-            setShowCreateNeuron(false);
-          }}
+          onCreate={onCreateNeuron}
         />
       )}
     </main>

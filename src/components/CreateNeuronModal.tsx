@@ -1,7 +1,12 @@
-import { Upload, X } from "lucide-react";
+import { FileText, Upload, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { apiMessage } from "../api/client";
+import { uploadDocument as uploadDocumentApi, validateDocumentFile } from "../api/documents";
+import { saveNeuronMarkdown } from "../api/markdownNotes";
+import { neuronMarkdownStore } from "../markdown/neuronMarkdownStore";
 import type { Neuron } from "../types";
 import { colorPresets } from "../utils/neuron";
+import { MarkdownComposeEditor } from "./MarkdownComposeEditor";
 
 function getInitialLayoutPosition(seed: string, isFirstNeuron: boolean) {
   if (isFirstNeuron) return { x: 0, y: 0, z: 0 };
@@ -20,91 +25,160 @@ function getInitialLayoutPosition(seed: string, isFirstNeuron: boolean) {
   };
 }
 
+function formatFileSize(size: number) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
 type CreateNeuronModalProps = {
   subjectId: string;
   neuronCount: number;
   onClose: () => void;
-  onCreate: (neuron: Neuron) => void | Promise<void>;
+  onCreate: (neuron: Neuron) => Promise<Neuron>;
 };
 
 export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }: CreateNeuronModalProps) {
   const [name, setName] = useState("");
   const [color, setColor] = useState(colorPresets[0].value);
-  const [textContent, setTextContent] = useState("");
-  const [keyPoints, setKeyPoints] = useState("");
-  const [memoryMethod, setMemoryMethod] = useState("");
-  const [application, setApplication] = useState("");
-  const [images, setImages] = useState<string[]>([]);
-  const [audio, setAudio] = useState<string[]>([]);
-  const [imageNames, setImageNames] = useState<string[]>([]);
-  const [audioNames, setAudioNames] = useState<string[]>([]);
+  const [markdown, setMarkdown] = useState("");
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [createdNeuronId, setCreatedNeuronId] = useState<string | null>(null);
+  const [markdownSaved, setMarkdownSaved] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const createdIdRef = useRef<string | null>(null);
+  const markdownSavedRef = useRef(false);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && !busy) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [busy, onClose]);
+
+  const addPendingFiles = (files: FileList | null) => {
+    const selected = Array.from(files ?? []);
+    if (!selected.length) return;
+    const invalid = selected.map((file) => ({ file, message: validateDocumentFile(file) })).find((item) => item.message);
+    if (invalid) {
+      setError(`${invalid.file.name}: ${invalid.message}`);
+      return;
+    }
+    setError("");
+    setPendingFiles((current) => [...current, ...selected]);
+  };
 
   const handleSubmit = async () => {
+    if (busy) return;
     const trimmedName = name.trim();
-    if (!trimmedName) return;
-    const timestamp = new Date().toISOString();
+    if (!trimmedName) {
+      setError("Nhập tên neuron.");
+      return;
+    }
+    if (trimmedName.length > 120) {
+      setError("Tên neuron tối đa 120 ký tự.");
+      return;
+    }
+
     setBusy(true);
     setError("");
     try {
-      await onCreate({
-        id: "",
-        subjectId,
-        name: trimmedName,
-        color,
-        position: getInitialLayoutPosition(`${subjectId}:${trimmedName.toLowerCase()}`, neuronCount === 0),
-        textContent,
-        images,
-        audio,
-        keyPoints,
-        memoryMethod,
-        application,
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      });
+      let neuronId = createdIdRef.current;
+      if (!neuronId) {
+        const timestamp = new Date().toISOString();
+        const created = await onCreate({
+          id: "",
+          subjectId,
+          name: trimmedName,
+          color,
+          position: getInitialLayoutPosition(`${subjectId}:${trimmedName.toLowerCase()}`, neuronCount === 0),
+          textContent: "",
+          images: [],
+          audio: [],
+          keyPoints: "",
+          memoryMethod: "",
+          application: "",
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        });
+        neuronId = created.id;
+        createdIdRef.current = neuronId;
+        setCreatedNeuronId(neuronId);
+      }
+
+      const markdownContent = markdown.trim();
+      if (markdownContent && !markdownSavedRef.current) {
+        await saveNeuronMarkdown(neuronId, markdown);
+        neuronMarkdownStore.commit(neuronId, markdown);
+        markdownSavedRef.current = true;
+        setMarkdownSaved(true);
+      }
+
+      const remaining: File[] = [];
+      let failedCount = 0;
+      for (const file of pendingFiles) {
+        const message = validateDocumentFile(file);
+        if (message) {
+          remaining.push(file);
+          failedCount += 1;
+          continue;
+        }
+        try {
+          await uploadDocumentApi(neuronId, file);
+        } catch {
+          remaining.push(file);
+          failedCount += 1;
+        }
+      }
+      setPendingFiles(remaining);
+
+      if (failedCount) {
+        setError(`Neuron đã được tạo nhưng ${failedCount} tài liệu tải lên thất bại.`);
+        return;
+      }
+
+      onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Không tạo được neuron.");
+      if (createdIdRef.current && !markdownSavedRef.current && markdown.trim()) {
+        setError(apiMessage(caught, "Neuron đã được tạo nhưng không lưu được Note Markdown."));
+      } else {
+        setError(apiMessage(caught, "Không tạo được neuron."));
+      }
     } finally {
       setBusy(false);
     }
   };
 
-  const handleLocalFiles = (files: FileList | null, setter: (urls: string[]) => void, names: (list: string[]) => void) => {
-    if (!files) return;
-    setter(Array.from(files).map((file) => URL.createObjectURL(file)));
-    names(Array.from(files).map((file) => file.name));
-  };
-
   return (
-    <div className="nm-modal-overlay" onClick={onClose}>
-      <section className="nm-modal nm-modal-lg" onClick={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
+    <div className="nm-modal-overlay" onClick={() => { if (!busy) onClose(); }}>
+      <section
+        className="nm-modal nm-modal-lg nm-modal-create"
+        onClick={(event) => event.stopPropagation()}
+        onWheel={(event) => event.stopPropagation()}
+      >
         <header className="nm-modal-head">
           <div>
             <h2>Tạo neuron</h2>
-            <p>Thêm một kiến thức mới vào không gian.</p>
+            <p>Thêm kiến thức mới vào không gian.</p>
           </div>
-          <button type="button" onClick={onClose} className="gs-close" aria-label="Đóng">
+          <button type="button" onClick={onClose} className="gs-close" aria-label="Đóng" disabled={busy}>
             <X size={18} />
           </button>
         </header>
 
         <div className="nm-modal-body">
           <label className="nm-field">
-            <span>Tên kiến thức</span>
+            <span>Tên neuron *</span>
             <input
               value={name}
+              disabled={busy || Boolean(createdNeuronId)}
               onChange={(event) => setName(event.target.value)}
               className="nm-input"
-              placeholder="Ví dụ: Chi phí cận biên"
+              placeholder="Ví dụ: React, Marketing, Tiếng Anh..."
+              maxLength={120}
             />
           </label>
 
@@ -115,6 +189,7 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
                 <button
                   key={preset.value}
                   type="button"
+                  disabled={busy || Boolean(createdNeuronId)}
                   onClick={() => setColor(preset.value)}
                   className={`nm-swatch ${color === preset.value ? "is-on" : ""}`}
                   style={{ backgroundColor: preset.value }}
@@ -125,6 +200,7 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
               <input
                 type="color"
                 value={color}
+                disabled={busy || Boolean(createdNeuronId)}
                 onChange={(event) => setColor(event.target.value)}
                 className="nm-swatch-custom"
                 aria-label="Chọn màu tùy chỉnh"
@@ -132,82 +208,79 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
             </div>
           </div>
 
-          <Textarea label="Nội dung học" value={textContent} onChange={setTextContent} />
-          <FileDrop
-            label="Hình ảnh"
-            hint="Chọn hình ảnh"
-            detail="PNG, JPG..."
-            accept="image/*"
-            names={imageNames}
-            onChange={(files) => handleLocalFiles(files, setImages, setImageNames)}
-          />
-          <FileDrop
-            label="Âm thanh"
-            hint="Chọn tệp âm thanh"
-            detail=""
-            accept="audio/*"
-            names={audioNames}
-            onChange={(files) => handleLocalFiles(files, setAudio, setAudioNames)}
-          />
-          <Textarea label="Trọng tâm kiến thức" value={keyPoints} onChange={setKeyPoints} />
-          <Textarea label="Cách ghi nhớ" value={memoryMethod} onChange={setMemoryMethod} />
-          <Textarea label="Áp dụng" value={application} onChange={setApplication} />
+          <div className="nm-field">
+            <span>Note Markdown</span>
+            <p className="nm-field-hint">Nội dung kiến thức chính của neuron.</p>
+            <MarkdownComposeEditor
+              value={markdown}
+              onChange={setMarkdown}
+              disabled={busy || markdownSaved}
+            />
+          </div>
+
+          <div className="nm-field">
+            <span>Tài liệu</span>
+            <p className="nm-field-hint">Thêm tài liệu liên quan đến neuron.</p>
+            <button
+              type="button"
+              className="nm-drop"
+              disabled={busy}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                addPendingFiles(event.dataTransfer.files);
+              }}
+            >
+              <Upload size={18} />
+              <strong>Chọn hoặc kéo thả tài liệu</strong>
+              <small>PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, MD</small>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md"
+              className="sr-only"
+              onChange={(event) => {
+                addPendingFiles(event.target.files);
+                event.target.value = "";
+              }}
+            />
+            {pendingFiles.length ? (
+              <ul className="nm-pending-docs">
+                {pendingFiles.map((file, index) => (
+                  <li key={`${file.name}-${file.size}-${index}`} className="nm-pending-doc">
+                    <FileText size={18} />
+                    <span className="min-w-0 flex-1">
+                      <strong className="block truncate">{file.name}</strong>
+                      <small>{formatFileSize(file.size)}</small>
+                    </span>
+                    <button
+                      type="button"
+                      className="nm-pending-remove"
+                      aria-label={`Gỡ ${file.name}`}
+                      disabled={busy}
+                      onClick={() => setPendingFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+
           {error ? <p className="nm-modal-error">{error}</p> : null}
         </div>
 
         <footer className="nm-modal-foot">
-          <button type="button" onClick={onClose} className="nm-btn nm-btn-secondary">Hủy</button>
-          <button type="button" onClick={handleSubmit} disabled={busy} className="nm-btn nm-btn-primary">
+          <button type="button" onClick={onClose} disabled={busy} className="nm-btn nm-btn-secondary">Hủy</button>
+          <button type="button" onClick={() => void handleSubmit()} disabled={busy} className="nm-btn nm-btn-primary">
             {busy ? "Đang tạo..." : "Tạo neuron"}
           </button>
         </footer>
       </section>
-    </div>
-  );
-}
-
-function Textarea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return (
-    <label className="nm-field">
-      <span>{label}</span>
-      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={4} className="nm-input nm-textarea" />
-    </label>
-  );
-}
-
-function FileDrop({
-  label,
-  hint,
-  detail,
-  accept,
-  names,
-  onChange,
-}: {
-  label: string;
-  hint: string;
-  detail: string;
-  accept: string;
-  names: string[];
-  onChange: (files: FileList | null) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  return (
-    <div className="nm-field">
-      <span>{label}</span>
-      <button type="button" className="nm-drop" onClick={() => inputRef.current?.click()}>
-        <Upload size={18} />
-        <strong>{hint}</strong>
-        {detail ? <small>{detail}</small> : null}
-        {names.length ? <em>{names.join(", ")}</em> : null}
-      </button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        multiple
-        className="sr-only"
-        onChange={(event) => onChange(event.target.files)}
-      />
     </div>
   );
 }

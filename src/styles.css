@@ -3578,7 +3578,7 @@ textarea:focus-visible {
 
 .nm-tab.is-active {
   border-bottom-color: var(--nm-primary);
-  color: var(--nm-text);
+  color: var(--nm-primary);
 }
 
 .neuron-workspace {
@@ -3598,27 +3598,51 @@ textarea:focus-visible {
 
 .neuron-workspace-tabs {
   display: flex;
-  gap: 12px;
-  padding: 0 16px;
+  gap: 4px;
+  padding: 0 10px;
+  overflow-x: hidden;
   border-bottom: 1px solid var(--nm-border);
 }
 
+.neuron-workspace-tabs .nm-tab {
+  flex: 1 1 0;
+  justify-content: center;
+  min-width: 0;
+  height: 36px;
+  padding: 0 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.nm-workspace.is-neuron-detail .nm-toolbar,
+.nm-workspace.is-neuron-detail .nm-notice {
+  display: none;
+}
+
 .learning-map-layout.has-neuron-detail {
-  grid-template-columns: minmax(0, 1fr) clamp(400px, 29vw, 470px);
+  position: relative;
+  grid-template-columns: minmax(0, 1fr) !important;
   min-height: 0;
+}
+
+.learning-map-layout.has-neuron-detail .nm-graph-stage {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .learning-map-detail-pane {
   display: flex;
   flex-direction: column;
   width: 100%;
-  min-width: 430px;
-  max-width: 470px;
+  min-width: 0;
+  max-width: none;
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  border-left: 1px solid var(--nm-border);
-  background: #fff;
+  border-left: 0;
+  background: #FAF7F2;
   pointer-events: auto;
   isolation: isolate;
   z-index: 6;
@@ -3675,19 +3699,19 @@ textarea:focus-visible {
   }
 
   .learning-map-detail-pane {
-    position: absolute;
-    inset: 0;
-    z-index: 15;
-    width: min(430px, 100vw);
+    position: relative;
+    inset: auto;
+    z-index: 6;
+    width: 100%;
     min-width: 0;
     max-width: none;
-    margin-left: auto;
+    margin-left: 0;
   }
 }
 
 @media (max-width: 640px) {
   .learning-map-detail-pane {
-    width: 100vw;
+    width: 100%;
   }
 
   .nm-modal.nm-modal-lg,
@@ -3700,20 +3724,52 @@ textarea:focus-visible {
 .neuron-workspace.neuron-detail-panel {
   display: flex;
   flex-direction: column;
+  width: 100%;
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  background: #fff;
+  background: #FAF7F2;
 }
 
 .neuron-workspace-header {
   flex-shrink: 0;
-  padding: 18px 20px 12px;
+  min-height: 76px;
+  padding: 18px 32px;
   gap: 16px;
+  align-items: center;
 }
 
 .neuron-workspace-tabs {
   flex-shrink: 0;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 32px;
+  overflow-x: hidden;
+}
+
+.neuron-workspace-tabs .nm-tab {
+  flex: 0 0 auto;
+  height: 42px;
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .neuron-workspace-header,
+  .neuron-workspace-tabs {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .neuron-workspace-tabs {
+    overflow-x: auto;
+    gap: 8px;
+  }
+
+  .neuron-workspace-tabs .nm-tab {
+    flex: 0 0 auto;
+    font-size: 13px;
+  }
 }
 
 .neuron-workspace-scroll {
@@ -3722,9 +3778,180 @@ textarea:focus-visible {
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  padding: 16px 18px 24px;
+  padding: 24px 32px;
   scrollbar-width: thin;
   scrollbar-color: #d9cfc6 transparent;
+}
+
+.neuron-workspace-scroll.is-markdown {
+  display: flex;
+  overflow: hidden;
+  padding: 16px 24px 24px;
+}
+
+.nm-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.nm-overview-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 16px auto 0;
+}
+
+.nm-docs,
+.nm-custom-page {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.nm-custom-page {
+  max-width: 1100px;
+}
+
+@media (max-width: 900px) {
+  .nm-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .neuron-detail-panel .neuron-md-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.neuron-detail-panel .neuron-md {
+  border: 1px solid #E7DDD4;
+  border-radius: 12px;
+  background: #FFFCF8;
+  box-shadow: none;
+}
+
+.neuron-detail-panel .neuron-md-head,
+.neuron-detail-panel .neuron-md-foot,
+.neuron-detail-panel .neuron-md-toolbar,
+.neuron-detail-panel .neuron-md-preview-label {
+  border-color: #E7DDD4;
+  background: #FFFCF8;
+  box-shadow: none;
+}
+
+.neuron-detail-panel .neuron-md-tool {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  color: #191515;
+  font-weight: 650;
+}
+
+.neuron-detail-panel .neuron-md-tool:hover,
+.neuron-detail-panel .neuron-md-tool:focus-visible {
+  background: rgba(127, 13, 18, 0.08);
+  color: #7F0D12;
+}
+
+.neuron-detail-panel .neuron-md-editor,
+.neuron-detail-panel .neuron-md-preview-wrap {
+  background: #fff;
+}
+
+.neuron-detail-panel .neuron-md-pane {
+  border-right: 1px solid #E7DDD4;
+}
+
+.nm-docs-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.nm-docs-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.nm-docs-head p {
+  margin: 4px 0 0;
+  color: #746A65;
+  font-size: 13px;
+}
+
+.nm-docs-status {
+  margin: 0 0 12px;
+  color: #746A65;
+  font-size: 13px;
+}
+
+.nm-docs-empty {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 20px 14px;
+  border: 1px dashed #E7DDD4;
+  border-radius: 10px;
+  background: #FFFCF8;
+}
+
+.nm-docs-empty p {
+  margin: 0;
+  color: #746A65;
+  font-size: 13px;
+}
+
+.nm-docs-empty p:first-child {
+  color: #191515;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.nm-docs-list {
+  display: grid;
+  gap: 10px;
+}
+
+.nm-doc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #E7DDD4;
+  border-radius: 10px;
+  background: #FFFCF8;
+}
+
+.nm-doc-row small {
+  color: #746A65;
+}
+
+.nm-doc-action {
+  border: 0;
+  background: transparent;
+  color: #7F0D12;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.nm-doc-action.is-danger {
+  color: #9b1c1c;
+}
+
+.nm-doc-action:disabled {
+  opacity: 0.55;
 }
 
 .neuron-workspace-scroll::-webkit-scrollbar {
@@ -3797,6 +4024,94 @@ textarea:focus-visible {
 
 .nm-modal-lg {
   width: min(680px, calc(100vw - 40px));
+}
+
+.nm-modal-create {
+  width: min(760px, calc(100vw - 40px));
+  max-height: min(820px, calc(100vh - 32px));
+}
+
+.nm-field-hint {
+  margin: 0;
+  color: #746A65;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.nm-md-compose {
+  overflow: hidden;
+  width: 100%;
+  border: 1px solid #DED3CB;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.nm-md-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #E7DDD4;
+  background: #FFFCF8;
+}
+
+.nm-md-tool {
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #191515;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.nm-md-tool:hover:not(:disabled) {
+  background: rgba(127, 13, 18, 0.06);
+}
+
+.nm-md-editor {
+  display: block;
+  width: 100%;
+  min-height: 240px;
+  padding: 12px 14px;
+  border: 0;
+  background: #fff;
+  color: #191515;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+}
+
+.nm-pending-docs {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nm-pending-doc {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid #E7DDD4;
+  border-radius: 10px;
+  background: #FFFCF8;
+}
+
+.nm-pending-doc small {
+  color: #746A65;
+}
+
+.nm-pending-remove {
+  border: 0;
+  background: transparent;
+  color: #746A65;
+  font-size: 20px;
+  line-height: 1;
 }
 
 .nm-modal-sm {
