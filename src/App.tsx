@@ -542,27 +542,29 @@ export default function App() {
           </span>
         </header>
       ) : null}
-      {layoutMode !== "desktop" && sidebarOpen ? (
-        <button type="button" className="nm-sidebar-backdrop" aria-label="Đóng menu" onClick={() => setSidebarOpen(false)} />
-      ) : null}
-      {!hideSidebar ? (
-        <Sidebar
-          activeView={activeView}
-          subjects={subjects}
-          selectedSubjectId={selectedSubjectId}
-          userLabel={user.email}
-          layoutMode={layoutMode}
-          open={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          onOpen={() => setSidebarOpen(true)}
-          onNavigate={navigate}
-          onSearch={() => setSearchOpen(true)}
-          onSelectSpace={openSubject}
-          onCreateSubject={createSubject}
-          onLogout={logout}
-        />
-      ) : null}
-      {renderView()}
+      <div className="nm-shell-body">
+        {layoutMode !== "desktop" && sidebarOpen ? (
+          <button type="button" className="nm-sidebar-backdrop" aria-label="Đóng menu" onClick={() => setSidebarOpen(false)} />
+        ) : null}
+        {!hideSidebar ? (
+          <Sidebar
+            activeView={activeView}
+            subjects={subjects}
+            selectedSubjectId={selectedSubjectId}
+            userLabel={user.email}
+            layoutMode={layoutMode}
+            open={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            onOpen={() => setSidebarOpen(true)}
+            onNavigate={navigate}
+            onSearch={() => setSearchOpen(true)}
+            onSelectSpace={openSubject}
+            onCreateSubject={createSubject}
+            onLogout={logout}
+          />
+        ) : null}
+        {renderView()}
+      </div>
       <GlobalSearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} onOpenResult={openSearchResult} />
       {onboardingOpen ? (
         <OnboardingTour

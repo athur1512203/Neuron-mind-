@@ -179,10 +179,44 @@ export function LearningMap({
             <input type="range" min="1.5" max="5" step="0.1" value={neuronSpacing} onChange={(event) => setNeuronSpacing(Number(event.target.value))} aria-label="Khoảng cách neuron" />
             <output>{neuronSpacing.toFixed(1)}</output>
           </label>
+          {layoutMode === "mobile" ? (
+            <div className="nm-mobile-graph-bar">
+              <div className="nm-segmented" role="toolbar" aria-label="Công cụ sơ đồ">
+                <button
+                  type="button"
+                  className="nm-segmented-item"
+                  aria-label="Điều chỉnh khoảng cách neuron"
+                  title="Điều chỉnh"
+                  onClick={() => setSpacingOpen(true)}
+                >
+                  <SlidersHorizontal size={16} />
+                </button>
+                <button
+                  type="button"
+                  className={`nm-segmented-item${connectionMode ? " is-on" : ""}`}
+                  data-onboarding="create-connection"
+                  aria-label="Tạo liên kết"
+                  title="Tạo liên kết"
+                  onClick={() => setConnectionMode((value) => !value)}
+                >
+                  <Link2 size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="nm-segmented-item"
+                  aria-label="Reset view"
+                  title="Reset View"
+                  onClick={() => setResetSignal((value) => value + 1)}
+                >
+                  <RotateCcw size={16} />
+                </button>
+              </div>
+              <Button variant="icon" title={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} aria-label={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} onClick={onToggleMapExpanded}>
+                {mapExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              </Button>
+            </div>
+          ) : null}
           <div className="nm-toolbar-actions">
-            <Button variant="icon" className="nm-spacing-trigger" aria-label="Điều chỉnh khoảng cách neuron" onClick={() => setSpacingOpen(true)}>
-              <SlidersHorizontal size={16} />
-            </Button>
             <Button variant="primary" size="sm" className="nm-create-neuron" data-onboarding="create-neuron" onClick={() => setShowCreateNeuron(true)}>
               <Plus size={16} /><span className="nm-btn-label">Tạo neuron</span>
             </Button>

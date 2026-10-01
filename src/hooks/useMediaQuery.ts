@@ -18,7 +18,7 @@ export type LayoutMode = "mobile" | "tablet" | "desktop";
 
 export function useLayoutMode(): LayoutMode {
   const isDesktop = useMediaQuery("(min-width: 1024px)");
-  const isTablet = useMediaQuery("(min-width: 640px) and (max-width: 1023px)");
+  const isTablet = useMediaQuery("(min-width: 641px) and (max-width: 1023px)");
   if (isDesktop) return "desktop";
   if (isTablet) return "tablet";
   return "mobile";

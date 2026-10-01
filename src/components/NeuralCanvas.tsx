@@ -642,7 +642,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   };
 
   return (
-    <div ref={containerRef} className="h-full min-h-[420px] w-full overflow-hidden bg-[#FAF9F6]">
+    <div ref={containerRef} className="h-full min-h-0 min-w-0 w-full overflow-hidden bg-[#FAF9F6]">
       <svg
         width="100%"
         height="100%"

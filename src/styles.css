@@ -698,26 +698,6 @@ textarea:focus-visible {
   background: rgba(255, 255, 255, 0.15);
 }
 
-@media (max-width: 767px) {
-  .app-sidebar {
-    flex-direction: row;
-    width: 100%;
-    min-width: 0;
-    height: 64px;
-    padding: 8px 12px;
-    gap: 12px;
-  }
-
-  .sidebar-brand-icon { margin-bottom: 0; }
-  .sidebar-navigation { display: flex; }
-  .sidebar-nav-item { flex-shrink: 0; margin: 0 auto; }
-  .sidebar-divider { display: none; }
-  .sidebar-tooltip { left: auto; right: 0; top: calc(100% + 10px); transform: translateY(-4px); }
-  .sidebar-tooltip::before { left: auto; right: 20px; top: -4px; }
-  .sidebar-nav-item:hover .sidebar-tooltip,
-  .sidebar-nav-item:focus-visible .sidebar-tooltip { transform: translateY(0); }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .sidebar-nav-item, .sidebar-tooltip { transition: none; }
 }
@@ -1161,6 +1141,10 @@ textarea:focus-visible {
 .learning-map-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
 }
 
 @media (min-width: 1280px) {
@@ -3109,11 +3093,20 @@ textarea:focus-visible {
 
 .nm-shell {
   display: flex;
+  flex-direction: column;
   min-height: 100dvh;
   height: 100dvh;
   background: var(--nm-bg);
   color: var(--nm-text);
   overflow: hidden;
+}
+
+.nm-shell-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
 }
 
 .nm-shell .app-sidebar {
@@ -3125,7 +3118,8 @@ textarea:focus-visible {
   align-items: stretch;
   width: 268px;
   min-width: 268px;
-  height: 100vh;
+  height: 100%;
+  max-height: 100%;
   padding: 20px 16px 16px;
   overflow: hidden;
   background: var(--nm-sidebar);
@@ -3506,6 +3500,7 @@ textarea:focus-visible {
   position: relative;
   min-width: 0;
   min-height: 0;
+  width: 100%;
   height: 100%;
   background: var(--nm-bg);
 }
@@ -4627,7 +4622,8 @@ textarea:focus-visible {
 }
 
 .nm-spacing-trigger,
-.nm-fab-create {
+.nm-fab-create,
+.nm-mobile-graph-bar {
   display: none;
 }
 
@@ -4705,11 +4701,48 @@ textarea:focus-visible {
   to { transform: translateY(0); opacity: 1; }
 }
 
+.nm-shell[data-layout="tablet"] .nm-shell-body {
+  display: grid;
+  grid-template-columns: clamp(64px, 9vw, 88px) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+}
+
+.nm-shell[data-layout="tablet"] .app-sidebar,
 .nm-shell[data-layout="tablet"] .app-sidebar.is-rail {
-  flex: 0 0 64px;
-  width: 64px;
-  min-width: 64px;
+  grid-column: 1;
+  grid-row: 1;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  flex: none;
+  height: 100%;
   padding: 16px 8px;
+  overflow: visible;
+}
+
+.nm-shell[data-layout="tablet"] .nm-workspace,
+.nm-shell[data-layout="tablet"] .nm-settings,
+.nm-shell[data-layout="tablet"] .nm-empty-workspace {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+}
+
+.nm-shell[data-layout="tablet"] .nm-sidebar-backdrop {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  width: auto;
+  height: auto;
+  border: 0;
+  background: rgba(20, 20, 20, 0.28);
 }
 
 .nm-shell[data-layout="tablet"] .app-sidebar.is-rail .sidebar-brand-name,
@@ -4725,9 +4758,9 @@ textarea:focus-visible {
 .nm-shell[data-layout="tablet"] .app-sidebar.is-rail .sidebar-space {
   position: relative;
   justify-content: center;
-  width: 48px;
+  width: 100%;
   min-height: 44px;
-  margin: 4px auto;
+  margin: 4px 0;
   padding: 0;
 }
 
@@ -4740,50 +4773,106 @@ textarea:focus-visible {
   display: block;
 }
 
-.nm-shell[data-layout="tablet"] .app-sidebar.is-open:not(.is-rail) {
+.nm-shell[data-layout="tablet"] .app-sidebar.is-open {
   position: fixed;
   left: 0;
   top: 0;
   z-index: 80;
+  width: min(280px, 72vw);
+  min-width: 0;
   height: 100dvh;
+  padding: 20px 16px 16px;
   box-shadow: 8px 0 24px rgba(23, 23, 23, 0.12);
+  overflow: hidden;
 }
 
-.nm-shell[data-layout="tablet"] .nm-sidebar-backdrop {
-  display: block;
-  position: fixed;
-  inset: 0;
-  z-index: 75;
-  border: 0;
-  background: rgba(20, 20, 20, 0.28);
+.nm-shell[data-layout="tablet"] .app-sidebar.is-open .sidebar-brand-name,
+.nm-shell[data-layout="tablet"] .app-sidebar.is-open .sidebar-nav-label,
+.nm-shell[data-layout="tablet"] .app-sidebar.is-open .sidebar-spaces-head span,
+.nm-shell[data-layout="tablet"] .app-sidebar.is-open .sidebar-space-name,
+.nm-shell[data-layout="tablet"] .app-sidebar.is-open .sidebar-user-name {
+  display: inline;
+}
+
+.nm-shell[data-layout="tablet"] .app-sidebar.is-open .sidebar-add {
+  display: grid;
+}
+
+.nm-shell[data-layout="tablet"] .app-sidebar.is-open .sidebar-nav-item,
+.nm-shell[data-layout="tablet"] .app-sidebar.is-open .sidebar-space {
+  justify-content: flex-start;
+  width: 100%;
+  padding: 0 10px;
 }
 
 .nm-shell[data-layout="tablet"] .nm-toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .nm-shell[data-layout="tablet"] .nm-toolbar-search {
-  grid-column: 1;
-  min-width: 0;
+  flex: 1 1 60%;
+  min-width: min(280px, 100%);
 }
 
 .nm-shell[data-layout="tablet"] .nm-toolbar-spacing {
-  grid-column: 2;
+  flex: 0 1 auto;
 }
 
 .nm-shell[data-layout="tablet"] .nm-toolbar-actions {
-  grid-column: 1 / -1;
+  flex: 1 1 auto;
   margin-left: 0;
 }
 
-.nm-shell[data-layout="tablet"] .nm-toolbar-spacing span {
-  display: none;
+.nm-shell[data-layout="tablet"] .nm-graph-stage,
+.nm-shell[data-layout="tablet"] .learning-map-layout,
+.nm-shell[data-layout="tablet"] .learning-map-detail-pane {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  max-width: none;
 }
 
-.nm-shell[data-layout="mobile"] {
-  flex-direction: column;
+.nm-shell[data-layout="tablet"] .nm-overview,
+.nm-shell[data-layout="tablet"] .nm-overview-actions,
+.nm-shell[data-layout="tablet"] .nm-docs,
+.nm-shell[data-layout="tablet"] .nm-custom-page {
+  max-width: none;
+  width: 100%;
+}
+
+.nm-shell[data-layout="tablet"] .nm-overview {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.nm-shell[data-layout="tablet"] .neuron-workspace-tabs {
+  display: flex;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.nm-shell[data-layout="tablet"] .neuron-workspace-tabs .nm-tab {
+  flex: 1 1 25%;
+  white-space: nowrap;
+}
+
+@media (max-width: 800px) {
+  .nm-shell[data-layout="tablet"] .nm-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.nm-shell[data-layout="mobile"] .nm-shell-body {
+  min-width: 0;
+}
+
+.nm-shell[data-layout="mobile"] .nm-workspace,
+.nm-shell[data-layout="mobile"] .nm-settings,
+.nm-shell[data-layout="mobile"] .nm-empty-workspace {
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .nm-shell[data-layout="mobile"] .nm-mobile-top {
@@ -4852,17 +4941,73 @@ textarea:focus-visible {
 }
 
 .nm-shell[data-layout="mobile"] .nm-toolbar-actions {
-  margin-left: 0;
+  display: none;
+}
+
+.nm-shell[data-layout="mobile"] .nm-mobile-graph-bar {
+  display: flex;
+  align-items: center;
   justify-content: flex-start;
+  gap: 10px;
+}
+
+.nm-segmented {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  overflow: hidden;
+  border: 1px solid #DED8CE;
+  border-radius: 12px;
+  background: #F7F3EA;
+  box-shadow: 0 2px 0 rgba(43, 43, 43, 0.2);
+}
+
+.nm-segmented-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-right: 1px solid #DED8CE;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #171717;
+  cursor: pointer;
+}
+
+.nm-segmented-item:last-child {
+  border-right: 0;
+}
+
+.nm-segmented-item:hover {
+  background: #EEE8DC;
+  color: #171717;
+}
+
+.nm-segmented-item:active {
+  background: #E7E0D5;
+  color: #171717;
+}
+
+.nm-segmented-item.is-on,
+.nm-segmented-item.is-on:hover,
+.nm-segmented-item.is-on:active {
+  background: #8B1E24;
+  color: #fff;
+}
+
+.nm-segmented-item:focus-visible {
+  outline: 2px solid #2d8cf0;
+  outline-offset: -2px;
 }
 
 .nm-shell[data-layout="mobile"] .nm-btn-label,
 .nm-shell[data-layout="mobile"] .nm-create-neuron {
   display: none;
-}
-
-.nm-shell[data-layout="mobile"] .nm-spacing-trigger {
-  display: inline-flex;
 }
 
 .nm-shell[data-layout="mobile"] .nm-fab-create {

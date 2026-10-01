@@ -42,7 +42,7 @@ export function Sidebar({
   const restoreRef = useRef<HTMLElement | null>(null);
   const initials = userLabel.trim().slice(0, 1).toUpperCase() || "N";
   const overlayOpen = layoutMode !== "desktop" && open;
-  const rail = layoutMode === "tablet" && !open;
+  const rail = layoutMode === "tablet";
 
   useEffect(() => {
     if (!overlayOpen) return;
