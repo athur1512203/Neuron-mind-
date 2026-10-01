@@ -37,8 +37,8 @@
 :root {
   --nm-primary: #7F0D12;
   --nm-primary-hover: #681014;
-  --nm-sidebar: #4A0808;
-  --nm-sidebar-active: #6F0D12;
+  --nm-sidebar: #FFFFFF;
+  --nm-sidebar-active: #F6E7E6;
   --nm-bg: #FAF7F2;
   --nm-panel: #FFFCF8;
   --nm-border: #E7DDD4;
@@ -3116,8 +3116,9 @@ textarea:focus-visible {
   height: 100vh;
   padding: 20px 16px 16px;
   overflow: hidden;
-  background: #4A0808;
-  color: #f8ecec;
+  background: #FFFFFF;
+  color: #25211F;
+  border-right: 1px solid #E8E3DE;
 }
 
 .sidebar-brand {
@@ -3125,6 +3126,7 @@ textarea:focus-visible {
   align-items: center;
   gap: 10px;
   margin-bottom: 22px;
+  background: transparent;
 }
 
 .nm-shell .sidebar-brand-icon {
@@ -3132,12 +3134,14 @@ textarea:focus-visible {
   height: 32px;
   margin-bottom: 0;
   border-radius: 8px;
-  background: #7F0D12;
+  background: #8B1E24;
+  color: #fff;
 }
 
 .sidebar-brand-name {
+  color: #25211F;
   font-size: 16px;
-  font-weight: 650;
+  font-weight: 600;
 }
 
 .nm-shell .sidebar-navigation {
@@ -3154,21 +3158,39 @@ textarea:focus-visible {
   justify-content: flex-start;
   gap: 10px;
   padding: 0 10px;
-  border-radius: 10px;
+  border-radius: 9px;
   background: transparent;
-  color: #f3dede;
+  color: #514A46;
   font-size: 14px;
   font-weight: 550;
 }
 
+.nm-shell .sidebar-nav-item:hover {
+  background: #F8F4F1;
+  color: #514A46;
+}
+
 .nm-shell .sidebar-nav-item.is-active {
-  background: #6F0D12;
+  background: #F6E7E6;
   box-shadow: none;
+  color: #8B1E24;
+  font-weight: 600;
+}
+
+.nm-shell .sidebar-nav-item.is-active:hover {
+  background: #F6E7E6;
+  color: #8B1E24;
+}
+
+.nm-shell .sidebar-nav-item:focus-visible {
+  outline: 2px solid #8B1E24;
+  outline-offset: 2px;
 }
 
 .nm-shell .sidebar-divider {
   width: auto;
   margin: 16px 4px;
+  background: #ECE7E2;
 }
 
 .sidebar-spaces {
@@ -3185,9 +3207,9 @@ textarea:focus-visible {
   justify-content: space-between;
   margin-bottom: 8px;
   padding: 0 6px;
-  color: #d7b8b8;
-  font-size: 11px;
-  font-weight: 650;
+  color: #8A817C;
+  font-size: 12px;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -3199,8 +3221,13 @@ textarea:focus-visible {
   height: 24px;
   border: 0;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  background: transparent;
+  color: #8A817C;
+}
+
+.sidebar-add:hover {
+  background: #F6E7E6;
+  color: #8B1E24;
 }
 
 .sidebar-space-list {
@@ -3217,15 +3244,19 @@ textarea:focus-visible {
   width: 100%;
   padding: 8px 10px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   background: transparent;
-  color: #f8ecec;
+  color: #3B3633;
   text-align: left;
   font-size: 14px;
 }
 
-.sidebar-space:hover { background: rgba(255, 255, 255, 0.07); }
-.sidebar-space.is-active { background: #7F0D12; color: #fff; }
+.sidebar-space:hover { background: #F8F4F1; }
+.sidebar-space.is-active {
+  background: #F6E7E6;
+  color: #8B1E24;
+  font-weight: 600;
+}
 .sidebar-space-dot { width: 8px; height: 8px; border-radius: 99px; flex-shrink: 0; }
 .sidebar-space-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -3235,7 +3266,8 @@ textarea:focus-visible {
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: #FFFFFF;
+  border-top: 1px solid #ECE7E2;
 }
 
 .sidebar-avatar {
@@ -3244,7 +3276,8 @@ textarea:focus-visible {
   width: 28px;
   height: 28px;
   border-radius: 99px;
-  background: #7F0D12;
+  background: #8B1E24;
+  color: #fff;
   font-size: 12px;
   font-weight: 650;
 }
@@ -3255,6 +3288,7 @@ textarea:focus-visible {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: #403A37;
   font-size: 13px;
 }
 
@@ -3267,7 +3301,12 @@ textarea:focus-visible {
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #f8ecec;
+  color: #817873;
+}
+
+.sidebar-more:hover {
+  background: #F8F4F1;
+  color: #8B1E24;
 }
 
 .sidebar-popover {
@@ -3292,6 +3331,10 @@ textarea:focus-visible {
   color: #191515;
   text-align: left;
   font-size: 13px;
+}
+
+.sidebar-popover button:hover {
+  background: #F8F4F1;
 }
 
 .nm-btn,
@@ -3691,7 +3734,7 @@ textarea:focus-visible {
 
   .nm-shell .app-sidebar.is-open {
     transform: none;
-    box-shadow: 12px 0 40px rgba(25, 21, 21, 0.2);
+    box-shadow: 4px 0 16px rgba(40, 30, 25, 0.08);
   }
 
   .learning-map-layout.has-neuron-detail {
