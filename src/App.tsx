@@ -7,13 +7,13 @@ import type { SearchResult } from "./api/search";
 import { createSubject as createSubjectApi, deleteSubject as deleteSubjectApi, getSubjectGraph, listSubjects } from "./api/subjects";
 import type { ApiUser } from "./api/mappers";
 import { AuthScreen } from "./components/AuthScreen";
-import { Dashboard } from "./components/Dashboard";
+import { CreateSubjectModal } from "./components/CreateSubjectModal";
 import { LearningMap } from "./components/LearningMap";
 import { GlobalSearchPalette } from "./components/GlobalSearchPalette";
 import type { DetailTab } from "./components/NeuronDetailPanel";
-import { SearchCoreDebug, isSearchCoreDebugPath } from "./components/SearchCoreDebug";
 import { Settings } from "./components/Settings";
 import { Sidebar } from "./components/Sidebar";
+import { WorkspaceEmpty } from "./components/WorkspaceEmpty";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject, ViewName } from "./types";
 import { areSameConnection } from "./utils/neuron";
 import { clearNavigation, readNavigation, restoreNavigation, saveNavigation } from "./utils/navigation";
@@ -21,7 +21,7 @@ import { clearNavigation, readNavigation, restoreNavigation, saveNavigation } fr
 export default function App() {
   const [user, setUser] = useState<ApiUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [activeView, setActiveView] = useState<ViewName>("dashboard");
+  const [activeView, setActiveView] = useState<ViewName>("map");
   const [mapExpanded, setMapExpanded] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
@@ -35,11 +35,12 @@ export default function App() {
   const [pendingNeuronSelection, setPendingNeuronSelection] = useState<{ neuronId: string; tab: DetailTab } | null>(null);
   const [detailInitialTab, setDetailInitialTab] = useState<DetailTab>("overview");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [spaceModalOpen, setSpaceModalOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [navigationUserId, setNavigationUserId] = useState<string | null>(null);
   const sessionVersion = useRef(0);
   const restoredGraph = useRef<string | null>(null);
-  const persistableViewRef = useRef<ViewName>("dashboard");
+  const persistableViewRef = useRef<ViewName>("map");
   const userIdRef = useRef<string | null>(null);
   userIdRef.current = user?.id ?? null;
 
@@ -51,7 +52,7 @@ export default function App() {
     setSubjects([]);
     setNeurons([]);
     setConnections([]);
-    setActiveView("dashboard");
+    setActiveView("map");
     setSelectedSubjectId(null);
     setSelection(null);
     setPendingNeuronSelection(null);
@@ -94,13 +95,38 @@ export default function App() {
         if (!current()) return;
         const restored = await restoreNavigation(readNavigation(user.id), next, getSubjectGraph);
         if (!current()) return;
-        const navigation = restored.navigation;
+        let navigation = restored.navigation;
+        let graph = restored.graph;
+        if (navigation.activeView === "dashboard" || navigation.activeView === "searchCoreTest") {
+          const spaceId =
+            (navigation.selectedSubjectId && next.some((subject) => subject.id === navigation.selectedSubjectId)
+              ? navigation.selectedSubjectId
+              : next[0]?.id) ?? null;
+          navigation = {
+            activeView: "map",
+            selectedSubjectId: spaceId,
+            selectedNeuronId: spaceId ? navigation.selectedNeuronId : null,
+          };
+          if (spaceId && !graph) {
+            try {
+              graph = await getSubjectGraph(spaceId);
+              const neuronExists = Boolean(
+                navigation.selectedNeuronId &&
+                  graph.neurons.some((neuron) => neuron.id === navigation.selectedNeuronId),
+              );
+              navigation = { ...navigation, selectedNeuronId: neuronExists ? navigation.selectedNeuronId : null };
+            } catch {
+              graph = undefined;
+              navigation = { ...navigation, selectedNeuronId: null };
+            }
+          }
+        }
         setSubjects(next);
         setSelectedSubjectId(navigation.selectedSubjectId);
-        if (restored.graph) {
-          setNeurons(restored.graph.neurons);
-          setConnections(restored.graph.connections);
-          restoredGraph.current = restored.graph.subject.id;
+        if (graph) {
+          setNeurons(graph.neurons);
+          setConnections(graph.connections);
+          restoredGraph.current = graph.subject.id;
         } else {
           setNeurons([]);
           setConnections([]);
@@ -131,18 +157,15 @@ export default function App() {
   }, [user]);
 
   const selectedNeuronId = pendingNeuronSelection?.neuronId ?? (selection?.type === "neuron" ? selection.id : null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   useEffect(() => {
-    if (activeView !== "searchCoreTest") persistableViewRef.current = activeView;
+    persistableViewRef.current = activeView === "searchCoreTest" ? persistableViewRef.current : activeView;
   }, [activeView]);
   useEffect(() => {
     if (!user || navigationUserId !== user.id) return;
     const persistView = activeView === "searchCoreTest" ? persistableViewRef.current : activeView;
     saveNavigation(user.id, { activeView: persistView, selectedSubjectId, selectedNeuronId });
   }, [user, navigationUserId, activeView, selectedSubjectId, selectedNeuronId]);
-  useEffect(() => {
-    if (!user || navigationUserId !== user.id) return;
-    if (isSearchCoreDebugPath()) setActiveView("searchCoreTest");
-  }, [user, navigationUserId]);
 
   useEffect(() => {
     if (!user || navigationUserId !== user.id || (activeView !== "map" && activeView !== "connections") || !selectedSubjectId) return;
@@ -222,6 +245,10 @@ export default function App() {
   const createSubject = async (payload: { name: string; color: string }) => {
     const subject = await createSubjectApi({ name: payload.name, color: payload.color });
     setSubjects((current) => [subject, ...current]);
+    setSelectedSubjectId(subject.id);
+    setActiveView("map");
+    setSelection(null);
+    setPendingNeuronSelection(null);
   };
 
   const removeSubject = async (subjectId: string) => {
@@ -230,9 +257,10 @@ export default function App() {
       setSubjects((current) => current.filter((subject) => subject.id !== subjectId));
       setNeurons((current) => current.filter((neuron) => neuron.subjectId !== subjectId));
       setConnections((current) => current.filter((connection) => connection.subjectId !== subjectId));
-      setSelectedSubjectId((current) => (current === subjectId ? null : current));
       if (selectedSubjectId === subjectId) {
-        setActiveView("dashboard");
+        const remaining = subjects.filter((subject) => subject.id !== subjectId);
+        setSelectedSubjectId(remaining[0]?.id ?? null);
+        setActiveView("map");
         setSelection(null);
         setPendingNeuronSelection(null);
       }
@@ -405,29 +433,13 @@ export default function App() {
   };
 
   const renderView = () => {
-    if (activeView === "dashboard") {
-      return (
-        <Dashboard
-          subjects={subjects}
-          loading={subjectsLoading}
-          error={subjectsError}
-          onOpenSubject={openSubject}
-          onCreateSubject={createSubject}
-          onDeleteSubject={removeSubject}
-        />
-      );
-    }
-    if (activeView === "searchCoreTest") return <SearchCoreDebug />;
     if (activeView === "settings") return <Settings email={user?.email} onLogout={logout} />;
     if (!selectedSubject) {
       return (
-        <Dashboard
-          subjects={subjects}
+        <WorkspaceEmpty
           loading={subjectsLoading}
           error={subjectsError}
-          onOpenSubject={openSubject}
-          onCreateSubject={createSubject}
-          onDeleteSubject={removeSubject}
+          onCreateSpace={() => setSpaceModalOpen(true)}
         />
       );
     }
@@ -443,12 +455,7 @@ export default function App() {
         onToggleMapExpanded={() => setMapExpanded((value) => !value)}
         selection={selection}
         notice={notice}
-        onBack={() => {
-          setMapExpanded(false);
-          setActiveView("dashboard");
-          setSelection(null);
-          setPendingNeuronSelection(null);
-        }}
+        onToggleSidebar={() => setSidebarOpen((open) => !open)}
         onSelectNeuron={selectNeuron}
         onSelectConnection={(connectionId) => {
           if (!connectionId) return;
@@ -488,10 +495,32 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 md:h-screen md:flex-row">
-      {!(activeView === "map" && mapExpanded) && <Sidebar activeView={activeView} onNavigate={navigate} onSearch={() => setSearchOpen(true)} />}
+    <div className="nm-shell">
+      {!(activeView === "map" && mapExpanded) ? (
+        <Sidebar
+          activeView={activeView}
+          subjects={subjects}
+          selectedSubjectId={selectedSubjectId}
+          userLabel={user.email}
+          open={sidebarOpen}
+          onNavigate={navigate}
+          onSearch={() => setSearchOpen(true)}
+          onSelectSpace={openSubject}
+          onCreateSubject={createSubject}
+          onLogout={logout}
+        />
+      ) : null}
       {renderView()}
       <GlobalSearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} onOpenResult={openSearchResult} />
+      {spaceModalOpen ? (
+        <CreateSubjectModal
+          onClose={() => setSpaceModalOpen(false)}
+          onCreate={async (payload) => {
+            await createSubject(payload);
+            setSpaceModalOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

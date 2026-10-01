@@ -1,9 +1,9 @@
-import { ArrowLeft, Brain, Link2, Maximize2, Minimize2, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
+import { Link2, Maximize2, Menu, Minimize2, Minus, MousePointer2, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject } from "../types";
 import { getConnectionCount } from "../utils/neuron";
 import { CreateNeuronModal } from "./CreateNeuronModal";
-import { NeuralCanvas } from "./NeuralCanvas";
+import { NeuralCanvas, type NeuralCanvasHandle } from "./NeuralCanvas";
 import { NeuronDetailPanel, type DetailTab } from "./NeuronDetailPanel";
 
 type LearningMapProps = {
@@ -14,7 +14,7 @@ type LearningMapProps = {
   onToggleMapExpanded: () => void;
   selection: Selection;
   notice: string | null;
-  onBack: () => void;
+  onToggleSidebar?: () => void;
   onSelectNeuron: (neuronId: string) => void;
   onSelectConnection: (connectionId: string) => void;
   onLayoutSettled: (positions: Record<string, Position3D>) => void;
@@ -46,7 +46,7 @@ export function LearningMap({
   onToggleMapExpanded,
   selection,
   notice,
-  onBack,
+  onToggleSidebar,
   onSelectNeuron,
   graphLoading,
   graphError,
@@ -61,6 +61,7 @@ export function LearningMap({
   onUpdateConnection,
   onDeleteConnection,
 }: LearningMapProps) {
+  const canvasRef = useRef<NeuralCanvasHandle>(null);
   const [showCreateNeuron, setShowCreateNeuron] = useState(false);
   const [connectionMode, setConnectionMode] = useState(false);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
@@ -147,109 +148,68 @@ export function LearningMap({
   };
 
   return (
-    <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-slate-50">
+    <main className="nm-workspace">
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <button onClick={onBack} className="mb-1 inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-950">
-                <ArrowLeft size={16} />
-                {subject.name}
-              </button>
-              <p className="app-metadata text-slate-500">
-                {subject.neuronCount} neuron • {subject.connectionCount} kết nối
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  className="h-10 w-64 rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm"
-                  placeholder="Tìm neuron..."
-                />
-                {filteredNeurons.length > 0 && (
-                  <div className="absolute right-0 top-12 z-20 w-72 rounded-md border border-slate-200 bg-white py-2 shadow-xl">
-                    {filteredNeurons.map((neuron) => (
-                      <button
-                        key={neuron.id}
-                        onClick={() => focusNeuron(neuron.id)}
-                        className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50"
-                      >
-                        <span>{neuron.name}</span>
-                        <span className="h-3 w-3 rounded-full" style={{ backgroundColor: neuron.color }} />
-                      </button>
-                    ))}
-                  </div>
-                )}
+        <header className="nm-toolbar">
+          {onToggleSidebar ? (
+            <button type="button" className="nm-icon-btn nm-toolbar-menu" aria-label="Menu" onClick={onToggleSidebar}>
+              <Menu size={18} />
+            </button>
+          ) : null}
+          <div className="nm-toolbar-search">
+            <Search size={16} />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm neuron..." aria-label="Tìm neuron" />
+            {filteredNeurons.length > 0 ? (
+              <div className="nm-toolbar-results">
+                {filteredNeurons.map((neuron) => (
+                  <button key={neuron.id} type="button" onClick={() => focusNeuron(neuron.id)}>
+                    <span>{neuron.name}</span>
+                    <span className="sidebar-space-dot" style={{ backgroundColor: neuron.color }} />
+                  </button>
+                ))}
               </div>
-              <label className="flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-600">
-                <span className="whitespace-nowrap font-semibold">Khoảng cách neuron</span>
-                <input
-                  type="range"
-                  min="1.5"
-                  max="5"
-                  step="0.1"
-                  value={neuronSpacing}
-                  onChange={(event) => setNeuronSpacing(Number(event.target.value))}
-                  className="w-24 accent-blue-600"
-                />
-                <output className="w-7 text-right font-semibold text-slate-800">{neuronSpacing.toFixed(1)}</output>
-              </label>
-              <button
-                onClick={() => setShowCreateNeuron(true)}
-                className="action-3d-button"
-              >
-                <span className="btn-shadow" />
-                <span className="btn-edge" />
-                <span className="btn-front"><Plus />Tạo neuron</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setConnectionMode((value) => !value)}
-                className={`action-3d-button ${connectionMode ? "" : "secondary"}`}
-              >
-                <span className="btn-shadow" />
-                <span className="btn-edge" />
-                <span className="btn-front">
-                  <Link2 />
-                  {connectionMode ? "Đang tạo liên kết" : "Tạo liên kết"}
-                </span>
-              </button>
-              <button
-                onClick={() => setResetSignal((value) => value + 1)}
-                className="action-3d-button secondary"
-              >
-                <span className="btn-shadow" />
-                <span className="btn-edge" />
-                <span className="btn-front"><RotateCcw />Reset View</span>
-              </button>
-            </div>
+            ) : null}
           </div>
-          {notice && <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">{notice}</div>}
-        </header>
-
-        <div className={`learning-map-layout min-h-0 flex-1 overflow-y-auto xl:overflow-hidden ${selectedNeuron ? "has-neuron-detail" : ""}`}>
-          <div className="relative min-h-[520px] min-w-0 p-4 xl:min-h-0">
-            <button
-              type="button"
-              onClick={onToggleMapExpanded}
-              title={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"}
-              aria-label={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"}
-              className="absolute right-6 top-6 z-10 rounded-md border border-slate-700/70 bg-slate-900/80 p-2 text-white shadow-lg backdrop-blur-sm hover:bg-slate-800"
-            >
+          <label className="nm-toolbar-spacing">
+            <span>Khoảng cách neuron</span>
+            <input type="range" min="1.5" max="5" step="0.1" value={neuronSpacing} onChange={(event) => setNeuronSpacing(Number(event.target.value))} />
+            <output>{neuronSpacing.toFixed(1)}</output>
+          </label>
+          <div className="nm-toolbar-actions">
+            <button type="button" className="nm-btn nm-btn-primary" onClick={() => setShowCreateNeuron(true)}>
+              <Plus size={16} />Tạo neuron
+            </button>
+            <button type="button" className={`nm-btn ${connectionMode ? "nm-btn-primary" : "nm-btn-secondary"}`} onClick={() => setConnectionMode((value) => !value)}>
+              <Link2 size={16} />{connectionMode ? "Đang tạo liên kết" : "Tạo liên kết"}
+            </button>
+            <button type="button" className="nm-btn nm-btn-secondary" onClick={() => setResetSignal((value) => value + 1)}>
+              <RotateCcw size={16} />Reset View
+            </button>
+            <button type="button" className="nm-icon-btn" title={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} aria-label={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} onClick={onToggleMapExpanded}>
               {mapExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
-            <div className="relative h-full min-h-0">
+          </div>
+        </header>
+        {notice ? <div className="nm-notice">{notice}</div> : null}
+
+        <div className={`learning-map-layout min-h-0 flex-1 overflow-hidden ${selectedNeuron ? "has-neuron-detail" : ""}`}>
+          <div className="nm-graph-stage">
+            <div className="nm-graph-tools">
+              <button type="button" className="nm-icon-btn" title="Chọn" aria-label="Chọn" onClick={() => setConnectionMode(false)}>
+                <MousePointer2 size={16} />
+              </button>
+              <button type="button" className="nm-icon-btn" title="Vừa khung" aria-label="Vừa khung" onClick={() => canvasRef.current?.fit()}>
+                <Maximize2 size={16} />
+              </button>
+            </div>
             {selectedConnection && !connectionMode ? (
-              <button type="button" className="brutal-button brutal-button-danger absolute left-2 top-2 z-10" onClick={() => { setDeleteError(""); setPendingDelete(selectedConnection); }}>
+              <button type="button" className="nm-btn nm-btn-danger nm-graph-delete" onClick={() => { setDeleteError(""); setPendingDelete(selectedConnection); }}>
                 <Trash2 size={16} />Xóa liên kết
               </button>
             ) : null}
-            {toast ? <div role="status" className="pointer-events-none absolute bottom-4 left-4 z-20 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm text-slate-800 shadow">{toast}</div> : null}
+            {toast ? <div role="status" className="nm-toast">{toast}</div> : null}
             <NeuralCanvas
+              ref={canvasRef}
               neurons={neurons}
               connections={connections}
               selectedNeuronId={selectedNeuron?.id ?? null}
@@ -263,40 +223,25 @@ export function LearningMap({
               onCreateConnection={onCreateConnection}
               neuronSpacing={neuronSpacing}
             />
-            {graphLoading ? (
-              <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center text-sm text-slate-300">
-                Đang tải sơ đồ...
-              </div>
-            ) : null}
-            {graphError ? (
-              <div className="absolute inset-x-6 top-16 z-20 rounded-md border border-red-500/40 bg-slate-950/80 px-3 py-2 text-sm text-red-300">
-                {graphError}
-              </div>
-            ) : null}
-            {!graphLoading && neurons.length === 0 && (
-              <div className="nm-graph-empty-overlay">
-                <div className="nm-graph-empty-card">
-                  <span className="nm-graph-empty-icon" aria-hidden="true"><Brain size={28} /></span>
-                  <h3>Không gian này chưa có neuron</h3>
-                  <p>
-                    Tạo neuron đầu tiên để bắt đầu xây dựng mạng lưới kiến thức của bạn.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateNeuron(true)}
-                    className="nm-create-button nm-graph-empty-button"
-                  >
-                    <Plus size={18} aria-hidden="true" />
-                    Tạo neuron đầu tiên
-                  </button>
-                </div>
-              </div>
-            )}
+            <div className="nm-zoom">
+              <button type="button" className="nm-icon-btn" aria-label="Phóng to" onClick={() => canvasRef.current?.zoomBy(1.15)}><Plus size={16} /></button>
+              <button type="button" className="nm-icon-btn" aria-label="Thu nhỏ" onClick={() => canvasRef.current?.zoomBy(1 / 1.15)}><Minus size={16} /></button>
             </div>
+            {graphLoading ? <div className="nm-graph-status">Đang tải sơ đồ...</div> : null}
+            {graphError ? <div className="nm-graph-error">{graphError}</div> : null}
+            {!graphLoading && neurons.length === 0 ? (
+              <div className="nm-graph-empty">
+                <h3>Không gian này chưa có neuron.</h3>
+                <p>Tạo neuron đầu tiên</p>
+                <button type="button" className="nm-btn nm-btn-primary" onClick={() => setShowCreateNeuron(true)}>
+                  <Plus size={16} />Tạo neuron đầu tiên
+                </button>
+              </div>
+            ) : null}
           </div>
 
           {selectedNeuron ? (
-            <div className="learning-map-detail-pane min-h-[420px] overflow-hidden border-t border-[#1b2a3d] bg-[#071322] xl:min-h-0 xl:border-l xl:border-t-0">
+            <div className="learning-map-detail-pane">
               <NeuronDetailPanel
                 neuron={selectedNeuron}
                 neurons={neurons}

@@ -1,5 +1,5 @@
-import { Code2, FileText, Hash, NotebookText, Search, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { AlertCircle, Code2, LoaderCircle, Search, X } from "lucide-react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ApiError, apiMessage } from "../api/client";
 import {
   debugSearchCore,
@@ -19,16 +19,10 @@ type GlobalSearchPaletteProps = {
   onOpenResult: (result: SearchResult) => void;
 };
 
-const GROUP_LABEL: Record<SearchResultType, string> = {
+const BADGE: Record<SearchResultType, string> = {
   neuron: "NEURON",
   markdown: "MARKDOWN",
-  document: "TÀI LIỆU",
-};
-
-const GROUP_ICON: Record<SearchResultType, typeof Hash> = {
-  neuron: Hash,
-  markdown: NotebookText,
-  document: FileText,
+  document: "DOCUMENT",
 };
 
 function stripClientUserId(value: unknown): unknown {
@@ -45,22 +39,17 @@ function SearchHit({ item }: { item: RetrievedDebugItem }) {
   const space = item.subjectName ? item.subjectName : item.subjectId;
   const neuron = item.title || item.neuronId;
   return (
-    <article className="global-search-plan-hit">
-      <p className="global-search-plan-meta">
-        Space: {space}
-        <br />
-        Neuron: {neuron}
-        <br />
-        Source: {item.sourceType}
+    <article className="gs-hit">
+      <dl className="gs-hit-meta">
+        <div><dt>Space</dt><dd>{space}</dd></div>
+        <div><dt>Neuron</dt><dd>{neuron}</dd></div>
+        <div><dt>Source</dt><dd>{item.sourceType}</dd></div>
         {item.heading ? (
-          <>
-            <br />
-            Heading: {item.heading}
-          </>
+          <div><dt>Heading</dt><dd>{item.heading}</dd></div>
         ) : null}
-      </p>
-      <p className="global-search-plan-body">{item.content || item.snippet || ""}</p>
-      <p className="global-search-plan-score">Score: {formatScore(item.score)}</p>
+      </dl>
+      <p className="gs-hit-body">{item.content || item.snippet || ""}</p>
+      <p className="gs-hit-score">Score {formatScore(item.score)}</p>
     </article>
   );
 }
@@ -68,24 +57,25 @@ function SearchHit({ item }: { item: RetrievedDebugItem }) {
 function SearchPlanResults({ result }: { result: RetrievedInformation }) {
   const [rawOpen, setRawOpen] = useState(false);
   return (
-    <div className="global-search-plan-out">
-      <p className="global-search-plan-kicker">Search Core</p>
+    <div className="gs-plan-out">
       {result.requests.map((request) => (
-        <section key={request.requestId} className="global-search-plan-request">
-          <p className="global-search-plan-head">
-            {request.requestId}
-            <span>{request.found ? "FOUND" : "NOT FOUND"}</span>
-          </p>
-          <p className="global-search-plan-query">{request.query}</p>
+        <section key={request.requestId} className="gs-plan-request">
+          <div className="gs-plan-request-head">
+            <span className="gs-plan-id">{request.requestId}</span>
+            <span className={`gs-found ${request.found ? "is-yes" : "is-no"}`}>
+              {request.found ? "FOUND" : "NOT FOUND"}
+            </span>
+          </div>
+          <p className="gs-plan-query">{request.query}</p>
           {request.results.map((item) => (
             <SearchHit key={item.id} item={item} />
           ))}
         </section>
       ))}
-      <button type="button" className="global-search-raw-toggle" onClick={() => setRawOpen((open) => !open)}>
-        {rawOpen ? "Hide raw JSON" : "Raw JSON"}
+      <button type="button" className="gs-raw-toggle" onClick={() => setRawOpen((open) => !open)}>
+        {rawOpen ? "Hide Raw JSON" : "View Raw JSON"}
       </button>
-      {rawOpen ? <pre className="global-search-raw">{JSON.stringify(result, null, 2)}</pre> : null}
+      {rawOpen ? <pre className="gs-raw">{JSON.stringify(result, null, 2)}</pre> : null}
     </div>
   );
 }
@@ -96,6 +86,7 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retryTick, setRetryTick] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [plan, setPlan] = useState("");
   const [planBusy, setPlanBusy] = useState(false);
@@ -164,22 +155,28 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [open, mode, query]);
-
-  const grouped = useMemo(
-    () => ({
-      neuron: results.filter((result) => result.type === "neuron"),
-      markdown: results.filter((result) => result.type === "markdown"),
-      document: results.filter((result) => result.type === "document"),
-    }),
-    [results],
-  );
+  }, [open, mode, query, retryTick]);
 
   if (!open) return null;
 
   const choose = (result: SearchResult) => {
     onOpenResult(result);
     onClose();
+  };
+
+  const formatPlan = () => {
+    try {
+      setPlan(JSON.stringify(JSON.parse(plan), null, 2));
+      setPlanError(null);
+    } catch (caught) {
+      setPlanError(`JSON không hợp lệ${caught instanceof SyntaxError ? `: ${caught.message}` : ""}`);
+    }
+  };
+
+  const resetPlan = () => {
+    setPlan("");
+    setPlanError(null);
+    setPlanResult(null);
   };
 
   const runPlan = async () => {
@@ -190,7 +187,7 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
       parsed = JSON.parse(text);
     } catch (caught) {
       setPlanResult(null);
-      setPlanError(`INVALID JSON${caught instanceof SyntaxError ? `: ${caught.message}` : ""}`);
+      setPlanError(`JSON không hợp lệ${caught instanceof SyntaxError ? `: ${caught.message}` : ""}`);
       return;
     }
     setPlanBusy(true);
@@ -251,39 +248,24 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
   };
 
   return (
-    <div className="global-search-overlay" role="presentation" onMouseDown={onClose}>
-      <section
-        className="global-search-palette"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Global Search"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header className="global-search-top">
-          <h2>Global Search</h2>
-          <button type="button" className="brutal-icon-button" onClick={onClose} aria-label="Đóng tìm kiếm">
+    <div className="gs-overlay" role="presentation" onMouseDown={onClose}>
+      <section className="gs-modal" role="dialog" aria-modal="true" aria-label="Global Search" onMouseDown={(event) => event.stopPropagation()}>
+        <header className="gs-header">
+          <div>
+            <h2>Global Search</h2>
+            <p>Tìm kiếm trong toàn bộ NeuroMind</p>
+          </div>
+          <button type="button" className="gs-close" onClick={onClose} aria-label="Đóng tìm kiếm">
             <X size={18} />
           </button>
         </header>
 
-        <div className="global-search-modes" role="tablist" aria-label="Chế độ tìm kiếm">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "search"}
-            className={`global-search-mode ${mode === "search" ? "is-on" : ""}`}
-            onClick={() => setMode("search")}
-          >
+        <div className="gs-switch" role="tablist" aria-label="Chế độ tìm kiếm">
+          <button type="button" role="tab" aria-selected={mode === "search"} className={mode === "search" ? "is-on" : ""} onClick={() => setMode("search")}>
             <Search size={14} aria-hidden="true" />
             Search
           </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "searchPlan"}
-            className={`global-search-mode ${mode === "searchPlan" ? "is-on" : ""}`}
-            onClick={() => setMode("searchPlan")}
-          >
+          <button type="button" role="tab" aria-selected={mode === "searchPlan"} className={mode === "searchPlan" ? "is-on" : ""} onClick={() => setMode("searchPlan")}>
             <Code2 size={14} aria-hidden="true" />
             SearchPlan
           </button>
@@ -291,87 +273,100 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
 
         {mode === "search" ? (
           <>
-            <div className="global-search-input">
+            <label className="gs-field">
               <Search size={18} aria-hidden="true" />
               <input
                 ref={inputRef}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={onSearchKeyDown}
-                placeholder="Tìm kiếm trong NeuroMind..."
-                aria-label="Tìm kiếm trong NeuroMind"
+                placeholder="Tìm neuron, ghi chú, tài liệu..."
+                aria-label="Tìm neuron, ghi chú, tài liệu"
               />
-            </div>
-            <div className="global-search-body">
+            </label>
+            <div className="gs-body">
               {!query.trim() ? (
-                <p className="global-search-state">Nhập từ khóa để tìm neuron, Markdown Note hoặc tài liệu.</p>
+                <p className="gs-hint">Tìm kiếm neuron, ghi chú và tài liệu trong các không gian của bạn.</p>
               ) : null}
-              {loading ? <p className="global-search-state">Đang tìm...</p> : null}
-              {error ? <p className="global-search-state is-error">{error}</p> : null}
-              {!loading && !error && query.trim() && results.length === 0 ? (
-                <p className="global-search-state">Không tìm thấy kết quả phù hợp.</p>
+              {loading ? (
+                <p className="gs-hint gs-loading">
+                  <LoaderCircle size={16} className="gs-spin" aria-hidden="true" />
+                  Đang tìm kiếm...
+                </p>
               ) : null}
-
-              {(["neuron", "markdown", "document"] as SearchResultType[]).map((type) => {
-                const items = grouped[type];
-                if (!items.length) return null;
-                const Icon = GROUP_ICON[type];
-                return (
-                  <div key={type} className="global-search-group">
-                    <h3>{GROUP_LABEL[type]}</h3>
-                    <div className="global-search-list">
-                      {items.map((result) => {
-                        const absoluteIndex = results.indexOf(result);
-                        const active = absoluteIndex === activeIndex;
-                        return (
-                          <button
-                            key={`${result.type}-${result.id}`}
-                            type="button"
-                            className={`global-search-result ${active ? "is-active" : ""}`}
-                            onMouseEnter={() => setActiveIndex(absoluteIndex)}
-                            onClick={() => choose(result)}
-                          >
-                            <Icon size={17} aria-hidden="true" />
-                            <span>
-                              <strong>{result.title}</strong>
-                              <small>
-                                {result.subjectName}
-                                {result.snippet ? ` · ${result.snippet}` : ""}
-                              </small>
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
+              {error ? (
+                <div className="gs-error">
+                  <AlertCircle size={16} aria-hidden="true" />
+                  <div>
+                    <p>Không thể tìm kiếm lúc này.</p>
+                    <button type="button" onClick={() => setRetryTick((tick) => tick + 1)}>Thử lại</button>
                   </div>
-                );
-              })}
+                </div>
+              ) : null}
+              {!loading && !error && query.trim() && results.length === 0 ? (
+                <p className="gs-hint">Không tìm thấy kết quả phù hợp.</p>
+              ) : null}
+              {!loading && !error
+                ? results.map((result, index) => (
+                    <button
+                      key={`${result.type}-${result.id}`}
+                      type="button"
+                      className={`gs-row ${index === activeIndex ? "is-active" : ""}`}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      onClick={() => choose(result)}
+                    >
+                      <span className="gs-badge">{BADGE[result.type]}</span>
+                      <strong>{result.title}</strong>
+                      {result.subjectName ? <span className="gs-space">{result.subjectName}</span> : null}
+                      {result.snippet ? <em>{result.snippet}</em> : null}
+                    </button>
+                  ))
+                : null}
             </div>
+            <footer className="gs-foot">
+              <span>↑↓ Di chuyển</span>
+              <span>Enter Mở</span>
+              <span>Esc Đóng</span>
+              <span>Ctrl K Tìm kiếm</span>
+            </footer>
           </>
         ) : (
           <>
-            <div className="global-search-plan-editor">
-              <textarea
-                ref={planRef}
-                value={plan}
-                onChange={(event) => setPlan(event.target.value)}
-                onKeyDown={onPlanKeyDown}
-                spellCheck={false}
-                placeholder='{"requests":[{"id":"nova","query":"ai phụ trách backend dự án Nova","sources":["MARKDOWN"]}]}'
-                aria-label="SearchPlan JSON"
-              />
-              <button type="button" className="global-search-run" disabled={planBusy || !plan.trim()} onClick={() => void runPlan()}>
+            <div className="gs-plan-intro">
+              <h3>SearchPlan</h3>
+              <p>Chạy trực tiếp Search Core bằng JSON.</p>
+            </div>
+            <textarea
+              ref={planRef}
+              className="gs-json"
+              value={plan}
+              onChange={(event) => setPlan(event.target.value)}
+              onKeyDown={onPlanKeyDown}
+              spellCheck={false}
+              placeholder='{"requests":[{"id":"nova","query":"ai phụ trách backend dự án Nova","sources":["MARKDOWN"]}]}'
+              aria-label="SearchPlan JSON"
+            />
+            {planError ? <p className="gs-plan-error">{planError}</p> : null}
+            <div className="gs-plan-actions">
+              <button type="button" className="gs-btn" onClick={formatPlan}>Format JSON</button>
+              <button type="button" className="gs-btn" onClick={resetPlan}>Reset</button>
+              <button type="button" className="gs-btn gs-btn-run" disabled={planBusy || !plan.trim()} onClick={() => void runPlan()}>
                 Run SearchPlan
               </button>
             </div>
-            <div className="global-search-body">
-              {planBusy ? <p className="global-search-state">Đang chạy Search Core…</p> : null}
-              {planError ? <p className="global-search-state is-error">{planError}</p> : null}
-              {!planBusy && !planError && !planResult ? (
-                <p className="global-search-state">Dán SearchPlan JSON rồi Run (Ctrl/Cmd+Enter). Không tạo câu trả lời AI.</p>
+            <div className="gs-body">
+              {planBusy ? (
+                <p className="gs-hint gs-loading">
+                  <LoaderCircle size={16} className="gs-spin" aria-hidden="true" />
+                  Đang chạy Search Core…
+                </p>
               ) : null}
               {planResult ? <SearchPlanResults result={planResult} /> : null}
             </div>
+            <footer className="gs-foot">
+              <span>Ctrl Enter Chạy</span>
+              <span>Esc Đóng</span>
+            </footer>
           </>
         )}
       </section>

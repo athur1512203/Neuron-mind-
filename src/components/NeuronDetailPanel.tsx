@@ -303,18 +303,17 @@ function NeuronDetailHeader({ neuron, connectionCount, editing, onEdit, onDelete
 }) {
   return (
     <header className="neuron-workspace-header">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="brutal-icon"><Brain size={22} /></span>
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="nm-neuron-swatch" style={{ backgroundColor: neuron.color }} />
         <div className="min-w-0">
-          <h2 className="truncate text-xl font-black text-[#111111]">{neuron.name}</h2>
-          <p className="mt-0.5 text-xs font-bold text-[#666666]">{connectionCount} kết nối</p>
-          <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#4b5563]">{neuron.keyPoints || "Chưa có mô tả ngắn cho neuron này."}</p>
+          <h2 className="truncate text-lg font-semibold text-[#191515]">{neuron.name}</h2>
+          <p className="mt-0.5 text-xs text-[#746A65]">{connectionCount} kết nối</p>
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap justify-end gap-2">
-        <button type="button" onClick={onEdit} className="brutal-button brutal-button-compact"><Pencil size={15} />{editing ? "Lưu" : "Chỉnh sửa"}</button>
-        <button type="button" onClick={onDelete} className="brutal-button brutal-button-danger brutal-button-compact"><Trash2 size={15} />Xóa neuron</button>
-        <button type="button" onClick={onClose} className="brutal-icon-button" aria-label="Đóng"><X size={17} /></button>
+        <button type="button" onClick={onEdit} className="nm-btn nm-btn-secondary"><Pencil size={15} />{editing ? "Lưu" : "Chỉnh sửa"}</button>
+        <button type="button" onClick={onDelete} className="nm-btn nm-btn-danger"><Trash2 size={15} />Xóa</button>
+        <button type="button" onClick={onClose} className="nm-icon-btn" aria-label="Đóng"><X size={17} /></button>
       </div>
     </header>
   );
@@ -330,7 +329,7 @@ function NeuronTabs({ tab, onChange }: { tab: DetailTab; onChange: (tab: DetailT
     <nav className="neuron-workspace-tabs" aria-label="Chi tiết neuron">
       {tabs.map((item) => {
         const Icon = item.icon;
-        return <button key={item.id} type="button" onClick={() => onChange(item.id)} className={`brutal-tab ${tab === item.id ? "is-active" : ""}`}><Icon size={15} />{item.label}</button>;
+        return <button key={item.id} type="button" onClick={() => onChange(item.id)} className={`nm-tab ${tab === item.id ? "is-active" : ""}`}><Icon size={14} />{item.label}</button>;
       })}
     </nav>
   );

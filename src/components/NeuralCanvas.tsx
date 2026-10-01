@@ -1,14 +1,5 @@
-import {
-  forceCenter,
-  forceCollide,
-  forceLink,
-  forceManyBody,
-  forceSimulation,
-  type Simulation,
-  type SimulationLinkDatum,
-  type SimulationNodeDatum,
-} from "d3-force";
-import { useEffect, useMemo, useRef, type PointerEvent as ReactPointerEvent, type WheelEvent } from "react";
+import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, type Simulation, type SimulationLinkDatum, type SimulationNodeDatum } from "d3-force";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, type PointerEvent as ReactPointerEvent, type WheelEvent } from "react";
 import type { Neuron, NeuronConnection, Position3D } from "../types";
 
 type NeuralCanvasProps = {
@@ -30,6 +21,7 @@ type GraphNode = SimulationNodeDatum & {
   id: string;
   name: string;
   radius: number;
+  color: string;
 };
 
 type GraphLink = SimulationLinkDatum<GraphNode> & {
@@ -40,6 +32,7 @@ type GraphLink = SimulationLinkDatum<GraphNode> & {
 
 type GraphTransform = { x: number; y: number; k: number };
 
+const LINK_STROKE = "#CBD0D6";
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 function nodeRadius(connectionCount: number) {
@@ -58,7 +51,12 @@ function endpointNode(endpoint: string | GraphNode, nodesById: Map<string, Graph
   return typeof endpoint === "string" ? nodesById.get(endpoint) : endpoint;
 }
 
-export function NeuralCanvas({
+export type NeuralCanvasHandle = {
+  fit: () => void;
+  zoomBy: (factor: number) => void;
+};
+
+export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(function NeuralCanvas({
   neurons,
   connections,
   selectedNeuronId,
@@ -71,7 +69,7 @@ export function NeuralCanvas({
   onCreateConnection,
   connectionMode = false,
   neuronSpacing,
-}: NeuralCanvasProps) {
+}: NeuralCanvasProps, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportGroupRef = useRef<SVGGElement>(null);
   const nodeElementRefs = useRef(new Map<string, SVGGElement>());
@@ -167,21 +165,22 @@ export function NeuralCanvas({
       const circle = nodeCircleRefs.current.get(neuron.id);
       const label = nodeLabelRefs.current.get(neuron.id);
       const radius = nodeRadius(connectionCounts.get(neuron.id) ?? 0);
-      group?.setAttribute("opacity", hoveredNodeId && !related ? "0.14" : "1");
-      circle?.setAttribute("r", String(hovered || selected ? radius * 1.35 : related ? radius * 1.12 : radius));
-      circle?.setAttribute("fill", hovered || selected ? "#7c3aed" : related ? "#64748b" : "#475569");
-      circle?.setAttribute("stroke", selected ? "#4c1d95" : hovered ? "#a78bfa" : "#ffffff");
-      circle?.setAttribute("stroke-width", selected ? "2" : "1");
-      label?.setAttribute("fill", hovered || related || selected ? "#1e1b4b" : "#334155");
-      label?.setAttribute("font-weight", hovered || selected ? "700" : "500");
+      group?.setAttribute("opacity", hoveredNodeId && !related ? "0.28" : "1");
+      circle?.setAttribute("r", String(hovered || selected ? radius * 1.18 : radius));
+      circle?.setAttribute("fill", neuron.color);
+      circle?.setAttribute("stroke", selected ? "#ffffff" : hovered ? "rgba(255,255,255,0.9)" : "transparent");
+      circle?.setAttribute("stroke-width", selected ? "2.5" : hovered ? "1.5" : "0");
+      circle?.setAttribute("filter", selected ? "url(#nm-node-selected)" : "");
+      label?.setAttribute("fill", "#191515");
+      label?.setAttribute("font-weight", hovered || selected ? "600" : "500");
     });
     connections.forEach((connection) => {
       const related = hoveredNodeId === connection.sourceNeuronId || hoveredNodeId === connection.targetNeuronId;
       const selected = connection.id === selectedConnectionId;
       const line = linkLineRefs.current.get(connection.id);
-      line?.setAttribute("stroke", selected || related ? "#8b5cf6" : "#94a3b8");
-      line?.setAttribute("stroke-width", selected ? "2.2" : related ? "1.8" : "1");
-      line?.setAttribute("opacity", hoveredNodeId && !related ? "0.07" : selected || related ? "0.92" : "0.28");
+      line?.setAttribute("stroke", LINK_STROKE);
+      line?.setAttribute("stroke-width", selected ? "1.5" : related ? "1.35" : "1.15");
+      line?.setAttribute("opacity", hoveredNodeId && !related ? "0.18" : selected || related ? "0.95" : "0.8");
     });
   };
 
@@ -205,6 +204,17 @@ export function NeuralCanvas({
     applyViewportTransform();
   };
 
+  useImperativeHandle(ref, () => ({
+    fit: () => fitGraph(nodesRef.current),
+    zoomBy: (factor: number) => {
+      const current = transformRef.current;
+      const nextK = Math.min(3, Math.max(0.25, current.k * factor));
+      const ratio = nextK / current.k;
+      transformRef.current = { k: nextK, x: current.x * ratio, y: current.y * ratio };
+      applyViewportTransform();
+    },
+  }));
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -225,6 +235,7 @@ export function NeuralCanvas({
       return {
         id: neuron.id,
         name: neuron.name,
+        color: neuron.color,
         radius: nodeRadius(connectionCounts.get(neuron.id) ?? 0),
         x: previous?.x ?? initial.x,
         y: previous?.y ?? initial.y,
@@ -516,7 +527,7 @@ export function NeuralCanvas({
   };
 
   return (
-    <div ref={containerRef} className="h-full min-h-[420px] w-full overflow-hidden bg-[#f8fafc]">
+    <div ref={containerRef} className="h-full min-h-[420px] w-full overflow-hidden bg-[#FAF7F2]">
       <svg
         width="100%"
         height="100%"
@@ -527,6 +538,11 @@ export function NeuralCanvas({
         onPointerCancel={endPan}
         onWheel={zoomGraph}
       >
+        <defs>
+          <filter id="nm-node-selected" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0" stdDeviation="1.6" floodColor="#4F8DF7" floodOpacity="0.45" />
+          </filter>
+        </defs>
         <g ref={viewportGroupRef}>
           <line
             ref={previewLineRef}
@@ -555,9 +571,9 @@ export function NeuralCanvas({
                   y1={source.y}
                   x2={target.x}
                   y2={target.y}
-                  stroke={selected ? "#8b5cf6" : "#94a3b8"}
-                  strokeWidth={selected ? 2.2 : 1}
-                  opacity={selected ? 0.92 : 0.28}
+                  stroke={LINK_STROKE}
+                  strokeWidth={selected ? 1.5 : 1.15}
+                  opacity={selected ? 0.95 : 0.8}
                   vectorEffect="non-scaling-stroke"
                   className="pointer-events-none"
                 />
@@ -640,10 +656,11 @@ export function NeuralCanvas({
                     if (element) nodeCircleRefs.current.set(neuron.id, element);
                     else nodeCircleRefs.current.delete(neuron.id);
                   }}
-                  r={selected ? radius * 1.35 : radius}
-                  fill={selected ? "#7c3aed" : "#475569"}
-                  stroke={selected ? "#4c1d95" : "#ffffff"}
-                  strokeWidth={selected ? 2 : 1}
+                  r={radius}
+                  fill={neuron.color}
+                  stroke={selected ? "#ffffff" : "transparent"}
+                  strokeWidth={selected ? 2.5 : 0}
+                  filter={selected ? "url(#nm-node-selected)" : undefined}
                   vectorEffect="non-scaling-stroke"
                 />
                 <text
@@ -651,13 +668,13 @@ export function NeuralCanvas({
                     if (element) nodeLabelRefs.current.set(neuron.id, element);
                     else nodeLabelRefs.current.delete(neuron.id);
                   }}
-                  x={radius + 6}
+                  x={radius + 7}
                   y={4}
-                  fill={selected ? "#1e1b4b" : "#334155"}
-                  fontSize={12}
-                  fontWeight={selected ? 700 : 500}
-                  stroke="#f8fafc"
-                  strokeWidth={3}
+                  fill="#191515"
+                  fontSize={13}
+                  fontWeight={selected ? 600 : 500}
+                  stroke="#FAF7F2"
+                  strokeWidth={2.5}
                   paintOrder="stroke"
                   strokeLinejoin="round"
                   className="pointer-events-none"
@@ -671,4 +688,4 @@ export function NeuralCanvas({
       </svg>
     </div>
   );
-}
+});
