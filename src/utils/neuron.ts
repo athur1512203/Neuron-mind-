@@ -1,14 +1,16 @@
 import type { NeuronConnection } from "../types";
 
-export const colorPresets = [
+export const NEURON_COLOR_PALETTE = [
   { label: "Blue", value: "#4F8DF7" },
-  { label: "Purple", value: "#A56AF5" },
-  { label: "Green", value: "#48D597" },
-  { label: "Yellow", value: "#F6BE4A" },
-  { label: "Coral", value: "#FF6875" },
-  { label: "Cyan", value: "#55B9E9" },
-  { label: "Pink", value: "#EF72B6" },
+  { label: "Purple", value: "#9B6BE8" },
+  { label: "Green", value: "#45B985" },
+  { label: "Orange", value: "#F29B52" },
+  { label: "Red", value: "#E96565" },
+  { label: "Cyan", value: "#4EB7C5" },
+  { label: "Pink", value: "#D96FA5" },
 ];
+
+export const colorPresets = NEURON_COLOR_PALETTE;
 
 export function getConnectionCount(neuronId: string, connections: NeuronConnection[]) {
   return connections.filter(

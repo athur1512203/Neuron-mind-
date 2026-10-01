@@ -17,6 +17,7 @@ import {
   type DocumentMeta,
 } from "../api/documents";
 import type { Neuron, NeuronConnection } from "../types";
+import { NeuronColorPicker } from "./NeuronColorPicker";
 import { NeuronMarkdownEditor } from "./NeuronMarkdownEditor";
 
 export type DetailTab = "overview" | "markdown" | "documents" | "custom";
@@ -197,6 +198,7 @@ export function NeuronDetailPanel({
       >
         <NeuronDetailHeader
           neuron={neuron}
+          draftColor={draft.color}
           connectionCount={connectionCount}
           editing={editing}
           onToggleSidebar={onToggleSidebar}
@@ -234,9 +236,17 @@ export function NeuronDetailPanel({
               onDeleteDocument={removeDocument}
             />
           ) : null}
-          {tab === "custom" ? <NeuronCustom /> : null}
+          {tab === "custom" ? (
+            <NeuronCustom
+              color={draft.color}
+              onColorChange={(color) => {
+                if (!editing) setEditing(true);
+                setDraft((current) => ({ ...current, color }));
+              }}
+            />
+          ) : null}
 
-          {editing && tab === "overview" ? (
+          {editing && (tab === "overview" || tab === "custom") ? (
             <div className="nm-overview-actions">
               <button type="button" className="nm-btn nm-btn-secondary" onClick={() => { setDraft(neuron); setEditing(false); }}>Hủy</button>
               <button type="button" className="nm-btn nm-btn-primary" onClick={saveDraft}><Check size={16} />Lưu thay đổi</button>
@@ -275,8 +285,9 @@ export function NeuronDetailPanel({
   );
 }
 
-function NeuronDetailHeader({ neuron, connectionCount, editing, onToggleSidebar, onEdit, onDelete, onClose }: {
+function NeuronDetailHeader({ neuron, draftColor, connectionCount, editing, onToggleSidebar, onEdit, onDelete, onClose }: {
   neuron: Neuron;
+  draftColor: string;
   connectionCount: number;
   editing: boolean;
   onToggleSidebar?: () => void;
@@ -292,7 +303,7 @@ function NeuronDetailHeader({ neuron, connectionCount, editing, onToggleSidebar,
             <Menu size={18} />
           </button>
         ) : null}
-        <span className="nm-neuron-swatch" style={{ backgroundColor: neuron.color }} />
+        <span className="nm-neuron-swatch" style={{ backgroundColor: editing ? draftColor : neuron.color }} />
         <div className="min-w-0">
           <h2 className="truncate text-lg font-semibold text-[#191515]">{neuron.name}</h2>
           <p className="mt-0.5 text-xs text-[#746A65]">{connectionCount} kết nối</p>
@@ -459,9 +470,12 @@ function NeuronDocuments({
   );
 }
 
-function NeuronCustom() {
+function NeuronCustom({ color, onColorChange }: { color: string; onColorChange: (color: string) => void }) {
   return (
     <div className="nm-custom-page">
+      <BrutalCard title="Màu neuron">
+        <NeuronColorPicker value={color} onChange={onColorChange} />
+      </BrutalCard>
       <BrutalCard title="Hình ảnh">
         <p className="text-sm font-semibold text-[#666666]">Sắp có. Upload ảnh chưa được lưu trên máy chủ.</p>
       </BrutalCard>

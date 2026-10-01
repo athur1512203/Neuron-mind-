@@ -32,7 +32,10 @@ type GraphLink = SimulationLinkDatum<GraphNode> & {
 
 type GraphTransform = { x: number; y: number; k: number };
 
-const LINK_STROKE = "#CBD0D6";
+const LINK_STROKE = "#A43A3F";
+const LINK_STROKE_ACTIVE = "#8B1E24";
+const LINK_GLOW = "url(#nm-link-glow)";
+const NODE_SELECTED_GLOW = "url(#nm-node-selected)";
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 function nodeRadius(connectionCount: number) {
@@ -74,6 +77,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   const viewportGroupRef = useRef<SVGGElement>(null);
   const nodeElementRefs = useRef(new Map<string, SVGGElement>());
   const nodeCircleRefs = useRef(new Map<string, SVGCircleElement>());
+  const nodeRingRefs = useRef(new Map<string, SVGCircleElement>());
   const nodeLabelRefs = useRef(new Map<string, SVGTextElement>());
   const linkLineRefs = useRef(new Map<string, SVGLineElement>());
   const linkHitRefs = useRef(new Map<string, SVGLineElement>());
@@ -163,6 +167,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
       const selected = neuron.id === selectedNeuronId;
       const group = nodeElementRefs.current.get(neuron.id);
       const circle = nodeCircleRefs.current.get(neuron.id);
+      const ring = nodeRingRefs.current.get(neuron.id);
       const label = nodeLabelRefs.current.get(neuron.id);
       const radius = nodeRadius(connectionCounts.get(neuron.id) ?? 0);
       group?.setAttribute("opacity", hoveredNodeId && !related ? "0.28" : "1");
@@ -170,17 +175,22 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
       circle?.setAttribute("fill", neuron.color);
       circle?.setAttribute("stroke", selected ? "#ffffff" : hovered ? "rgba(255,255,255,0.9)" : "transparent");
       circle?.setAttribute("stroke-width", selected ? "2.5" : hovered ? "1.5" : "0");
-      circle?.setAttribute("filter", selected ? "url(#nm-node-selected)" : "");
+      circle?.setAttribute("filter", selected ? NODE_SELECTED_GLOW : "");
+      ring?.setAttribute("r", String((hovered || selected ? radius * 1.18 : radius) + 3.2));
+      ring?.setAttribute("opacity", selected ? "0.9" : "0");
       label?.setAttribute("fill", "#191515");
       label?.setAttribute("font-weight", hovered || selected ? "600" : "500");
     });
     connections.forEach((connection) => {
-      const related = hoveredNodeId === connection.sourceNeuronId || hoveredNodeId === connection.targetNeuronId;
+      const relatedHover = Boolean(hoveredNodeId) && (hoveredNodeId === connection.sourceNeuronId || hoveredNodeId === connection.targetNeuronId);
+      const relatedSelected = Boolean(selectedNeuronId) && (selectedNeuronId === connection.sourceNeuronId || selectedNeuronId === connection.targetNeuronId);
       const selected = connection.id === selectedConnectionId;
+      const emphasized = selected || relatedHover || relatedSelected;
       const line = linkLineRefs.current.get(connection.id);
-      line?.setAttribute("stroke", LINK_STROKE);
-      line?.setAttribute("stroke-width", selected ? "1.5" : related ? "1.35" : "1.15");
-      line?.setAttribute("opacity", hoveredNodeId && !related ? "0.18" : selected || related ? "0.95" : "0.8");
+      line?.setAttribute("stroke", emphasized ? LINK_STROKE_ACTIVE : LINK_STROKE);
+      line?.setAttribute("stroke-width", selected ? "2" : emphasized ? "1.8" : "1.15");
+      line?.setAttribute("opacity", hoveredNodeId && !relatedHover && !selected ? "0.18" : selected ? "1" : emphasized ? "0.9" : "0.45");
+      line?.setAttribute("filter", emphasized ? LINK_GLOW : "");
     });
   };
 
@@ -306,10 +316,15 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectionTopology, neuronSpacing, neuronTopology]);
 
+  const neuronColors = useMemo(
+    () => neurons.map((neuron) => `${neuron.id}:${neuron.color}`).join("|"),
+    [neurons],
+  );
+
   useEffect(() => {
     applyHighlight(hoveredNodeIdRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedConnectionId, selectedNeuronId]);
+  }, [selectedConnectionId, selectedNeuronId, neuronColors]);
 
   useEffect(() => {
     if (connectionMode) return;
@@ -541,7 +556,10 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
       >
         <defs>
           <filter id="nm-node-selected" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="1.6" floodColor="#4F8DF7" floodOpacity="0.45" />
+            <feDropShadow dx="0" dy="0" stdDeviation="1.4" floodColor="#8B1E24" floodOpacity="0.28" />
+          </filter>
+          <filter id="nm-link-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="0" stdDeviation="1.1" floodColor="#8B1E24" floodOpacity="0.35" />
           </filter>
         </defs>
         <g ref={viewportGroupRef}>
@@ -551,7 +569,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
             y1={0}
             x2={0}
             y2={0}
-            stroke="#2563eb"
+            stroke={LINK_STROKE_ACTIVE}
             strokeWidth={1.4}
             opacity={0}
             vectorEffect="non-scaling-stroke"
@@ -573,8 +591,9 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                   x2={target.x}
                   y2={target.y}
                   stroke={LINK_STROKE}
-                  strokeWidth={selected ? 1.5 : 1.15}
-                  opacity={selected ? 0.95 : 0.8}
+                  strokeWidth={selected ? 2 : 1.15}
+                  opacity={selected ? 1 : 0.45}
+                  filter={selected ? LINK_GLOW : undefined}
                   vectorEffect="non-scaling-stroke"
                   className="pointer-events-none"
                 />
@@ -654,6 +673,19 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
               >
                 <circle
                   ref={(element) => {
+                    if (element) nodeRingRefs.current.set(neuron.id, element);
+                    else nodeRingRefs.current.delete(neuron.id);
+                  }}
+                  r={radius + 3.2}
+                  fill="none"
+                  stroke="#8B1E24"
+                  strokeWidth={1.6}
+                  opacity={selected ? 0.9 : 0}
+                  className="pointer-events-none"
+                  vectorEffect="non-scaling-stroke"
+                />
+                <circle
+                  ref={(element) => {
                     if (element) nodeCircleRefs.current.set(neuron.id, element);
                     else nodeCircleRefs.current.delete(neuron.id);
                   }}
@@ -661,7 +693,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                   fill={neuron.color}
                   stroke={selected ? "#ffffff" : "transparent"}
                   strokeWidth={selected ? 2.5 : 0}
-                  filter={selected ? "url(#nm-node-selected)" : undefined}
+                  filter={selected ? NODE_SELECTED_GLOW : undefined}
                   vectorEffect="non-scaling-stroke"
                 />
                 <text

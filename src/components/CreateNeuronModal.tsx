@@ -6,6 +6,7 @@ import { saveNeuronMarkdown } from "../api/markdownNotes";
 import { neuronMarkdownStore } from "../markdown/neuronMarkdownStore";
 import type { Neuron } from "../types";
 import { colorPresets } from "../utils/neuron";
+import { NeuronColorPicker } from "./NeuronColorPicker";
 import { MarkdownComposeEditor } from "./MarkdownComposeEditor";
 
 function getInitialLayoutPosition(seed: string, isFirstNeuron: boolean) {
@@ -184,28 +185,11 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
 
           <div className="nm-field">
             <span>Màu neuron</span>
-            <div className="nm-swatches">
-              {colorPresets.map((preset) => (
-                <button
-                  key={preset.value}
-                  type="button"
-                  disabled={busy || Boolean(createdNeuronId)}
-                  onClick={() => setColor(preset.value)}
-                  className={`nm-swatch ${color === preset.value ? "is-on" : ""}`}
-                  style={{ backgroundColor: preset.value }}
-                  aria-label={preset.label}
-                  title={preset.label}
-                />
-              ))}
-              <input
-                type="color"
-                value={color}
-                disabled={busy || Boolean(createdNeuronId)}
-                onChange={(event) => setColor(event.target.value)}
-                className="nm-swatch-custom"
-                aria-label="Chọn màu tùy chỉnh"
-              />
-            </div>
+            <NeuronColorPicker
+              value={color}
+              onChange={setColor}
+              disabled={busy || Boolean(createdNeuronId)}
+            />
           </div>
 
           <div className="nm-field">
