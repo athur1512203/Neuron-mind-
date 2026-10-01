@@ -16,36 +16,38 @@ export function CreateConnectionModal({ source, target, onCancel, onCreate }: Cr
   const [busy, setBusy] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4">
-      <section className="w-full max-w-xl rounded-lg bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <h2 className="text-lg font-semibold text-slate-950">Tạo liên kết</h2>
+    <div className="nm-modal-overlay">
+      <section className="nm-modal nm-modal-sm" onClick={(event) => event.stopPropagation()}>
+        <header className="nm-modal-head">
+          <div>
+            <h2>Tạo liên kết</h2>
+          </div>
           <Button variant="icon" onClick={onCancel} aria-label="Đóng">
             <X size={18} />
           </Button>
-        </div>
+        </header>
 
-        <div className="space-y-5 px-6 py-5">
-          <div className="app-card p-4 text-center text-sm font-medium text-slate-200">
+        <div className="nm-modal-body">
+          <div className="nm-field">
             <span>{source.name}</span>
-            <div className="py-2 text-slate-400">↓</div>
+            <p className="nm-field-hint">↓</p>
             <span>{target.name}</span>
           </div>
 
-          <label className="block">
-            <span className="text-sm font-medium text-slate-700">Hai kiến thức này liên kết như thế nào?</span>
+          <label className="nm-field">
+            <span>Hai kiến thức này liên kết như thế nào?</span>
             <textarea
               value={explanation}
               onChange={(event) => setExplanation(event.target.value)}
               rows={5}
-              className="mt-2 w-full resize-none rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="nm-textarea"
               placeholder="Giải thích tại sao hai kiến thức này có liên quan..."
             />
           </label>
-          {error ? <p className="text-sm text-red-500">{error}</p> : null}
+          {error ? <p className="nm-modal-error">{error}</p> : null}
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+        <footer className="nm-modal-foot">
           <Button variant="secondary" onClick={onCancel}>
             Hủy
           </Button>
@@ -67,7 +69,7 @@ export function CreateConnectionModal({ source, target, onCancel, onCreate }: Cr
           >
             {busy ? "Đang tạo..." : "Tạo liên kết"}
           </Button>
-        </div>
+        </footer>
       </section>
     </div>
   );

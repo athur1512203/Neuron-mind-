@@ -32,18 +32,68 @@ type GraphLink = SimulationLinkDatum<GraphNode> & {
 
 type GraphTransform = { x: number; y: number; k: number };
 
-const LINK_STROKE = "#EF4444";
-const LINK_STROKE_ACTIVE = "#EF4444";
-const LINK_STROKE_SELECTED = "#DC2626";
-const NODE_IDLE_FILL = "#747B85";
+const LINK_STROKE = "#B7ADA9";
+const LINK_STROKE_ACTIVE = "#8F8582";
+const LINK_STROKE_SELECTED = "#706663";
+const NODE_IDLE_FILL = "url(#nm-neuron-idle)";
+const NODE_DEPTH_FILTER = "url(#nm-neuron-depth)";
+const NODE_STROKE = "#2B2B2B";
+const NODE_STROKE_WIDTH = "1.25";
 const LABEL_FILL = "#171717";
 const LABEL_HALO = "#FAF9F6";
-const LINK_GLOW = "url(#nm-link-glow)";
-const NODE_SELECTED_GLOW = "url(#nm-node-selected)";
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 function nodeRadius(connectionCount: number) {
-  return Math.min(8, 4.5 + Math.log2(connectionCount + 1) * 1.1);
+  return Math.min(9, 7 + Math.log2(connectionCount + 1) * 0.45);
+}
+
+function clampByte(value: number) {
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function parseRgb(color: string): [number, number, number] | null {
+  const value = color.trim();
+  const short = /^#([0-9a-fA-F]{3})$/.exec(value);
+  if (short) {
+    const digits = short[1];
+    return [parseInt(digits[0] + digits[0], 16), parseInt(digits[1] + digits[1], 16), parseInt(digits[2] + digits[2], 16)];
+  }
+  const long = /^#([0-9a-fA-F]{6})$/.exec(value);
+  if (long) {
+    const digits = long[1];
+    return [parseInt(digits.slice(0, 2), 16), parseInt(digits.slice(2, 4), 16), parseInt(digits.slice(4, 6), 16)];
+  }
+  return null;
+}
+
+function mixHex(color: string, other: string, amount: number) {
+  const start = parseRgb(color);
+  const end = parseRgb(other);
+  if (!start || !end) return color;
+  return `#${[0, 1, 2].map((index) => clampByte(start[index] + (end[index] - start[index]) * amount).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function sphereStops(color: string) {
+  return {
+    highlight: mixHex(color, "#FFFFFF", 0.58),
+    mid: color,
+    shade: mixHex(color, "#2B2B2B", 0.32),
+    edge: mixHex(color, "#2B2B2B", 0.52),
+  };
+}
+
+function neuronGradientId(neuronId: string) {
+  const safe = neuronId.replace(/[^A-Za-z0-9_-]/g, "");
+  return `nm-ng-${safe || "node"}`;
+}
+
+function neuronFill(neuronId: string, emphasized: boolean) {
+  return emphasized ? `url(#${neuronGradientId(neuronId)})` : NODE_IDLE_FILL;
+}
+
+function displayLabel(name: string, expanded: boolean) {
+  if (expanded || name.length <= 18) return name;
+  return `${name.slice(0, 16)}…`;
 }
 
 function initialCoordinate(neuron: Neuron, index: number) {
@@ -104,6 +154,10 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   const connectionModeRef = useRef(connectionMode);
   const onCreateConnectionRef = useRef(onCreateConnection);
   const persistTimerRef = useRef<number | null>(null);
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ startDist: number; startK: number; originX: number; originY: number; midX: number; midY: number } | null>(null);
+  const onSelectNeuronRef = useRef(onSelectNeuron);
+  onSelectNeuronRef.current = onSelectNeuron;
 
   onLayoutSettledRef.current = onLayoutSettled;
   connectionModeRef.current = connectionMode;
@@ -174,17 +228,20 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
       const ring = nodeRingRefs.current.get(neuron.id);
       const label = nodeLabelRefs.current.get(neuron.id);
       const radius = nodeRadius(connectionCounts.get(neuron.id) ?? 0);
+      const visualRadius = hovered || selected ? radius * 1.05 : radius;
       group?.setAttribute("opacity", hoveredNodeId && !related ? "0.28" : "1");
-      circle?.setAttribute("r", String(hovered || selected ? radius * 1.18 : radius));
-      circle?.setAttribute("fill", selected || hovered ? neuron.color : NODE_IDLE_FILL);
-      circle?.setAttribute("stroke", selected ? "#ffffff" : hovered ? "rgba(255,255,255,0.9)" : "transparent");
-      circle?.setAttribute("stroke-width", selected ? "2" : hovered ? "1.5" : "0");
-      circle?.setAttribute("filter", selected ? NODE_SELECTED_GLOW : "");
-      ring?.setAttribute("r", String((hovered || selected ? radius * 1.18 : radius) + 3.2));
-      ring?.setAttribute("stroke", "#FFFFFF");
-      ring?.setAttribute("opacity", selected ? "0.9" : "0");
+      circle?.setAttribute("r", String(visualRadius));
+      circle?.setAttribute("fill", neuronFill(neuron.id, selected || hovered));
+      circle?.setAttribute("stroke", NODE_STROKE);
+      circle?.setAttribute("stroke-width", NODE_STROKE_WIDTH);
+      circle?.setAttribute("filter", NODE_DEPTH_FILTER);
+      ring?.setAttribute("r", String(radius + 3));
+      ring?.setAttribute("stroke", "#8B1E24");
+      ring?.setAttribute("stroke-width", "2");
+      ring?.setAttribute("opacity", selected ? "1" : "0");
       label?.setAttribute("fill", LABEL_FILL);
       label?.setAttribute("font-weight", hovered || selected ? "600" : "500");
+      if (label) label.textContent = displayLabel(neuron.name, hovered || selected);
     });
     connections.forEach((connection) => {
       const relatedHover = Boolean(hoveredNodeId) && (hoveredNodeId === connection.sourceNeuronId || hoveredNodeId === connection.targetNeuronId);
@@ -194,8 +251,8 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
       const line = linkLineRefs.current.get(connection.id);
       line?.setAttribute("stroke", selected ? LINK_STROKE_SELECTED : emphasized ? LINK_STROKE_ACTIVE : LINK_STROKE);
       line?.setAttribute("stroke-width", selected ? "2" : emphasized ? "1.8" : "1.15");
-      line?.setAttribute("opacity", hoveredNodeId && !relatedHover && !selected ? "0.18" : selected ? "1" : emphasized ? "0.85" : "0.45");
-      line?.setAttribute("filter", emphasized ? LINK_GLOW : "");
+      line?.setAttribute("opacity", hoveredNodeId && !relatedHover && !selected ? "0.22" : selected ? "1" : emphasized ? "0.9" : "0.65");
+      line?.removeAttribute("filter");
     });
   };
 
@@ -446,6 +503,23 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   };
 
   const beginPan = (event: ReactPointerEvent<SVGSVGElement>) => {
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointersRef.current.size >= 2) {
+      panRef.current = null;
+      const points = Array.from(pointersRef.current.values());
+      const dist = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || 1;
+      const transform = transformRef.current;
+      const rect = event.currentTarget.getBoundingClientRect();
+      pinchRef.current = {
+        startDist: dist,
+        startK: transform.k,
+        originX: transform.x,
+        originY: transform.y,
+        midX: (points[0].x + points[1].x) / 2 - rect.left - sizeRef.current.width / 2,
+        midY: (points[0].y + points[1].y) / 2 - rect.top - sizeRef.current.height / 2,
+      };
+      return;
+    }
     if (event.target !== event.currentTarget) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     const transform = transformRef.current;
@@ -460,6 +534,23 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   };
 
   const movePan = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (pointersRef.current.has(event.pointerId)) {
+      pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }
+    const pinch = pinchRef.current;
+    if (pinch && pointersRef.current.size >= 2) {
+      const points = Array.from(pointersRef.current.values());
+      const dist = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) || pinch.startDist;
+      const nextK = Math.min(3, Math.max(0.25, pinch.startK * (dist / pinch.startDist)));
+      const ratio = nextK / pinch.startK;
+      transformRef.current = {
+        k: nextK,
+        x: pinch.midX - (pinch.midX - pinch.originX) * ratio,
+        y: pinch.midY - (pinch.midY - pinch.originY) * ratio,
+      };
+      applyViewportTransform();
+      return;
+    }
     const pan = panRef.current;
     if (!pan || pan.pointerId !== event.pointerId) return;
     pan.moved ||= Math.hypot(event.clientX - pan.startX, event.clientY - pan.startY) > 5;
@@ -469,9 +560,12 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   };
 
   const endPan = (event: ReactPointerEvent<SVGSVGElement>) => {
+    pointersRef.current.delete(event.pointerId);
+    if (pointersRef.current.size < 2) pinchRef.current = null;
     const pan = panRef.current;
     if (!pan || pan.pointerId !== event.pointerId) return;
     panRef.current = null;
+    if (!pan.moved) onSelectNeuronRef.current("");
   };
 
   const zoomGraph = (event: WheelEvent<SVGSVGElement>) => {
@@ -560,12 +654,26 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
         onWheel={zoomGraph}
       >
         <defs>
-          <filter id="nm-node-selected" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="1.4" floodColor="#171717" floodOpacity="0.16" />
+          <radialGradient id="nm-neuron-idle" cx="32%" cy="28%" r="70%">
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="35%" stopColor="#F7F3EA" />
+            <stop offset="72%" stopColor="#DED7CC" />
+            <stop offset="100%" stopColor="#AAA297" />
+          </radialGradient>
+          <filter id="nm-neuron-depth" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="1" dy="2" stdDeviation="1" floodColor="#000000" floodOpacity="0.18" />
           </filter>
-          <filter id="nm-link-glow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="0" stdDeviation="1.1" floodColor="#EF4444" floodOpacity="0.35" />
-          </filter>
+          {neurons.map((neuron) => {
+            const stops = sphereStops(neuron.color);
+            return (
+              <radialGradient key={neuron.id} id={neuronGradientId(neuron.id)} cx="32%" cy="28%" r="70%">
+                <stop offset="0%" stopColor={stops.highlight} />
+                <stop offset="35%" stopColor={stops.mid} />
+                <stop offset="72%" stopColor={stops.shade} />
+                <stop offset="100%" stopColor={stops.edge} />
+              </radialGradient>
+            );
+          })}
         </defs>
         <g ref={viewportGroupRef}>
           <line
@@ -597,8 +705,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                   y2={target.y}
                   stroke={selected ? LINK_STROKE_SELECTED : LINK_STROKE}
                   strokeWidth={selected ? 2 : 1.15}
-                  opacity={selected ? 1 : 0.45}
-                  filter={selected ? LINK_GLOW : undefined}
+                  opacity={selected ? 1 : 0.65}
                   vectorEffect="non-scaling-stroke"
                   className="pointer-events-none"
                 />
@@ -681,11 +788,11 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                     if (element) nodeRingRefs.current.set(neuron.id, element);
                     else nodeRingRefs.current.delete(neuron.id);
                   }}
-                  r={radius + 3.2}
+                  r={radius + 3}
                   fill="none"
-                  stroke="#FFFFFF"
-                  strokeWidth={1.6}
-                  opacity={selected ? 0.9 : 0}
+                  stroke="#8B1E24"
+                  strokeWidth={2}
+                  opacity={selected ? 1 : 0}
                   className="pointer-events-none"
                   vectorEffect="non-scaling-stroke"
                 />
@@ -695,10 +802,10 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                     else nodeCircleRefs.current.delete(neuron.id);
                   }}
                   r={radius}
-                  fill={selected ? neuron.color : NODE_IDLE_FILL}
-                  stroke={selected ? "#ffffff" : "transparent"}
-                  strokeWidth={selected ? 2 : 0}
-                  filter={selected ? NODE_SELECTED_GLOW : undefined}
+                  fill={neuronFill(neuron.id, selected)}
+                  stroke={NODE_STROKE}
+                  strokeWidth={1.25}
+                  filter={NODE_DEPTH_FILTER}
                   vectorEffect="non-scaling-stroke"
                   className="nm-graph-node"
                 />
@@ -718,7 +825,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                   strokeLinejoin="round"
                   className="pointer-events-none"
                 >
-                  {neuron.name}
+                  {displayLabel(neuron.name, selected)}
                 </text>
               </g>
             );

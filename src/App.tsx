@@ -19,6 +19,9 @@ import { areSameConnection } from "./utils/neuron";
 import { clearNavigation, readNavigation, restoreNavigation, saveNavigation } from "./utils/navigation";
 import { isOnboardingCompleted } from "./utils/onboarding";
 import { OnboardingTour } from "./components/onboarding/OnboardingTour";
+import { useLayoutMode } from "./hooks/useMediaQuery";
+import { Button } from "./components/ui/Button";
+import { Brain, Menu } from "lucide-react";
 
 export default function App() {
   const [user, setUser] = useState<ApiUser | null>(null);
@@ -162,6 +165,12 @@ export default function App() {
 
   const selectedNeuronId = pendingNeuronSelection?.neuronId ?? (selection?.type === "neuron" ? selection.id : null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const layoutMode = useLayoutMode();
+
+  useEffect(() => {
+    if (onboardingOpen) return;
+    setSidebarOpen(layoutMode === "desktop");
+  }, [layoutMode, onboardingOpen]);
   useEffect(() => {
     persistableViewRef.current = activeView === "searchCoreTest" ? persistableViewRef.current : activeView;
   }, [activeView]);
@@ -451,7 +460,7 @@ export default function App() {
           onReplayOnboarding={() => {
             setActiveView("map");
             setMapExpanded(false);
-            setSidebarOpen(true);
+            setSidebarOpen(layoutMode === "desktop" || layoutMode === "tablet");
             setSearchOpen(false);
             setOnboardingOpen(true);
           }}
@@ -476,6 +485,7 @@ export default function App() {
         graphError={graphError}
         detailInitialTab={detailInitialTab}
         mapExpanded={mapExpanded}
+        layoutMode={layoutMode}
         onToggleMapExpanded={() => setMapExpanded((value) => !value)}
         selection={selection}
         notice={notice}
@@ -517,15 +527,34 @@ export default function App() {
     return <AuthScreen onAuthenticated={setUser} />;
   }
 
+  const hideSidebar = layoutMode === "desktop" && activeView === "map" && mapExpanded && !selectedNeuronId;
+
   return (
-    <div className="nm-shell">
-      {!(activeView === "map" && mapExpanded && !selectedNeuronId) ? (
+    <div className="nm-shell" data-layout={layoutMode}>
+      {layoutMode === "mobile" ? (
+        <header className="nm-mobile-top">
+          <Button variant="icon" aria-label="Menu" onClick={() => setSidebarOpen(true)}>
+            <Menu size={18} />
+          </Button>
+          <span className="nm-mobile-brand">
+            <Brain size={18} aria-hidden="true" />
+            NeuroMind
+          </span>
+        </header>
+      ) : null}
+      {layoutMode !== "desktop" && sidebarOpen ? (
+        <button type="button" className="nm-sidebar-backdrop" aria-label="Đóng menu" onClick={() => setSidebarOpen(false)} />
+      ) : null}
+      {!hideSidebar ? (
         <Sidebar
           activeView={activeView}
           subjects={subjects}
           selectedSubjectId={selectedSubjectId}
           userLabel={user.email}
+          layoutMode={layoutMode}
           open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onOpen={() => setSidebarOpen(true)}
           onNavigate={navigate}
           onSearch={() => setSearchOpen(true)}
           onSelectSpace={openSubject}

@@ -1,7 +1,9 @@
-import { Link2, Maximize2, Menu, Minimize2, Minus, MousePointer2, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
+import { Link2, Maximize2, Menu, Minimize2, Minus, MousePointer2, Plus, RotateCcw, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { LayoutMode } from "../hooks/useMediaQuery";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject } from "../types";
 import { getConnectionCount } from "../utils/neuron";
+import { BottomSheet } from "./BottomSheet";
 import { CreateNeuronModal } from "./CreateNeuronModal";
 import { NeuralCanvas, type NeuralCanvasHandle } from "./NeuralCanvas";
 import { NeuronDetailPanel, type DetailTab } from "./NeuronDetailPanel";
@@ -12,6 +14,7 @@ type LearningMapProps = {
   neurons: Neuron[];
   connections: NeuronConnection[];
   mapExpanded: boolean;
+  layoutMode?: LayoutMode;
   onToggleMapExpanded: () => void;
   selection: Selection;
   notice: string | null;
@@ -43,6 +46,7 @@ export function LearningMap({
   neurons,
   connections,
   mapExpanded,
+  layoutMode = "desktop",
   onToggleMapExpanded,
   selection,
   notice,
@@ -74,6 +78,7 @@ export function LearningMap({
   const [focusNeuronId, setFocusNeuronId] = useState<string | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
   const [neuronSpacing, setNeuronSpacing] = useState(loadNeuronSpacing);
+  const [spacingOpen, setSpacingOpen] = useState(false);
 
   useEffect(() => {
     window.localStorage.setItem(NEURON_SPACING_KEY, neuronSpacing.toFixed(1));
@@ -150,7 +155,7 @@ export function LearningMap({
     <main className={`nm-workspace${selectedNeuron ? " is-neuron-detail" : ""}`}>
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="nm-toolbar">
-          {onToggleSidebar ? (
+          {onToggleSidebar && layoutMode !== "mobile" ? (
             <Button variant="icon" className="nm-toolbar-menu" aria-label="Menu" onClick={onToggleSidebar}>
               <Menu size={18} />
             </Button>
@@ -171,18 +176,21 @@ export function LearningMap({
           </div>
           <label className="nm-toolbar-spacing">
             <span>Khoảng cách neuron</span>
-            <input type="range" min="1.5" max="5" step="0.1" value={neuronSpacing} onChange={(event) => setNeuronSpacing(Number(event.target.value))} />
+            <input type="range" min="1.5" max="5" step="0.1" value={neuronSpacing} onChange={(event) => setNeuronSpacing(Number(event.target.value))} aria-label="Khoảng cách neuron" />
             <output>{neuronSpacing.toFixed(1)}</output>
           </label>
           <div className="nm-toolbar-actions">
-            <Button variant="primary" size="sm" data-onboarding="create-neuron" onClick={() => setShowCreateNeuron(true)}>
-              <Plus size={16} />Tạo neuron
+            <Button variant="icon" className="nm-spacing-trigger" aria-label="Điều chỉnh khoảng cách neuron" onClick={() => setSpacingOpen(true)}>
+              <SlidersHorizontal size={16} />
+            </Button>
+            <Button variant="primary" size="sm" className="nm-create-neuron" data-onboarding="create-neuron" onClick={() => setShowCreateNeuron(true)}>
+              <Plus size={16} /><span className="nm-btn-label">Tạo neuron</span>
             </Button>
             <Button variant={connectionMode ? "primary" : "secondary"} size="sm" data-onboarding="create-connection" onClick={() => setConnectionMode((value) => !value)}>
-              <Link2 size={16} />{connectionMode ? "Đang tạo liên kết" : "Tạo liên kết"}
+              <Link2 size={16} /><span className="nm-btn-label">{connectionMode ? "Đang tạo liên kết" : "Tạo liên kết"}</span>
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => setResetSignal((value) => value + 1)}>
-              <RotateCcw size={16} />Reset View
+            <Button variant="secondary" size="sm" aria-label="Reset View" onClick={() => setResetSignal((value) => value + 1)}>
+              <RotateCcw size={16} /><span className="nm-btn-label">Reset View</span>
             </Button>
             <Button variant="icon" title={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} aria-label={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} onClick={onToggleMapExpanded}>
               {mapExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -226,6 +234,9 @@ export function LearningMap({
               <Button variant="icon" aria-label="Phóng to" onClick={() => canvasRef.current?.zoomBy(1.15)}><Plus size={16} /></Button>
               <Button variant="icon" aria-label="Thu nhỏ" onClick={() => canvasRef.current?.zoomBy(1 / 1.15)}><Minus size={16} /></Button>
             </div>
+            <Button variant="primary" className="nm-fab-create" aria-label="Tạo neuron" data-onboarding="create-neuron" onClick={() => setShowCreateNeuron(true)}>
+              <Plus size={22} />
+            </Button>
             {graphLoading ? <div className="nm-graph-status">Đang tải sơ đồ...</div> : null}
             {graphError ? <div className="nm-graph-error">{graphError}</div> : null}
             {!graphLoading && neurons.length === 0 ? (
@@ -278,6 +289,12 @@ export function LearningMap({
           onCreate={onCreateNeuron}
         />
       )}
+      <BottomSheet open={spacingOpen} title={`Khoảng cách neuron · ${neuronSpacing.toFixed(1)}`} onClose={() => setSpacingOpen(false)}>
+        <label className="nm-sheet-slider">
+          <span className="sr-only">Khoảng cách neuron</span>
+          <input type="range" min="1.5" max="5" step="0.1" value={neuronSpacing} onChange={(event) => setNeuronSpacing(Number(event.target.value))} />
+        </label>
+      </BottomSheet>
     </main>
   );
 }
