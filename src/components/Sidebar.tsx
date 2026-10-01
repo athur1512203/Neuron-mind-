@@ -43,7 +43,7 @@ export function Sidebar({
       </div>
 
       <nav className="sidebar-navigation" aria-label="Điều hướng chính">
-        <button type="button" className="sidebar-nav-item" onClick={onSearch}>
+        <button type="button" className="sidebar-nav-item" data-onboarding="search" onClick={onSearch}>
           <Search size={18} />
           Search
         </button>
@@ -67,7 +67,7 @@ export function Sidebar({
 
       <div className="sidebar-divider" />
 
-      <div className="sidebar-spaces">
+      <div className="sidebar-spaces" data-onboarding="spaces">
         <div className="sidebar-spaces-head">
           <span>Không gian</span>
           <Button variant="icon" className="sidebar-add" aria-label="Tạo không gian" onClick={() => setShowCreate(true)}>

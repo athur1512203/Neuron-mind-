@@ -3617,6 +3617,13 @@ textarea:focus-visible {
   background: #fff;
 }
 
+.nm-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
 .nm-neuron-swatch {
   width: 14px;
   height: 14px;
@@ -4553,4 +4560,81 @@ textarea:focus-visible {
   height: 28px;
   min-height: 28px;
   padding: 0;
+}
+
+.nm-onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.nm-onboarding-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 20, 20, 0.3);
+  pointer-events: auto;
+}
+
+.nm-onboarding-scrim.is-cutout {
+  background: transparent;
+}
+
+.nm-onboarding-spot {
+  position: fixed;
+  z-index: 81;
+  border-radius: 10px;
+  outline: 2px solid #8B1E24;
+  outline-offset: 4px;
+  box-shadow: 0 0 0 4px rgba(139, 30, 36, 0.1), 0 0 0 9999px rgba(20, 20, 20, 0.3);
+  pointer-events: none;
+}
+
+.nm-onboarding-tip {
+  position: fixed;
+  z-index: 82;
+  width: 300px;
+  max-width: calc(100vw - 32px);
+  padding: 16px;
+  border: 1px solid var(--nm-border);
+  border-radius: 10px;
+  background: var(--nm-milk);
+  color: var(--nm-text);
+  box-shadow: 0 12px 32px rgba(23, 23, 23, 0.12);
+}
+
+.nm-onboarding-tip.is-mobile {
+  width: calc(100vw - 24px);
+  max-width: calc(100vw - 24px);
+}
+
+.nm-onboarding-kicker {
+  margin: 0 0 6px;
+  color: var(--nm-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.nm-onboarding-tip h2 {
+  margin: 0 0 8px;
+  color: var(--nm-text);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.nm-onboarding-copy {
+  margin: 0 0 16px;
+  color: var(--nm-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.nm-onboarding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.nm-onboarding-actions .nm-button--ghost {
+  margin-right: auto;
 }

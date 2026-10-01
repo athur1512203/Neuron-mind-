@@ -175,10 +175,10 @@ export function LearningMap({
             <output>{neuronSpacing.toFixed(1)}</output>
           </label>
           <div className="nm-toolbar-actions">
-            <Button variant="primary" size="sm" onClick={() => setShowCreateNeuron(true)}>
+            <Button variant="primary" size="sm" data-onboarding="create-neuron" onClick={() => setShowCreateNeuron(true)}>
               <Plus size={16} />Tạo neuron
             </Button>
-            <Button variant={connectionMode ? "primary" : "secondary"} size="sm" onClick={() => setConnectionMode((value) => !value)}>
+            <Button variant={connectionMode ? "primary" : "secondary"} size="sm" data-onboarding="create-connection" onClick={() => setConnectionMode((value) => !value)}>
               <Link2 size={16} />{connectionMode ? "Đang tạo liên kết" : "Tạo liên kết"}
             </Button>
             <Button variant="secondary" size="sm" onClick={() => setResetSignal((value) => value + 1)}>
@@ -192,7 +192,7 @@ export function LearningMap({
         {notice ? <div className="nm-notice">{notice}</div> : null}
 
         <div className={`learning-map-layout min-h-0 flex-1 overflow-hidden ${selectedNeuron ? "has-neuron-detail" : ""}`}>
-          <div className="nm-graph-stage">
+          <div className="nm-graph-stage" data-onboarding="graph">
             <div className="nm-graph-tools">
               <Button variant="icon" title="Chọn" aria-label="Chọn" onClick={() => setConnectionMode(false)}>
                 <MousePointer2 size={16} />

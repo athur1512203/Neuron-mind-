@@ -17,6 +17,8 @@ import { WorkspaceEmpty } from "./components/WorkspaceEmpty";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject, ViewName } from "./types";
 import { areSameConnection } from "./utils/neuron";
 import { clearNavigation, readNavigation, restoreNavigation, saveNavigation } from "./utils/navigation";
+import { isOnboardingCompleted } from "./utils/onboarding";
+import { OnboardingTour } from "./components/onboarding/OnboardingTour";
 
 export default function App() {
   const [user, setUser] = useState<ApiUser | null>(null);
@@ -37,6 +39,7 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [spaceModalOpen, setSpaceModalOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [navigationUserId, setNavigationUserId] = useState<string | null>(null);
   const sessionVersion = useRef(0);
   const restoredGraph = useRef<string | null>(null);
@@ -59,6 +62,7 @@ export default function App() {
     setSearchOpen(false);
     setMapExpanded(false);
     setNotice(null);
+    setOnboardingOpen(false);
     restoredGraph.current = null;
   };
 
@@ -166,6 +170,16 @@ export default function App() {
     const persistView = activeView === "searchCoreTest" ? persistableViewRef.current : activeView;
     saveNavigation(user.id, { activeView: persistView, selectedSubjectId, selectedNeuronId });
   }, [user, navigationUserId, activeView, selectedSubjectId, selectedNeuronId]);
+
+  useEffect(() => {
+    if (!user || navigationUserId !== user.id) return;
+    if (isOnboardingCompleted(user.id)) return;
+    setActiveView("map");
+    setMapExpanded(false);
+    setSidebarOpen(true);
+    setSearchOpen(false);
+    setOnboardingOpen(true);
+  }, [user, navigationUserId]);
 
   useEffect(() => {
     if (!user || navigationUserId !== user.id || (activeView !== "map" && activeView !== "connections") || !selectedSubjectId) return;
@@ -429,7 +443,21 @@ export default function App() {
   };
 
   const renderView = () => {
-    if (activeView === "settings") return <Settings email={user?.email} onLogout={logout} />;
+    if (activeView === "settings") {
+      return (
+        <Settings
+          email={user?.email}
+          onLogout={logout}
+          onReplayOnboarding={() => {
+            setActiveView("map");
+            setMapExpanded(false);
+            setSidebarOpen(true);
+            setSearchOpen(false);
+            setOnboardingOpen(true);
+          }}
+        />
+      );
+    }
     if (!selectedSubject) {
       return (
         <WorkspaceEmpty
@@ -507,6 +535,14 @@ export default function App() {
       ) : null}
       {renderView()}
       <GlobalSearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} onOpenResult={openSearchResult} />
+      {onboardingOpen ? (
+        <OnboardingTour
+          userId={user.id}
+          open={onboardingOpen}
+          hasNeurons={subjectNeurons.length > 0}
+          onClose={() => setOnboardingOpen(false)}
+        />
+      ) : null}
       {spaceModalOpen ? (
         <CreateSubjectModal
           onClose={() => setSpaceModalOpen(false)}
