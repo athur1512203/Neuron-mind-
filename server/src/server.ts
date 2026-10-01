@@ -1,8 +1,10 @@
 import "dotenv/config";
 import { app } from "./app";
+import { assertJwtConfiguration } from "./config/secrets";
 import { prisma } from "./lib/prisma";
 import { getStorageProvider } from "./storage";
 
+assertJwtConfiguration();
 getStorageProvider();
 
 const port = Number(process.env.PORT) || 3000;

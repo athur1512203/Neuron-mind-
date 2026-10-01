@@ -108,11 +108,16 @@ test("Global Search HTTP regression with mocked Prisma", async (t) => {
       }
     });
     await t.test("document metadata matching remains available without extraction", async () => {
-      for (const q of ["opaque-filename", "application%2Fpdf", ".pdf", "checksumneedle"]) {
+      for (const q of ["application%2Fpdf", ".pdf"]) {
         const body = await search(`q=${q}`);
         assert.ok(body.results.length > 0);
         assert.ok(body.results.every((r) => r.type === "document"));
-        if (q === "opaque-filename") assert.ok(body.results.every((r) => r.snippet === undefined));
+      }
+    });
+    await t.test("storedName and checksum are not user-facing search matches", async () => {
+      for (const q of ["opaque-filename", "checksumneedle"]) {
+        const body = await search(`q=${q}`);
+        assert.deepEqual(body.results, []);
       }
     });
     await t.test("empty queries avoid database calls; unmatched queries return no results", async () => {

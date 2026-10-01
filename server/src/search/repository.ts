@@ -11,7 +11,7 @@ export interface SearchRepository {
 }
 const match = (query: string) => ({ contains: query, mode: "insensitive" as const });
 const neuronFields = ["name", "textContent", "note", "keyPoints", "memoryMethod", "application"] as const;
-const documentFields = ["originalName", "storedName", "mimeType", "extension", "checksum"] as const;
+const documentFields = ["originalName", "mimeType", "extension"] as const;
 const termsFor = (plan: SearchPlan, query: string) => plan.options?.ranking === "navigation"
   ? [query.trim()] : [...new Set(buildRetrievalTemplate(query).knownTerms)];
 const neuronMatches = (terms: string[]): Prisma.NeuronWhereInput[] => terms.flatMap((term) => neuronFields.map((field) => ({ [field]: match(term) })));
@@ -67,7 +67,7 @@ export class PrismaSearchRepository implements SearchRepository {
         ] }) }, select: { id: true, neuronId: true, content: true, updatedAt: true, neuron: { select: parentSelect } },
         orderBy: [{ updatedAt: "desc" }, { id: "asc" }], take }) : [],
       types.includes("DOCUMENT") ? prisma.document.findMany({ where: { neuron: neuronScope, OR: documentMatches(terms) },
-        select: { id: true, neuronId: true, originalName: true, storedName: true, mimeType: true, extension: true, checksum: true,
+        select: { id: true, neuronId: true, originalName: true, mimeType: true, extension: true,
           size: true, updatedAt: true, neuron: { select: parentSelect } }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }], take }) : [],
     ]);
     const base = (type: SearchSource["type"], id: string, neuron: { id: string; name: string; subjectId: string; subject: { name: string } }, updatedAt: Date) => ({
@@ -83,8 +83,8 @@ export class PrismaSearchRepository implements SearchRepository {
       ...notes.map((note): SearchSource => ({ ...base("MARKDOWN", note.id, note.neuron, note.updatedAt), content: note.content, snippetFields: [note.content] })),
       ...documents.map((doc): SearchSource => ({ ...base("DOCUMENT", doc.id, doc.neuron, doc.updatedAt), title: doc.originalName,
         content: `${doc.originalName}\n${doc.mimeType}`, metadata: { fileName: doc.originalName, mimeType: doc.mimeType, fileSize: doc.size },
-        searchText: [doc.originalName, doc.storedName, doc.mimeType, doc.extension, doc.checksum].filter(Boolean).join(" "),
-        snippetFields: [doc.originalName, doc.mimeType, doc.extension, doc.checksum ?? ""] })),
+        searchText: [doc.originalName, doc.mimeType, doc.extension].filter(Boolean).join(" "),
+        snippetFields: [doc.originalName, doc.mimeType, doc.extension] })),
     ];
   }
 }

@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { JWT_SIGN_OPTIONS } from "../config/secrets";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/app-error";
@@ -10,7 +11,7 @@ const userSelect = { id: true, email: true, createdAt: true, updatedAt: true } a
 function createToken(userId: string) {
   const secret = process.env.JWT_SECRET;
   if (!secret) throw new AppError(500, "SERVER_CONFIGURATION_ERROR", "Server is not configured");
-  return jwt.sign({}, secret, { subject: userId, expiresIn: "7d" });
+  return jwt.sign({}, secret, { subject: userId, ...JWT_SIGN_OPTIONS });
 }
 
 export async function register(request: Request, response: Response) {

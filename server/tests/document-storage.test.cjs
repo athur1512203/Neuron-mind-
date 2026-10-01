@@ -54,6 +54,7 @@ test('R2 command contract and missing-object behavior', async () => {
 test('Document HTTP API with real local storage and mocked Prisma', async (t) => {
   process.env.JWT_SECRET = 'test-only-document-secret';
   process.env.STORAGE_PROVIDER = 'local';
+  process.env.UPLOAD_RATE_LIMIT_MAX = '1000';
   const { prisma } = require('../dist/lib/prisma');
   const { getStorageProvider, getStorageProviderName } = require('../dist/storage');
   const { app } = require('../dist/app');
@@ -164,5 +165,52 @@ test('Document HTTP API with real local storage and mocked Prisma', async (t) =>
     await new Promise((resolve) => server.close(resolve));
     await fs.rm(root, { recursive: true, force: true });
     await prisma.$disconnect();
+  }
+});
+
+test('Delete space removes owned storage objects after ownership check', async (t) => {
+  process.env.JWT_SECRET = 'test-only-document-secret';
+  process.env.STORAGE_PROVIDER = 'local';
+  const { prisma } = require('../dist/lib/prisma');
+  const { documentService } = require('../dist/services/document.service');
+  const { app } = require('../dist/app');
+  const jwt = require('jsonwebtoken');
+  const deleted = [];
+  t.mock.method(documentService, 'deleteObject', async (document) => {
+    deleted.push(document.storageKey);
+  });
+  const originalFindFirst = prisma.subject.findFirst;
+  const originalFindMany = prisma.document.findMany;
+  const originalDelete = prisma.subject.delete;
+  t.after(() => {
+    prisma.subject.findFirst = originalFindFirst;
+    prisma.document.findMany = originalFindMany;
+    prisma.subject.delete = originalDelete;
+  });
+  prisma.subject.findFirst = async ({ where }) => (
+    where.id === 'space-1' && where.userId === 'owner' ? { id: 'space-1', userId: 'owner' } : null
+  );
+  prisma.document.findMany = async ({ where }) => {
+    if (where?.neuron?.subjectId !== 'space-1' || where.neuron.subject.userId !== 'owner') return [];
+    return [{ id: 'doc-1', storageProvider: 'local', storageKey: 'users/owner/workspaces/space-1/documents/a.pdf' }];
+  };
+  let dbDeleted = false;
+  prisma.subject.delete = async ({ where }) => {
+    dbDeleted = where.id === 'space-1';
+    return { id: 'space-1' };
+  };
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise((resolve) => server.once('listening', resolve));
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+  const headers = (user) => ({ Authorization: `Bearer ${jwt.sign({}, process.env.JWT_SECRET, { subject: user })}` });
+  try {
+    assert.equal((await fetch(`${base}/subjects/space-1`, { method: 'DELETE', headers: headers('other') })).status, 404);
+    assert.equal(deleted.length, 0);
+    assert.equal(dbDeleted, false);
+    assert.equal((await fetch(`${base}/subjects/space-1`, { method: 'DELETE', headers: headers('owner') })).status, 204);
+    assert.deepEqual(deleted, ['users/owner/workspaces/space-1/documents/a.pdf']);
+    assert.equal(dbDeleted, true);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
   }
 });

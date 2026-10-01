@@ -6,6 +6,9 @@ test("Auth and core CRUD HTTP with mocked Prisma", async (t) => {
   process.env.JWT_SECRET = "test-only-auth-crud-secret";
   process.env.AUTH_RATE_LIMIT_MAX = "1000";
   process.env.AUTH_RATE_LIMIT_WINDOW_MS = "60000";
+  process.env.REGISTER_RATE_LIMIT_MAX = "1000";
+  process.env.REGISTER_RATE_LIMIT_WINDOW_MS = "60000";
+  process.env.UPLOAD_RATE_LIMIT_MAX = "1000";
 
   const { prisma } = require("../dist/lib/prisma");
   const { app } = require("../dist/app");
@@ -256,6 +259,14 @@ test("Auth and core CRUD HTTP with mocked Prisma", async (t) => {
       neuron2 = await second.json();
       const foreign = await fetch(`${base}/neurons/${neuron1.id}`, { headers: authHeaders(bob.id) });
       assert.equal(foreign.status, 404);
+      const foreignPatch = await fetch(`${base}/neurons/${neuron1.id}`, {
+        method: "PATCH",
+        headers: authHeaders(bob.id),
+        body: JSON.stringify({ name: "stolen" }),
+      });
+      assert.equal(foreignPatch.status, 404);
+      const foreignNote = await fetch(`${base}/neurons/${neuron1.id}/note`, { headers: authHeaders(bob.id) });
+      assert.equal(foreignNote.status, 404);
     });
 
     await t.test("connections reject self, duplicate and foreign access", async () => {
@@ -290,6 +301,27 @@ test("Auth and core CRUD HTTP with mocked Prisma", async (t) => {
       assert.equal(deleted.status, 204);
     });
 
+    await t.test("register rate limit returns 429 without leaking secrets", async () => {
+      process.env.REGISTER_RATE_LIMIT_MAX = "2";
+      const headers = { ...json, "X-Forwarded-For": "198.51.100.20" };
+      const first = await fetch(`${base}/auth/register`, {
+        method: "POST", headers, body: JSON.stringify({ email: "r1@example.com", password: "password1" }),
+      });
+      const second = await fetch(`${base}/auth/register`, {
+        method: "POST", headers, body: JSON.stringify({ email: "r2@example.com", password: "password1" }),
+      });
+      const third = await fetch(`${base}/auth/register`, {
+        method: "POST", headers, body: JSON.stringify({ email: "r3@example.com", password: "password1" }),
+      });
+      assert.equal(first.status, 201);
+      assert.equal(second.status, 201);
+      assert.equal(third.status, 429);
+      const body = await third.json();
+      assert.equal(body.error.code, "RATE_LIMIT_EXCEEDED");
+      assert.equal(JSON.stringify(body).includes("passwordHash"), false);
+      process.env.REGISTER_RATE_LIMIT_MAX = "1000";
+    });
+
     await t.test("login rate limit returns 429 without leaking secrets", async () => {
       process.env.AUTH_RATE_LIMIT_MAX = "2";
       const headers = { ...json, "X-Forwarded-For": "203.0.113.50" };
@@ -305,6 +337,15 @@ test("Auth and core CRUD HTTP with mocked Prisma", async (t) => {
       assert.equal(JSON.stringify(body).includes("password"), false);
       assert.equal(JSON.stringify(body).includes("passwordHash"), false);
       process.env.AUTH_RATE_LIMIT_MAX = "1000";
+    });
+
+    await t.test("JWT with a non-HS256 algorithm is rejected", async () => {
+      const token = jwt.sign({}, process.env.JWT_SECRET, { subject: alice.id, algorithm: "HS512" });
+      const response = await fetch(`${base}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
+      assert.equal(response.status, 401);
+      const expired = jwt.sign({}, process.env.JWT_SECRET, { subject: alice.id, algorithm: "HS256", expiresIn: -10 });
+      const expiredRes = await fetch(`${base}/users/me`, { headers: { Authorization: `Bearer ${expired}` } });
+      assert.equal(expiredRes.status, 401);
     });
   } finally {
     await new Promise((resolve) => server.close(resolve));

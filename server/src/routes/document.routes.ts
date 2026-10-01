@@ -7,6 +7,7 @@ import {
   uploadDocument,
 } from "../controllers/document.controller";
 import { requireAuth } from "../middleware/auth";
+import { uploadRateLimitMiddleware } from "../middleware/rate-limit";
 import { DOCUMENT_MAX_BYTES, validateDocumentFile } from "../services/document-storage";
 import { asyncHandler } from "../utils/async-handler";
 import { requireOwnedNeuron } from "../services/ownership";
@@ -30,7 +31,7 @@ export const documentRouter = Router();
 
 neuronDocumentRouter.use(requireAuth);
 neuronDocumentRouter.get("/", asyncHandler(listDocuments));
-neuronDocumentRouter.post("/", asyncHandler(async (request, _response, next) => {
+neuronDocumentRouter.post("/", uploadRateLimitMiddleware, asyncHandler(async (request, _response, next) => {
   await requireOwnedNeuron(routeParam(request, "neuronId"), request.userId);
   next();
 }), upload.single("file"), asyncHandler(uploadDocument));

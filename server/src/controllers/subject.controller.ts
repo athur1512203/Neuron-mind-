@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { documentService } from "../services/document.service";
 import { requireOwnedSubject } from "../services/ownership";
 import { routeParam } from "../utils/request";
 
@@ -43,6 +44,16 @@ export async function updateSubject(request: Request, response: Response) {
 
 export async function deleteSubject(request: Request, response: Response) {
   const subject = await requireOwnedSubject(routeParam(request, "id"), request.userId);
+  const documents = await prisma.document.findMany({
+    where: { neuron: { subjectId: subject.id, subject: { userId: request.userId } } },
+    select: { id: true, storageProvider: true, storageKey: true },
+  });
+  const deletions = await Promise.allSettled(
+    documents.map((document) => documentService.deleteObject(document)),
+  );
+  deletions.forEach((result) => {
+    if (result.status === "rejected") console.error("Failed to delete space document file");
+  });
   await prisma.subject.delete({ where: { id: subject.id } });
   response.status(204).send();
 }

@@ -61,7 +61,9 @@ test('Search Core hierarchy and independent backend execution', async (t) => {
       const serialized = JSON.stringify(args.where);
       assert.ok(serialized.includes('userId'), `${type} missing ownership predicate`);
       if (type === 'document') {
-        for (const field of ['storageKey', 'storagePath', 'passwordHash']) assert.equal(args.select[field], undefined);
+        for (const field of ['storageKey', 'storagePath', 'passwordHash', 'storedName', 'checksum']) {
+          assert.equal(args.select[field], undefined);
+        }
       }
       return rows.filter((row) => matches(row, args.where)).sort((a, b) => a.id.localeCompare(b.id)).slice(0, args.take);
     };

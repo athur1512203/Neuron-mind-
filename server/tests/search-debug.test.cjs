@@ -30,6 +30,8 @@ test("Search Core debug HTTP is flag-gated and ignores client userId", async (t)
 
   const disabled = await fetch(`${base}/debug`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   assert.equal(disabled.status, 404);
+  const healthOff = await fetch(`${base.replace(/\/search$/, "/health")}`);
+  assert.equal((await healthOff.json()).searchDebug, false);
 
   process.env.ENABLE_SEARCH_DEBUG = "true";
   const unauth = await fetch(`${base}/debug`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -57,4 +59,7 @@ test("Search Core debug HTTP is flag-gated and ignores client userId", async (t)
 
   const global = await fetch(`${base}?q=`, { headers });
   assert.equal(global.status, 200);
+  const health = await fetch(`${base.replace(/\/search$/, "/health")}`);
+  assert.equal(health.status, 200);
+  assert.equal((await health.json()).searchDebug, true);
 });

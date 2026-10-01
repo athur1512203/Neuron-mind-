@@ -25,6 +25,10 @@ export function searchGlobal(query: string, options: { signal?: AbortSignal; lim
   return apiRequest<GlobalSearchResponse>(`/search?${params.toString()}`, { signal: options.signal });
 }
 
+export function getApiHealth(signal?: AbortSignal) {
+  return apiRequest<{ status: string; searchDebug?: boolean }>("/health", { signal });
+}
+
 export type SearchSourceType = "NEURON" | "MARKDOWN" | "DOCUMENT";
 
 export type SearchDebugRequest = {

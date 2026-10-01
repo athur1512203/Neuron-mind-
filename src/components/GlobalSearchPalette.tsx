@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ApiError, apiMessage } from "../api/client";
 import {
   debugSearchCore,
+  getApiHealth,
   searchGlobal,
   type RetrievedDebugItem,
   type RetrievedInformation,
@@ -92,6 +93,7 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
   const [planBusy, setPlanBusy] = useState(false);
   const [planError, setPlanError] = useState<string | null>(null);
   const [planResult, setPlanResult] = useState<RetrievedInformation | null>(null);
+  const [searchDebug, setSearchDebug] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const planRef = useRef<HTMLTextAreaElement>(null);
 
@@ -103,7 +105,12 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
     setError(null);
     setActiveIndex(0);
     setPlanError(null);
+    const controller = new AbortController();
+    void getApiHealth(controller.signal)
+      .then((health) => setSearchDebug(health.searchDebug === true))
+      .catch(() => setSearchDebug(false));
     window.setTimeout(() => inputRef.current?.focus(), 0);
+    return () => controller.abort();
   }, [open]);
 
   useEffect(() => {
@@ -120,6 +127,10 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!searchDebug && mode === "searchPlan") setMode("search");
+  }, [searchDebug, mode]);
 
   useEffect(() => {
     if (!open || mode !== "search") return;
@@ -260,6 +271,7 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
           </button>
         </header>
 
+        {searchDebug ? (
         <div className="gs-switch" role="tablist" aria-label="Chế độ tìm kiếm">
           <button type="button" role="tab" aria-selected={mode === "search"} className={mode === "search" ? "is-on" : ""} onClick={() => setMode("search")}>
             <Search size={14} aria-hidden="true" />
@@ -270,8 +282,9 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
             SearchPlan
           </button>
         </div>
+        ) : null}
 
-        {mode === "search" ? (
+        {mode !== "searchPlan" || !searchDebug ? (
           <>
             <label className="gs-field">
               <Search size={18} aria-hidden="true" />
