@@ -2,7 +2,6 @@ import {
   Brain,
   Check,
   FileText,
-  Pencil,
   Plus,
   Settings,
   Trash2,
@@ -213,7 +212,10 @@ export function NeuronDetailPanel({
 
   return (
     <>
-      <aside className="neuron-workspace">
+      <aside
+        className="neuron-workspace neuron-detail-panel"
+        onWheel={(event) => event.stopPropagation()}
+      >
         <NeuronDetailHeader
           neuron={neuron}
           connectionCount={connectionCount}
@@ -311,8 +313,8 @@ function NeuronDetailHeader({ neuron, connectionCount, editing, onEdit, onDelete
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap justify-end gap-2">
-        <button type="button" onClick={onEdit} className="nm-btn nm-btn-secondary"><Pencil size={15} />{editing ? "Lưu" : "Chỉnh sửa"}</button>
-        <button type="button" onClick={onDelete} className="nm-btn nm-btn-danger"><Trash2 size={15} />Xóa</button>
+        <button type="button" onClick={onEdit} className="nm-btn nm-btn-secondary">{editing ? "Lưu" : "Chỉnh sửa"}</button>
+        <button type="button" onClick={onDelete} className="nm-btn nm-btn-danger">Xóa</button>
         <button type="button" onClick={onClose} className="nm-icon-btn" aria-label="Đóng"><X size={17} /></button>
       </div>
     </header>
@@ -394,7 +396,7 @@ function NeuronOverview({ neuron, onSaveNote, draft, editing, connectionCount, l
 }
 
 function BrutalCard({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
-  return <section className="brutal-card"><div className="mb-4 flex items-center justify-between gap-3"><h3 className="text-sm font-black uppercase text-[#111111]">{title}</h3>{action}</div>{children}</section>;
+  return <section className="nm-detail-card"><div className="mb-4 flex items-center justify-between gap-3"><h3 className="nm-detail-card-title">{title}</h3>{action}</div>{children}</section>;
 }
 
 function InfoRow({ label, value }: { label: string; value: ReactNode }) {
@@ -432,8 +434,8 @@ function NeuronNote({ neuron, onSave }: { neuron: Neuron; onSave: (id: string, n
     <BrutalCard title="NOTE">
       <textarea
         aria-label="NOTE"
-        className="brutal-textarea"
-        style={{ minHeight: 150 }}
+        className="nm-note-input"
+        style={{ minHeight: 140 }}
         placeholder="Ghi chú kiến thức, việc cần nhớ..."
         maxLength={100_000}
         value={value}
@@ -442,7 +444,7 @@ function NeuronNote({ neuron, onSave }: { neuron: Neuron; onSave: (id: string, n
       />
       <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
         <span role="status" className="text-xs font-semibold">{feedback}</span>
-        <button type="button" className="brutal-button brutal-button-primary" disabled={saving || value === savedValue} onClick={() => void save()}>
+        <button type="button" className="nm-btn nm-btn-primary" disabled={saving || value === savedValue} onClick={() => void save()}>
           <Check size={16} />{saving ? "Đang lưu..." : "Lưu ghi chú"}
         </button>
       </div>

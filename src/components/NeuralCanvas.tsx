@@ -455,6 +455,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   };
 
   const zoomGraph = (event: WheelEvent<SVGSVGElement>) => {
+    if (event.target instanceof Element && event.target.closest(".neuron-detail-panel")) return;
     event.preventDefault();
     const rect = event.currentTarget.getBoundingClientRect();
     const viewport = sizeRef.current;

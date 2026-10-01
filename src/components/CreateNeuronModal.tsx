@@ -1,5 +1,5 @@
-import { X } from "lucide-react";
-import { useState } from "react";
+import { Upload, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { Neuron } from "../types";
 import { colorPresets } from "../utils/neuron";
 
@@ -36,8 +36,18 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
   const [application, setApplication] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [audio, setAudio] = useState<string[]>([]);
+  const [imageNames, setImageNames] = useState<string[]>([]);
+  const [audioNames, setAudioNames] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   const handleSubmit = async () => {
     const trimmedName = name.trim();
@@ -68,40 +78,45 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
     }
   };
 
-  const handleLocalFiles = (files: FileList | null, setter: (urls: string[]) => void) => {
+  const handleLocalFiles = (files: FileList | null, setter: (urls: string[]) => void, names: (list: string[]) => void) => {
     if (!files) return;
     setter(Array.from(files).map((file) => URL.createObjectURL(file)));
+    names(Array.from(files).map((file) => file.name));
   };
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/40 p-4">
-      <section className="create-neuron-form">
-        <div className="create-neuron-header sticky top-0 z-10 flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold text-slate-900">Tạo neuron</h2>
-          <button onClick={onClose} className="rounded-md p-2 text-slate-600 transition hover:bg-slate-200" aria-label="Đóng">
+    <div className="nm-modal-overlay" onClick={onClose}>
+      <section className="nm-modal nm-modal-lg" onClick={(event) => event.stopPropagation()} onWheel={(event) => event.stopPropagation()}>
+        <header className="nm-modal-head">
+          <div>
+            <h2>Tạo neuron</h2>
+            <p>Thêm một kiến thức mới vào không gian.</p>
+          </div>
+          <button type="button" onClick={onClose} className="gs-close" aria-label="Đóng">
             <X size={18} />
           </button>
-        </div>
+        </header>
 
-        <div className="create-neuron-fields">
-          <label className="block">
-            <span className="create-neuron-label">Tên kiến thức</span>
+        <div className="nm-modal-body">
+          <label className="nm-field">
+            <span>Tên kiến thức</span>
             <input
               value={name}
               onChange={(event) => setName(event.target.value)}
-              className="neuron-input"
+              className="nm-input"
               placeholder="Ví dụ: Chi phí cận biên"
             />
           </label>
 
-          <div>
-            <div className="create-neuron-label">Màu neuron</div>
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="nm-field">
+            <span>Màu neuron</span>
+            <div className="nm-swatches">
               {colorPresets.map((preset) => (
                 <button
                   key={preset.value}
+                  type="button"
                   onClick={() => setColor(preset.value)}
-                  className={`neuron-color ${color === preset.value ? "is-selected" : ""}`}
+                  className={`nm-swatch ${color === preset.value ? "is-on" : ""}`}
                   style={{ backgroundColor: preset.value }}
                   aria-label={preset.label}
                   title={preset.label}
@@ -111,30 +126,41 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
                 type="color"
                 value={color}
                 onChange={(event) => setColor(event.target.value)}
-                className="h-8 w-12 cursor-pointer rounded-md border-2 border-slate-900 bg-white"
+                className="nm-swatch-custom"
                 aria-label="Chọn màu tùy chỉnh"
               />
             </div>
           </div>
 
           <Textarea label="Nội dung học" value={textContent} onChange={setTextContent} />
-          <FileInput label="Hình ảnh" accept="image/*" onChange={(files) => handleLocalFiles(files, setImages)} />
-          <FileInput label="Âm thanh" accept="audio/*" onChange={(files) => handleLocalFiles(files, setAudio)} />
+          <FileDrop
+            label="Hình ảnh"
+            hint="Chọn hình ảnh"
+            detail="PNG, JPG..."
+            accept="image/*"
+            names={imageNames}
+            onChange={(files) => handleLocalFiles(files, setImages, setImageNames)}
+          />
+          <FileDrop
+            label="Âm thanh"
+            hint="Chọn tệp âm thanh"
+            detail=""
+            accept="audio/*"
+            names={audioNames}
+            onChange={(files) => handleLocalFiles(files, setAudio, setAudioNames)}
+          />
           <Textarea label="Trọng tâm kiến thức" value={keyPoints} onChange={setKeyPoints} />
           <Textarea label="Cách ghi nhớ" value={memoryMethod} onChange={setMemoryMethod} />
           <Textarea label="Áp dụng" value={application} onChange={setApplication} />
+          {error ? <p className="nm-modal-error">{error}</p> : null}
         </div>
 
-        {error ? <p className="px-1 text-sm text-red-500">{error}</p> : null}
-
-        <div className="create-neuron-footer sticky bottom-0 flex justify-end gap-3">
-          <button onClick={onClose} className="neuron-modal-button">
-            Hủy
-          </button>
-          <button onClick={handleSubmit} disabled={busy} className="neuron-modal-button primary">
+        <footer className="nm-modal-foot">
+          <button type="button" onClick={onClose} className="nm-btn nm-btn-secondary">Hủy</button>
+          <button type="button" onClick={handleSubmit} disabled={busy} className="nm-btn nm-btn-primary">
             {busy ? "Đang tạo..." : "Tạo neuron"}
           </button>
-        </div>
+        </footer>
       </section>
     </div>
   );
@@ -142,23 +168,46 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
 
 function Textarea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <label className="block">
-      <span className="create-neuron-label">{label}</span>
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        rows={3}
-        className="neuron-input neuron-textarea"
-      />
+    <label className="nm-field">
+      <span>{label}</span>
+      <textarea value={value} onChange={(event) => onChange(event.target.value)} rows={4} className="nm-input nm-textarea" />
     </label>
   );
 }
 
-function FileInput({ label, accept, onChange }: { label: string; accept: string; onChange: (files: FileList | null) => void }) {
+function FileDrop({
+  label,
+  hint,
+  detail,
+  accept,
+  names,
+  onChange,
+}: {
+  label: string;
+  hint: string;
+  detail: string;
+  accept: string;
+  names: string[];
+  onChange: (files: FileList | null) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <label className="neuron-upload">
-      <span className="create-neuron-label">{label}</span>
-      <input type="file" accept={accept} multiple onChange={(event) => onChange(event.target.files)} className="block text-sm text-slate-500" />
-    </label>
+    <div className="nm-field">
+      <span>{label}</span>
+      <button type="button" className="nm-drop" onClick={() => inputRef.current?.click()}>
+        <Upload size={18} />
+        <strong>{hint}</strong>
+        {detail ? <small>{detail}</small> : null}
+        {names.length ? <em>{names.join(", ")}</em> : null}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        multiple
+        className="sr-only"
+        onChange={(event) => onChange(event.target.files)}
+      />
+    </div>
   );
 }

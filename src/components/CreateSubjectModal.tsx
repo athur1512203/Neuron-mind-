@@ -49,55 +49,58 @@ export function CreateSubjectModal({ onClose, onCreate }: CreateSubjectModalProp
   };
 
   return (
-    <div className="create-subject-overlay fixed inset-0 z-50 grid place-items-center p-4" onClick={onClose}>
-      <section className="create-subject-modal" onClick={(event) => event.stopPropagation()}>
-        <div className="create-subject-header flex items-center justify-between">
-          <h2 className="create-subject-title">Tạo không gian mới</h2>
-          <button onClick={onClose} className="create-subject-close" aria-label="Đóng">
+    <div className="nm-modal-overlay" onClick={onClose}>
+      <section className="nm-modal nm-modal-sm" onClick={(event) => event.stopPropagation()}>
+        <header className="nm-modal-head">
+          <div>
+            <h2>Tạo không gian mới</h2>
+            <p>Tạo một khu vực riêng để tổ chức các neuron.</p>
+          </div>
+          <button type="button" onClick={onClose} className="gs-close" aria-label="Đóng">
             <X size={18} />
           </button>
-        </div>
+        </header>
 
-        <label className="block">
-          <span className="create-subject-label">Tên không gian *</span>
-          <input
-            ref={nameRef}
-            value={name}
-            onChange={(event) => {
-              setName(event.target.value);
-              if (error) setError("");
-            }}
-            className="create-subject-field create-subject-input"
-            placeholder="Ví dụ: Công việc, TMU, Dự án XMP..."
-          />
-          {error ? <p className="mt-1.5 text-sm font-semibold text-red-700">{error}</p> : null}
-        </label>
+        <div className="nm-modal-body">
+          <label className="nm-field">
+            <span>Tên không gian</span>
+            <input
+              ref={nameRef}
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                if (error) setError("");
+              }}
+              className="nm-input"
+              placeholder="Ví dụ: Công việc, Học tập, Dự án cá nhân..."
+            />
+            {error ? <p className="nm-modal-error">{error}</p> : null}
+          </label>
 
-        <div className="mt-4">
-          <div className="create-subject-label">Màu chủ đề *</div>
-          <div className="flex flex-wrap gap-3">
-            {subjectColors.map((preset) => (
-              <button
-                key={preset.value}
-                type="button"
-                onClick={() => setColor(preset.value)}
-                className={`create-subject-swatch ${color === preset.value ? "is-selected" : ""}`}
-                style={{ backgroundColor: preset.value }}
-                title={preset.label}
-                aria-label={preset.label}
-              />
-            ))}
+          <div className="nm-field">
+            <span>Màu chủ đề</span>
+            <div className="nm-swatches">
+              {subjectColors.map((preset) => (
+                <button
+                  key={preset.value}
+                  type="button"
+                  onClick={() => setColor(preset.value)}
+                  className={`nm-swatch ${color === preset.value ? "is-on" : ""}`}
+                  style={{ backgroundColor: preset.value }}
+                  title={preset.label}
+                  aria-label={preset.label}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="create-subject-btn create-subject-btn-cancel">
-            Hủy
-          </button>
-          <button type="button" onClick={handleSubmit} disabled={busy} className="create-subject-btn create-subject-btn-submit">
+        <footer className="nm-modal-foot">
+          <button type="button" onClick={onClose} className="nm-btn nm-btn-secondary">Hủy</button>
+          <button type="button" onClick={handleSubmit} disabled={busy} className="nm-btn nm-btn-primary">
             {busy ? "Đang tạo..." : "Tạo không gian"}
           </button>
-        </div>
+        </footer>
       </section>
     </div>
   );

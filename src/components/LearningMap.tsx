@@ -241,7 +241,10 @@ export function LearningMap({
           </div>
 
           {selectedNeuron ? (
-            <div className="learning-map-detail-pane">
+            <div
+              className="learning-map-detail-pane"
+              onWheel={(event) => event.stopPropagation()}
+            >
               <NeuronDetailPanel
                 neuron={selectedNeuron}
                 neurons={neurons}
