@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { useState } from "react";
 import type { Neuron } from "../types";
+import { Button } from "./ui/Button";
 
 type CreateConnectionModalProps = {
   source: Neuron;
@@ -19,9 +20,9 @@ export function CreateConnectionModal({ source, target, onCancel, onCreate }: Cr
       <section className="w-full max-w-xl rounded-lg bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <h2 className="text-lg font-semibold text-slate-950">Tạo liên kết</h2>
-          <button onClick={onCancel} className="rounded-md p-2 text-slate-500 hover:bg-slate-100" aria-label="Đóng">
+          <Button variant="icon" onClick={onCancel} aria-label="Đóng">
             <X size={18} />
-          </button>
+          </Button>
         </div>
 
         <div className="space-y-5 px-6 py-5">
@@ -45,12 +46,11 @@ export function CreateConnectionModal({ source, target, onCancel, onCreate }: Cr
         </div>
 
         <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
-          <button onClick={onCancel} className="action-3d-button secondary">
-            <span className="btn-shadow" />
-            <span className="btn-edge" />
-            <span className="btn-front">Hủy</span>
-          </button>
-          <button
+          <Button variant="secondary" onClick={onCancel}>
+            Hủy
+          </Button>
+          <Button
+            variant="primary"
             onClick={async () => {
               if (!explanation.trim()) return;
               setBusy(true);
@@ -63,13 +63,10 @@ export function CreateConnectionModal({ source, target, onCancel, onCreate }: Cr
                 setBusy(false);
               }
             }}
-            className="action-3d-button"
             disabled={!explanation.trim() || busy}
           >
-            <span className="btn-shadow" />
-            <span className="btn-edge" />
-            <span className="btn-front">{busy ? "Đang tạo..." : "Tạo liên kết"}</span>
-          </button>
+            {busy ? "Đang tạo..." : "Tạo liên kết"}
+          </Button>
         </div>
       </section>
     </div>

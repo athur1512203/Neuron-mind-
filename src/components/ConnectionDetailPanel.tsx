@@ -1,6 +1,7 @@
 import { Pencil, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import type { Neuron, NeuronConnection } from "../types";
+import { Button } from "./ui/Button";
 
 type ConnectionDetailPanelProps = {
   connection: NeuronConnection;
@@ -29,9 +30,9 @@ export function ConnectionDetailPanel({ connection, source, target, onClose, onD
               {source.name} ↔ {target.name}
             </h2>
           </div>
-          <button onClick={onClose} className="rounded-md p-2 text-slate-500 hover:bg-slate-100" aria-label="Đóng panel">
+          <Button variant="icon" onClick={onClose} aria-label="Đóng panel">
             <X size={18} />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -52,29 +53,17 @@ export function ConnectionDetailPanel({ connection, source, target, onClose, onD
 
         <div className="flex gap-2">
           {editing ? (
-            <button onClick={save} disabled={!draft.trim()} className="action-3d-button">
-              <span className="btn-shadow" />
-              <span className="btn-edge" />
-              <span className="btn-front">Lưu</span>
-            </button>
+            <Button variant="primary" onClick={save} disabled={!draft.trim()}>
+              Lưu
+            </Button>
           ) : (
-            <button
-              onClick={() => setEditing(true)}
-              className="action-3d-button"
-            >
-              <span className="btn-shadow" />
-              <span className="btn-edge" />
-              <span className="btn-front"><Pencil />Chỉnh sửa</span>
-            </button>
+            <Button variant="primary" onClick={() => setEditing(true)}>
+              <Pencil />Chỉnh sửa
+            </Button>
           )}
-          <button
-            onClick={() => onDelete(connection.id)}
-            className="action-3d-button danger"
-          >
-            <span className="btn-shadow" />
-            <span className="btn-edge" />
-            <span className="btn-front"><Trash2 />Xóa liên kết</span>
-          </button>
+          <Button variant="danger" onClick={() => onDelete(connection.id)}>
+            <Trash2 />Xóa liên kết
+          </Button>
         </div>
       </div>
     </aside>

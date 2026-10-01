@@ -1,6 +1,7 @@
 import { useCallback, useState, type KeyboardEvent } from "react";
 import { ApiError } from "../api/client";
 import { debugSearchCore, type SearchDebugRequest } from "../api/search";
+import { Button } from "./ui/Button";
 
 export const SEARCH_CORE_EXAMPLE = `{
   "space": {
@@ -120,14 +121,14 @@ export function SearchCoreDebug() {
           <h1 className="text-xl font-black">Search Core Test</h1>
           <p className="text-sm text-slate-600">Test SearchPlan directly against Search Core</p>
         </div>
-        <button
+        <Button
           type="button"
-          className="border-2 border-black bg-emerald-200 px-3 py-2 text-sm font-bold disabled:opacity-60"
+          variant="primary"
           onClick={() => void run()}
           disabled={busy}
         >
           {busy ? "Running…" : "Run Search Core"}
-        </button>
+        </Button>
       </header>
 
       <div className="grid min-h-0 flex-1 grid-rows-2 gap-0 lg:grid-cols-2 lg:grid-rows-1">
@@ -135,18 +136,18 @@ export function SearchCoreDebug() {
           <div className="flex items-center justify-between border-b-2 border-black px-4 py-2">
             <h2 className="text-xs font-black tracking-wide">SEARCH PLAN</h2>
             <div className="flex flex-wrap gap-2">
-              <button type="button" className="border-2 border-black px-2 py-1 text-xs font-bold" onClick={formatJson}>
+              <Button variant="secondary" size="sm" type="button" onClick={formatJson}>
                 Format JSON
-              </button>
-              <button type="button" className="border-2 border-black px-2 py-1 text-xs font-bold" onClick={() => setScript(SEARCH_CORE_EXAMPLE)}>
+              </Button>
+              <Button variant="secondary" size="sm" type="button" onClick={() => setScript(SEARCH_CORE_EXAMPLE)}>
                 Reset Example
-              </button>
-              <button type="button" className="border-2 border-black px-2 py-1 text-xs font-bold" onClick={() => setOutput(null)}>
+              </Button>
+              <Button variant="ghost" size="sm" type="button" onClick={() => setOutput(null)}>
                 Clear Output
-              </button>
-              <button type="button" className="border-2 border-black px-2 py-1 text-xs font-bold" onClick={() => void copyOutput()} disabled={!output}>
+              </Button>
+              <Button variant="secondary" size="sm" type="button" onClick={() => void copyOutput()} disabled={!output}>
                 Copy Output
-              </button>
+              </Button>
             </div>
           </div>
           <textarea

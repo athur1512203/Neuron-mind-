@@ -5,6 +5,7 @@ import { getConnectionCount } from "../utils/neuron";
 import { CreateNeuronModal } from "./CreateNeuronModal";
 import { NeuralCanvas, type NeuralCanvasHandle } from "./NeuralCanvas";
 import { NeuronDetailPanel, type DetailTab } from "./NeuronDetailPanel";
+import { Button } from "./ui/Button";
 
 type LearningMapProps = {
   subject: Subject;
@@ -150,9 +151,9 @@ export function LearningMap({
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="nm-toolbar">
           {onToggleSidebar ? (
-            <button type="button" className="nm-icon-btn nm-toolbar-menu" aria-label="Menu" onClick={onToggleSidebar}>
+            <Button variant="icon" className="nm-toolbar-menu" aria-label="Menu" onClick={onToggleSidebar}>
               <Menu size={18} />
-            </button>
+            </Button>
           ) : null}
           <div className="nm-toolbar-search">
             <Search size={16} />
@@ -174,18 +175,18 @@ export function LearningMap({
             <output>{neuronSpacing.toFixed(1)}</output>
           </label>
           <div className="nm-toolbar-actions">
-            <button type="button" className="nm-btn nm-btn-primary" onClick={() => setShowCreateNeuron(true)}>
+            <Button variant="primary" size="sm" onClick={() => setShowCreateNeuron(true)}>
               <Plus size={16} />Tạo neuron
-            </button>
-            <button type="button" className={`nm-btn ${connectionMode ? "nm-btn-primary" : "nm-btn-secondary"}`} onClick={() => setConnectionMode((value) => !value)}>
+            </Button>
+            <Button variant={connectionMode ? "primary" : "secondary"} size="sm" onClick={() => setConnectionMode((value) => !value)}>
               <Link2 size={16} />{connectionMode ? "Đang tạo liên kết" : "Tạo liên kết"}
-            </button>
-            <button type="button" className="nm-btn nm-btn-secondary" onClick={() => setResetSignal((value) => value + 1)}>
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setResetSignal((value) => value + 1)}>
               <RotateCcw size={16} />Reset View
-            </button>
-            <button type="button" className="nm-icon-btn" title={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} aria-label={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} onClick={onToggleMapExpanded}>
+            </Button>
+            <Button variant="icon" title={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} aria-label={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} onClick={onToggleMapExpanded}>
               {mapExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-            </button>
+            </Button>
           </div>
         </header>
         {notice ? <div className="nm-notice">{notice}</div> : null}
@@ -193,17 +194,17 @@ export function LearningMap({
         <div className={`learning-map-layout min-h-0 flex-1 overflow-hidden ${selectedNeuron ? "has-neuron-detail" : ""}`}>
           <div className="nm-graph-stage">
             <div className="nm-graph-tools">
-              <button type="button" className="nm-icon-btn" title="Chọn" aria-label="Chọn" onClick={() => setConnectionMode(false)}>
+              <Button variant="icon" title="Chọn" aria-label="Chọn" onClick={() => setConnectionMode(false)}>
                 <MousePointer2 size={16} />
-              </button>
-              <button type="button" className="nm-icon-btn" title="Vừa khung" aria-label="Vừa khung" onClick={() => canvasRef.current?.fit()}>
+              </Button>
+              <Button variant="icon" title="Vừa khung" aria-label="Vừa khung" onClick={() => canvasRef.current?.fit()}>
                 <Maximize2 size={16} />
-              </button>
+              </Button>
             </div>
             {selectedConnection && !connectionMode ? (
-              <button type="button" className="nm-btn nm-btn-danger nm-graph-delete" onClick={() => { setDeleteError(""); setPendingDelete(selectedConnection); }}>
+              <Button variant="danger" size="sm" className="nm-graph-delete" onClick={() => { setDeleteError(""); setPendingDelete(selectedConnection); }}>
                 <Trash2 size={16} />Xóa liên kết
-              </button>
+              </Button>
             ) : null}
             {toast ? <div role="status" className="nm-toast">{toast}</div> : null}
             <NeuralCanvas
@@ -222,8 +223,8 @@ export function LearningMap({
               neuronSpacing={neuronSpacing}
             />
             <div className="nm-zoom">
-              <button type="button" className="nm-icon-btn" aria-label="Phóng to" onClick={() => canvasRef.current?.zoomBy(1.15)}><Plus size={16} /></button>
-              <button type="button" className="nm-icon-btn" aria-label="Thu nhỏ" onClick={() => canvasRef.current?.zoomBy(1 / 1.15)}><Minus size={16} /></button>
+              <Button variant="icon" aria-label="Phóng to" onClick={() => canvasRef.current?.zoomBy(1.15)}><Plus size={16} /></Button>
+              <Button variant="icon" aria-label="Thu nhỏ" onClick={() => canvasRef.current?.zoomBy(1 / 1.15)}><Minus size={16} /></Button>
             </div>
             {graphLoading ? <div className="nm-graph-status">Đang tải sơ đồ...</div> : null}
             {graphError ? <div className="nm-graph-error">{graphError}</div> : null}
@@ -231,9 +232,9 @@ export function LearningMap({
               <div className="nm-graph-empty">
                 <h3>Không gian này chưa có neuron.</h3>
                 <p>Tạo neuron đầu tiên</p>
-                <button type="button" className="nm-btn nm-btn-primary" onClick={() => setShowCreateNeuron(true)}>
+                <Button variant="primary" onClick={() => setShowCreateNeuron(true)}>
                   <Plus size={16} />Tạo neuron đầu tiên
-                </button>
+                </Button>
               </div>
             ) : null}
           </div>
@@ -265,8 +266,8 @@ export function LearningMap({
         <p className="mt-3 break-words">Bạn có chắc muốn xóa liên kết giữa {neurons.find((neuron) => neuron.id === pendingDelete?.sourceNeuronId)?.name} và {neurons.find((neuron) => neuron.id === pendingDelete?.targetNeuronId)?.name}?</p>
         {deleteError ? <p role="alert" className="mt-3 text-sm text-red-700">{deleteError}</p> : null}
         <div className="mt-5 flex justify-end gap-3">
-          <button type="button" autoFocus disabled={deleteBusy} className="brutal-button" onClick={() => setPendingDelete(null)}>Hủy</button>
-          <button type="button" disabled={deleteBusy} className="brutal-button brutal-button-danger" onClick={() => void confirmDeleteConnection()}><Trash2 size={16} />{deleteBusy ? "Đang xóa..." : "Xóa liên kết"}</button>
+          <Button variant="secondary" autoFocus disabled={deleteBusy} onClick={() => setPendingDelete(null)}>Hủy</Button>
+          <Button variant="danger" disabled={deleteBusy} onClick={() => void confirmDeleteConnection()}><Trash2 size={16} />{deleteBusy ? "Đang xóa..." : "Xóa liên kết"}</Button>
         </div>
       </dialog>
       {showCreateNeuron && (

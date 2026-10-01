@@ -6,6 +6,7 @@ import {
   wrapMarkers,
   type EditorRange,
 } from "../markdown/editMarkdown";
+import { Button } from "./ui/Button";
 
 const TOOLBAR: Array<{ label: string; title: string; apply: (range: EditorRange) => EditorRange }> = [
   { label: "H1", title: "H1", apply: (range) => prefixSelectedLines(range, "# ") },
@@ -55,17 +56,17 @@ export function MarkdownComposeEditor({ value, onChange, disabled }: MarkdownCom
     <div className="nm-md-compose">
       <div className="nm-md-toolbar" role="toolbar" aria-label="Markdown">
         {TOOLBAR.map((action) => (
-          <button
+          <Button
             key={action.label}
+            variant="toolbar"
             type="button"
             title={action.title}
             disabled={disabled}
-            className="nm-md-tool"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => applyRange(action.apply)}
           >
             {action.label}
-          </button>
+          </Button>
         ))}
       </div>
       <textarea

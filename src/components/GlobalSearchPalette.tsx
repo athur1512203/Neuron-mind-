@@ -11,6 +11,7 @@ import {
   type SearchResult,
   type SearchResultType,
 } from "../api/search";
+import { Button } from "./ui/Button";
 
 type SearchMode = "search" | "searchPlan";
 
@@ -73,9 +74,9 @@ function SearchPlanResults({ result }: { result: RetrievedInformation }) {
           ))}
         </section>
       ))}
-      <button type="button" className="gs-raw-toggle" onClick={() => setRawOpen((open) => !open)}>
+      <Button variant="ghost" size="sm" type="button" className="gs-raw-toggle" onClick={() => setRawOpen((open) => !open)}>
         {rawOpen ? "Hide Raw JSON" : "View Raw JSON"}
-      </button>
+      </Button>
       {rawOpen ? <pre className="gs-raw">{JSON.stringify(result, null, 2)}</pre> : null}
     </div>
   );
@@ -266,9 +267,9 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
             <h2>Global Search</h2>
             <p>Tìm kiếm trong toàn bộ NeuroMind</p>
           </div>
-          <button type="button" className="gs-close" onClick={onClose} aria-label="Đóng tìm kiếm">
+          <Button variant="icon" type="button" onClick={onClose} aria-label="Đóng tìm kiếm">
             <X size={18} />
-          </button>
+          </Button>
         </header>
 
         {searchDebug ? (
@@ -312,7 +313,7 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
                   <AlertCircle size={16} aria-hidden="true" />
                   <div>
                     <p>Không thể tìm kiếm lúc này.</p>
-                    <button type="button" onClick={() => setRetryTick((tick) => tick + 1)}>Thử lại</button>
+                    <Button variant="secondary" size="sm" type="button" onClick={() => setRetryTick((tick) => tick + 1)}>Thử lại</Button>
                   </div>
                 </div>
               ) : null}
@@ -361,11 +362,11 @@ export function GlobalSearchPalette({ open, onClose, onOpenResult }: GlobalSearc
             />
             {planError ? <p className="gs-plan-error">{planError}</p> : null}
             <div className="gs-plan-actions">
-              <button type="button" className="gs-btn" onClick={formatPlan}>Format JSON</button>
-              <button type="button" className="gs-btn" onClick={resetPlan}>Reset</button>
-              <button type="button" className="gs-btn gs-btn-run" disabled={planBusy || !plan.trim()} onClick={() => void runPlan()}>
+              <Button variant="secondary" size="sm" type="button" onClick={formatPlan}>Format JSON</Button>
+              <Button variant="secondary" size="sm" type="button" onClick={resetPlan}>Reset</Button>
+              <Button variant="primary" size="sm" type="button" disabled={planBusy || !plan.trim()} onClick={() => void runPlan()}>
                 Run SearchPlan
-              </button>
+              </Button>
             </div>
             <div className="gs-body">
               {planBusy ? (

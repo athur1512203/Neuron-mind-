@@ -19,6 +19,7 @@ import {
 import type { Neuron, NeuronConnection } from "../types";
 import { NeuronColorPicker } from "./NeuronColorPicker";
 import { NeuronMarkdownEditor } from "./NeuronMarkdownEditor";
+import { Button } from "./ui/Button";
 
 export type DetailTab = "overview" | "markdown" | "documents" | "custom";
 
@@ -248,8 +249,8 @@ export function NeuronDetailPanel({
 
           {editing && (tab === "overview" || tab === "custom") ? (
             <div className="nm-overview-actions">
-              <button type="button" className="nm-btn nm-btn-secondary" onClick={() => { setDraft(neuron); setEditing(false); }}>Hủy</button>
-              <button type="button" className="nm-btn nm-btn-primary" onClick={saveDraft}><Check size={16} />Lưu thay đổi</button>
+              <Button variant="secondary" onClick={() => { setDraft(neuron); setEditing(false); }}>Hủy</Button>
+              <Button variant="primary" onClick={saveDraft}><Check size={16} />Lưu thay đổi</Button>
             </div>
           ) : null}
         </div>
@@ -275,8 +276,8 @@ export function NeuronDetailPanel({
             <p className="mt-2 text-sm">Neuron và các liên kết liên quan sẽ bị xóa.</p>
             {deleteError ? <p className="mt-4 border-2 border-red-700 bg-red-100 p-3 text-sm font-bold text-red-800">{deleteError}</p> : null}
             <div className="mt-6 flex justify-end gap-3">
-              <button type="button" disabled={deleting} onClick={() => setShowDeleteConfirm(false)} className="brutal-button">Hủy</button>
-              <button type="button" disabled={deleting} onClick={confirmDelete} className="brutal-button brutal-button-danger"><Trash2 size={16} />{deleting ? "Đang xóa..." : "Xóa neuron"}</button>
+              <Button variant="secondary" disabled={deleting} onClick={() => setShowDeleteConfirm(false)}>Hủy</Button>
+              <Button variant="danger" disabled={deleting} onClick={confirmDelete}><Trash2 size={16} />{deleting ? "Đang xóa..." : "Xóa neuron"}</Button>
             </div>
           </section>
         </div>
@@ -299,9 +300,9 @@ function NeuronDetailHeader({ neuron, draftColor, connectionCount, editing, onTo
     <header className="neuron-workspace-header">
       <div className="flex min-w-0 items-center gap-3">
         {onToggleSidebar ? (
-          <button type="button" className="nm-icon-btn nm-toolbar-menu" aria-label="Menu" onClick={onToggleSidebar}>
+          <Button variant="icon" className="nm-toolbar-menu" aria-label="Menu" onClick={onToggleSidebar}>
             <Menu size={18} />
-          </button>
+          </Button>
         ) : null}
         <span className="nm-neuron-swatch" style={{ backgroundColor: editing ? draftColor : neuron.color }} />
         <div className="min-w-0">
@@ -310,9 +311,9 @@ function NeuronDetailHeader({ neuron, draftColor, connectionCount, editing, onTo
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap justify-end gap-2">
-        <button type="button" onClick={onEdit} className="nm-btn nm-btn-secondary">{editing ? "Lưu" : "Chỉnh sửa"}</button>
-        <button type="button" onClick={onDelete} className="nm-btn nm-btn-danger">Xóa</button>
-        <button type="button" onClick={onClose} className="nm-icon-btn" aria-label="Đóng"><X size={17} /></button>
+        <Button variant="secondary" size="sm" onClick={onEdit}>{editing ? "Lưu" : "Chỉnh sửa"}</Button>
+        <Button variant="danger" size="sm" onClick={onDelete}>Xóa</Button>
+        <Button variant="icon" onClick={onClose} aria-label="Đóng"><X size={17} /></Button>
       </div>
     </header>
   );
@@ -423,9 +424,9 @@ function NeuronDocuments({
           <h3>Tài liệu</h3>
           <p>Các tài liệu liên quan đến neuron.</p>
         </div>
-        <button type="button" className="nm-btn nm-btn-primary" onClick={onPickDocuments}>
+        <Button variant="primary" size="sm" onClick={onPickDocuments}>
           <Plus size={15} /> Thêm tài liệu
-        </button>
+        </Button>
       </header>
       <div
         onDragOver={(event) => event.preventDefault()}
@@ -441,9 +442,9 @@ function NeuronDocuments({
           <div className="nm-docs-empty">
             <p>Chưa có tài liệu</p>
             <p>Thêm tài liệu để lưu cùng neuron này.</p>
-            <button type="button" className="nm-btn nm-btn-primary" onClick={onPickDocuments}>
+            <Button variant="primary" size="sm" onClick={onPickDocuments}>
               <Plus size={15} /> Thêm tài liệu
-            </button>
+            </Button>
           </div>
         ) : null}
         {!loading && documents.length ? (
@@ -455,12 +456,12 @@ function NeuronDocuments({
                   <strong className="block truncate">{document.originalName}</strong>
                   <small>{formatType(document)} • {formatFileSize(document.size)}</small>
                 </span>
-                <button type="button" onClick={() => onDownloadDocument(document)} disabled={Boolean(downloadingId)} className="nm-doc-action">
+                <Button variant="secondary" size="sm" onClick={() => onDownloadDocument(document)} disabled={Boolean(downloadingId)}>
                   {downloadingId === document.id ? "Đang tải..." : "Tải xuống"}
-                </button>
-                <button type="button" onClick={() => onDeleteDocument(document)} disabled={Boolean(deletingId)} className="nm-doc-action is-danger">
+                </Button>
+                <Button variant="danger" size="sm" onClick={() => onDeleteDocument(document)} disabled={Boolean(deletingId)}>
                   {deletingId === document.id ? "Đang xóa..." : "Xóa"}
-                </button>
+                </Button>
               </div>
             ))}
           </div>

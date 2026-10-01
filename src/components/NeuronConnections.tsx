@@ -2,6 +2,7 @@ import { ArrowRight, Check, Link2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { Neuron, NeuronConnection, Subject } from "../types";
 import { areSameConnection } from "../utils/neuron";
+import { Button } from "./ui/Button";
 
 type NeuronConnectionsProps = {
   subject: Subject;
@@ -145,16 +146,15 @@ export function NeuronConnections({
         {duplicate ? <p className="mt-3 text-sm text-amber-300">Hai neuron này đã được liên kết.</p> : null}
         {submitError ? <p className="mt-3 text-sm text-red-300">{submitError}</p> : null}
 
-        <button
+        <Button
           type="button"
+          variant="primary"
           onClick={createConnection}
           disabled={!source || !target || duplicate || !explanation.trim() || busy}
-          className="action-3d-button mt-5 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-5"
         >
-          <span className="btn-shadow" />
-          <span className="btn-edge" />
-          <span className="btn-front"><Link2 />{busy ? "Đang tạo..." : "Tạo liên kết"}</span>
-        </button>
+          <Link2 />{busy ? "Đang tạo..." : "Tạo liên kết"}
+        </Button>
       </section>
     </main>
   );

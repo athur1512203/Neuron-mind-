@@ -8,6 +8,7 @@ import type { Neuron } from "../types";
 import { colorPresets } from "../utils/neuron";
 import { NeuronColorPicker } from "./NeuronColorPicker";
 import { MarkdownComposeEditor } from "./MarkdownComposeEditor";
+import { Button } from "./ui/Button";
 
 function getInitialLayoutPosition(seed: string, isFirstNeuron: boolean) {
   if (isFirstNeuron) return { x: 0, y: 0, z: 0 };
@@ -165,9 +166,9 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
             <h2>Tạo neuron</h2>
             <p>Thêm kiến thức mới vào không gian.</p>
           </div>
-          <button type="button" onClick={onClose} className="gs-close" aria-label="Đóng" disabled={busy}>
+          <Button variant="icon" onClick={onClose} aria-label="Đóng" disabled={busy}>
             <X size={18} />
-          </button>
+          </Button>
         </header>
 
         <div className="nm-modal-body">
@@ -240,7 +241,8 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
                       <strong className="block truncate">{file.name}</strong>
                       <small>{formatFileSize(file.size)}</small>
                     </span>
-                    <button
+                    <Button
+                      variant="toolbar"
                       type="button"
                       className="nm-pending-remove"
                       aria-label={`Gỡ ${file.name}`}
@@ -248,7 +250,7 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
                       onClick={() => setPendingFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}
                     >
                       ×
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -259,10 +261,10 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
         </div>
 
         <footer className="nm-modal-foot">
-          <button type="button" onClick={onClose} disabled={busy} className="nm-btn nm-btn-secondary">Hủy</button>
-          <button type="button" onClick={() => void handleSubmit()} disabled={busy} className="nm-btn nm-btn-primary">
+          <Button variant="secondary" onClick={onClose} disabled={busy}>Hủy</Button>
+          <Button variant="primary" onClick={() => void handleSubmit()} disabled={busy}>
             {busy ? "Đang tạo..." : "Tạo neuron"}
-          </button>
+          </Button>
         </footer>
       </section>
     </div>

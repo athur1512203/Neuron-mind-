@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
+import { Button } from "./ui/Button";
 
 const subjectColors = [
   { label: "Xanh lá", value: "#22c55e" },
@@ -56,9 +57,9 @@ export function CreateSubjectModal({ onClose, onCreate }: CreateSubjectModalProp
             <h2>Tạo không gian mới</h2>
             <p>Tạo một khu vực riêng để tổ chức các neuron.</p>
           </div>
-          <button type="button" onClick={onClose} className="gs-close" aria-label="Đóng">
+          <Button variant="icon" onClick={onClose} aria-label="Đóng">
             <X size={18} />
-          </button>
+          </Button>
         </header>
 
         <div className="nm-modal-body">
@@ -96,10 +97,10 @@ export function CreateSubjectModal({ onClose, onCreate }: CreateSubjectModalProp
         </div>
 
         <footer className="nm-modal-foot">
-          <button type="button" onClick={onClose} className="nm-btn nm-btn-secondary">Hủy</button>
-          <button type="button" onClick={handleSubmit} disabled={busy} className="nm-btn nm-btn-primary">
+          <Button variant="secondary" onClick={onClose}>Hủy</Button>
+          <Button variant="primary" onClick={handleSubmit} disabled={busy}>
             {busy ? "Đang tạo..." : "Tạo không gian"}
-          </button>
+          </Button>
         </footer>
       </section>
     </div>

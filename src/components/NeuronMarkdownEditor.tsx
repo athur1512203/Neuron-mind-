@@ -11,6 +11,7 @@ import {
   type EditorRange,
 } from "../markdown/editMarkdown";
 import { neuronMarkdownStore } from "../markdown/neuronMarkdownStore";
+import { Button } from "./ui/Button";
 
 type SaveStatus = "saved" | "unsaved" | "saving" | "error";
 
@@ -158,26 +159,26 @@ export function NeuronMarkdownEditor({ neuronId }: { neuronId: string }) {
     <section className={`neuron-md ${fullscreen ? "is-fullscreen" : ""}`}>
       <header className="neuron-md-head">
         <h3>Note Markdown</h3>
-        <button type="button" className="brutal-button brutal-button-compact" onClick={() => setFullscreen((open) => !open)}>
+        <Button variant="secondary" size="sm" onClick={() => setFullscreen((open) => !open)}>
           {fullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
           {fullscreen ? "Thu nhỏ" : "Xem toàn màn hình"}
-        </button>
+        </Button>
       </header>
 
       <div className="neuron-md-split">
         <div className="neuron-md-pane">
           <div className="neuron-md-toolbar" role="toolbar" aria-label="Markdown">
             {TOOLBAR.map((action) => (
-              <button
+              <Button
                 key={action.title}
+                variant="toolbar"
                 type="button"
                 title={action.title}
-                className="neuron-md-tool"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => applyRange(action.apply)}
               >
                 {action.label}
-              </button>
+              </Button>
             ))}
           </div>
           <textarea
@@ -232,9 +233,9 @@ export function NeuronMarkdownEditor({ neuronId }: { neuronId: string }) {
         <p>Markdown • {value.length} ký tự</p>
         <div className="neuron-md-foot-actions">
           <span role="status">{STATUS_LABEL[status]}</span>
-          <button type="button" className="brutal-button brutal-button-primary" disabled={status === "saving" || status === "saved"} onClick={() => void save()}>
+          <Button variant="primary" disabled={status === "saving" || status === "saved"} onClick={() => void save()}>
             Lưu
-          </button>
+          </Button>
         </div>
       </footer>
     </section>

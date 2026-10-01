@@ -3,6 +3,7 @@ import { useState } from "react";
 import { apiMessage } from "../api/client";
 import { login, register } from "../api/auth";
 import type { ApiUser } from "../api/mappers";
+import { Button } from "./ui/Button";
 
 type AuthScreenProps = {
   onAuthenticated: (user: ApiUser) => void;
@@ -89,15 +90,17 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
 
           {error ? <p className="nm-auth-error" role="alert">{error}</p> : null}
 
-          <button type="submit" disabled={busy} className="nm-auth-submit">
+          <Button type="submit" variant="primary" size="lg" disabled={busy} className="nm-auth-submit">
             {busy ? "Đang xử lý..." : isLogin ? "Đăng nhập" : "Tạo tài khoản"}
-          </button>
+          </Button>
         </form>
 
         <p className="nm-auth-switch">
           {isLogin ? "Chưa có tài khoản? " : "Đã có tài khoản? "}
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             disabled={busy}
             onClick={() => {
               setMode(isLogin ? "register" : "login");
@@ -105,7 +108,7 @@ export function AuthScreen({ onAuthenticated }: AuthScreenProps) {
             }}
           >
             {isLogin ? "Đăng ký" : "Đăng nhập"}
-          </button>
+          </Button>
         </p>
       </section>
     </main>

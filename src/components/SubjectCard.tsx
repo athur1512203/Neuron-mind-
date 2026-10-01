@@ -1,6 +1,7 @@
 import { ArrowRight, BrainCircuit, MoreVertical } from "lucide-react";
 import { useState, type MouseEvent } from "react";
 import type { Subject } from "../types";
+import { Button } from "./ui/Button";
 
 const workspacePalette = ["#ADD8E6", "#FFF2C7", "#DDF8E8", "#EDE2FF", "#FFE1E7"];
 
@@ -50,8 +51,9 @@ export function SubjectCard({ subject, onOpen, onDelete }: SubjectCardProps) {
       </div>
 
       <div className="nm-workspace-menu" onClick={stopCardOpen} onKeyDown={(event) => event.stopPropagation()}>
-        <button
+        <Button
           type="button"
+          variant="icon"
           aria-label="Tùy chọn không gian"
           className="nm-workspace-menu-button"
           onClick={(event) => {
@@ -60,11 +62,13 @@ export function SubjectCard({ subject, onOpen, onDelete }: SubjectCardProps) {
           }}
         >
           <MoreVertical size={16} />
-        </button>
+        </Button>
         {menuOpen ? (
           <div className="nm-workspace-menu-list">
-            <button
+            <Button
               type="button"
+              variant="danger"
+              size="sm"
               onClick={(event) => {
                 stopCardOpen(event);
                 setMenuOpen(false);
@@ -72,7 +76,7 @@ export function SubjectCard({ subject, onOpen, onDelete }: SubjectCardProps) {
               }}
             >
               Xóa không gian
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>

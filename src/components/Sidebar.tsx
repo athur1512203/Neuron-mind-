@@ -2,6 +2,7 @@ import { Brain, MoreHorizontal, Plus, Search, Settings, Share2 } from "lucide-re
 import { useState } from "react";
 import type { Subject, ViewName } from "../types";
 import { CreateSubjectModal } from "./CreateSubjectModal";
+import { Button } from "./ui/Button";
 
 type SidebarProps = {
   activeView: ViewName;
@@ -69,9 +70,9 @@ export function Sidebar({
       <div className="sidebar-spaces">
         <div className="sidebar-spaces-head">
           <span>Không gian</span>
-          <button type="button" className="sidebar-add" aria-label="Tạo không gian" onClick={() => setShowCreate(true)}>
+          <Button variant="icon" className="sidebar-add" aria-label="Tạo không gian" onClick={() => setShowCreate(true)}>
             <Plus size={14} />
-          </button>
+          </Button>
         </div>
         <ul className="sidebar-space-list">
           {subjects.map((subject) => {
@@ -96,13 +97,13 @@ export function Sidebar({
         <span className="sidebar-avatar" aria-hidden="true">{initials}</span>
         <span className="sidebar-user-name">{userLabel}</span>
         <div className="sidebar-user-menu">
-          <button type="button" className="sidebar-more" aria-label="Tài khoản" onClick={() => setMenuOpen((openMenu) => !openMenu)}>
+          <Button variant="icon" className="sidebar-more" aria-label="Tài khoản" onClick={() => setMenuOpen((openMenu) => !openMenu)}>
             <MoreHorizontal size={16} />
-          </button>
+          </Button>
           {menuOpen ? (
             <div className="sidebar-popover">
               <button type="button" onClick={() => { setMenuOpen(false); onNavigate("settings"); }}>Cài đặt</button>
-              <button type="button" onClick={() => { setMenuOpen(false); onLogout(); }}>Đăng xuất</button>
+              <Button variant="ghost" size="sm" type="button" onClick={() => { setMenuOpen(false); onLogout(); }}>Đăng xuất</Button>
             </div>
           ) : null}
         </div>

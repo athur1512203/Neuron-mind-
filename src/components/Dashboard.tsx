@@ -5,6 +5,7 @@ import { CreateSubjectModal } from "./CreateSubjectModal";
 import { DashboardStats } from "./DashboardStats";
 import { RecentActivity } from "./RecentActivity";
 import { SubjectCard } from "./SubjectCard";
+import { Button } from "./ui/Button";
 
 type DashboardProps = {
   subjects: Subject[];
@@ -46,10 +47,10 @@ export function Dashboard({
             <h1>Dashboard</h1>
             <p>Quản lý các không gian và mạng lưới thông tin của bạn.</p>
           </div>
-          <button type="button" onClick={openCreate} className="nm-create-button">
+          <Button variant="primary" onClick={openCreate}>
             <Plus size={18} />
             Tạo không gian
-          </button>
+          </Button>
         </header>
 
         {loading ? <p className="nm-status">Đang tải không gian...</p> : null}
@@ -80,10 +81,10 @@ export function Dashboard({
             {isEmpty ? (
               <div className="nm-workspace-empty">
                 <p className="nm-empty">Chưa có Không gian.</p>
-                <button type="button" onClick={openCreate} className="nm-create-button">
+                <Button variant="primary" onClick={openCreate}>
                   <Plus size={18} />
                   Tạo không gian
-                </button>
+                </Button>
               </div>
             ) : (
               <div className="nm-workspace-grid">
@@ -122,13 +123,12 @@ export function Dashboard({
             <p>Toàn bộ neuron và liên kết trong không gian này cũng sẽ bị xóa.</p>
             {deleteError ? <p className="nm-status-error">{deleteError}</p> : null}
             <div className="nm-delete-actions">
-              <button type="button" disabled={deleteBusy} onClick={() => setPendingDelete(null)} className="nm-ghost-button">
+              <Button variant="secondary" disabled={deleteBusy} onClick={() => setPendingDelete(null)}>
                 Hủy
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="danger"
                 disabled={deleteBusy}
-                className="nm-create-button"
                 onClick={async () => {
                   setDeleteBusy(true);
                   setDeleteError("");
@@ -143,7 +143,7 @@ export function Dashboard({
                 }}
               >
                 {deleteBusy ? "Đang xóa..." : "Xóa không gian"}
-              </button>
+              </Button>
             </div>
           </section>
         </div>

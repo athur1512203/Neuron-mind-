@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import { Button } from "./ui/Button";
 
 type WorkspaceEmptyProps = {
   loading?: boolean;
@@ -15,10 +16,10 @@ export function WorkspaceEmpty({ loading, error, onCreateSpace }: WorkspaceEmpty
         <>
           <h1>Chưa có không gian</h1>
           <p>Tạo không gian đầu tiên để bắt đầu.</p>
-          <button type="button" className="nm-btn nm-btn-primary" onClick={onCreateSpace}>
+          <Button variant="primary" onClick={onCreateSpace}>
             <Plus size={16} />
             Tạo không gian
-          </button>
+          </Button>
         </>
       ) : null}
     </main>
