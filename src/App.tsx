@@ -4,7 +4,7 @@ import { apiMessage, clearToken, getToken, setUnauthorizedHandler } from "./api/
 import { createConnection as createConnectionApi, deleteConnection as deleteConnectionApi } from "./api/connections";
 import { createNeuron as createNeuronApi, deleteNeuron as deleteNeuronApi, updateNeuron as updateNeuronApi } from "./api/neurons";
 import type { SearchResult } from "./api/search";
-import { createSubject as createSubjectApi, deleteSubject as deleteSubjectApi, getSubjectGraph, listSubjects } from "./api/subjects";
+import { createSubject as createSubjectApi, deleteSubject as deleteSubjectApi, getSubjectGraph, listSubjects, updateSubject as updateSubjectApi } from "./api/subjects";
 import type { ApiUser } from "./api/mappers";
 import { AuthScreen } from "./components/AuthScreen";
 import { CreateSubjectModal } from "./components/CreateSubjectModal";
@@ -274,21 +274,29 @@ export default function App() {
     setPendingNeuronSelection(null);
   };
 
+  const renameSubject = async (subjectId: string, name: string) => {
+    const updated = await updateSubjectApi(subjectId, { name });
+    setSubjects((current) => current.map((subject) => (subject.id === subjectId ? { ...subject, name: updated.name } : subject)));
+  };
+
   const removeSubject = async (subjectId: string) => {
     try {
       await deleteSubjectApi(subjectId);
-      setSubjects((current) => current.filter((subject) => subject.id !== subjectId));
+      let remaining: Subject[] = [];
+      setSubjects((current) => {
+        remaining = current.filter((subject) => subject.id !== subjectId);
+        return remaining;
+      });
       setNeurons((current) => current.filter((neuron) => neuron.subjectId !== subjectId));
       setConnections((current) => current.filter((connection) => connection.subjectId !== subjectId));
       if (selectedSubjectId === subjectId) {
-        const remaining = subjects.filter((subject) => subject.id !== subjectId);
         setSelectedSubjectId(remaining[0]?.id ?? null);
         setActiveView("map");
         setSelection(null);
         setPendingNeuronSelection(null);
       }
     } catch (error) {
-      setSubjectsError(apiMessage(error, "Không xóa được môn học."));
+      setSubjectsError(apiMessage(error, "Không xóa được không gian."));
       throw error;
     }
   };
@@ -559,6 +567,8 @@ export default function App() {
             onSearch={() => setSearchOpen(true)}
             onSelectSpace={openSubject}
             onCreateSubject={createSubject}
+            onRenameSubject={renameSubject}
+            onDeleteSubject={removeSubject}
             onLogout={logout}
           />
         ) : null}

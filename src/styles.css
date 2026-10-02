@@ -3101,6 +3101,10 @@ textarea:focus-visible {
   overflow: hidden;
 }
 
+.nm-shell .app-sidebar.is-space-menu {
+  overflow: visible;
+}
+
 .nm-shell-body {
   display: flex;
   flex: 1 1 auto;
@@ -3203,6 +3207,10 @@ textarea:focus-visible {
   flex-direction: column;
 }
 
+.sidebar-spaces.is-menu-open {
+  overflow: visible;
+}
+
 .sidebar-spaces-head {
   display: flex;
   align-items: center;
@@ -3216,34 +3224,38 @@ textarea:focus-visible {
   text-transform: uppercase;
 }
 
-.sidebar-add {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border: 0;
-  border-radius: 6px;
+.sidebar-add.nm-button {
+  width: auto;
+  height: auto;
   background: transparent;
-  color: var(--nm-text);
-}
-
-.sidebar-add:hover {
-  background: var(--nm-milk);
-  color: var(--nm-text);
 }
 
 .sidebar-space-list {
   margin: 0;
   padding: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   list-style: none;
+}
+
+.sidebar-spaces.is-menu-open .sidebar-space-list {
+  overflow: visible;
+}
+
+.sidebar-space-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
 .sidebar-space {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  width: auto;
   padding: 8px 10px;
   border: 0;
   border-radius: 9px;
@@ -3264,7 +3276,68 @@ textarea:focus-visible {
   font-weight: 600;
 }
 .sidebar-space-dot { width: 8px; height: 8px; border-radius: 99px; flex-shrink: 0; }
-.sidebar-space-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-space-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.sidebar-space-more {
+  flex: 0 0 auto;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar-space-row:hover .sidebar-space-more,
+.sidebar-space-row:focus-within .sidebar-space-more,
+.sidebar-space-row.is-menu-open .sidebar-space-more {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.nm-shell:not([data-layout="desktop"]) .sidebar-space-more {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar-space-menu {
+  position: absolute;
+  top: calc(100% - 2px);
+  right: 4px;
+  z-index: 40;
+  min-width: 168px;
+  max-width: calc(100% - 8px);
+  padding: 6px;
+  border-radius: 10px;
+  background: #FFFCF8;
+  box-shadow: 0 8px 24px rgba(25, 21, 21, 0.16);
+}
+
+.sidebar-space-menu.is-up {
+  top: auto;
+  bottom: calc(100% - 2px);
+}
+
+.sidebar-space-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #191515;
+  text-align: left;
+  font-size: 13px;
+}
+
+.sidebar-space-menu button:hover {
+  background: var(--nm-milk);
+}
+
+.sidebar-space-menu button.is-danger {
+  color: var(--nm-primary);
+}
+
+.sidebar-space-menu button.is-danger:hover {
+  background: #F6E8E6;
+  color: var(--nm-primary-dark);
+}
 
 .sidebar-user {
   display: flex;
@@ -4537,8 +4610,16 @@ textarea:focus-visible {
   width: 100%;
 }
 
-.sidebar-add.nm-button--icon .nm-button-front,
+.sidebar-add.nm-button--primary .nm-button-front {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: #fff;
+  border-radius: 8px;
+}
+
 .sidebar-more.nm-button--icon .nm-button-front,
+.sidebar-space-more.nm-button--icon .nm-button-front,
 .nm-workspace-menu-button.nm-button--icon .nm-button-front {
   width: 28px;
   height: 28px;
