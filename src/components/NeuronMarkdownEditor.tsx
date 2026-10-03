@@ -341,6 +341,7 @@ export function NeuronMarkdownEditor({
             ref={textareaRef}
             aria-label="Markdown editor"
             className="neuron-md-editor"
+            dir="ltr"
             spellCheck={false}
             placeholder="Bắt đầu viết ghi chú bằng Markdown..."
             value={value}

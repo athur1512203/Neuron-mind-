@@ -1591,6 +1591,9 @@ textarea:focus-visible {
   font-family: inherit;
   font-size: 13px;
   line-height: 1.6;
+  direction: ltr;
+  unicode-bidi: plaintext;
+  text-align: left;
   resize: none;
   outline: none;
 }
