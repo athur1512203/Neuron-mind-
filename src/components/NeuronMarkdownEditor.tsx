@@ -80,7 +80,8 @@ export function NeuronMarkdownEditor({
   const [documentMenuOpen, setDocumentMenuOpen] = useState(false);
   const [relationMenuOpen, setRelationMenuOpen] = useState(false);
   const [relationQuery, setRelationQuery] = useState("");
-  const selectionRef = useRef<{ start: number; end: number } | null>(null);
+  const savedSelectionRef = useRef<{ start: number; end: number } | null>(null);
+  const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null);
   const loadRequestRef = useRef(0);
 
   const relationTargets = neurons
@@ -89,11 +90,11 @@ export function NeuronMarkdownEditor({
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current;
-    const selection = selectionRef.current;
+    const selection = pendingSelectionRef.current;
     if (!textarea || !selection) return;
     textarea.focus();
     textarea.setSelectionRange(selection.start, selection.end);
-    selectionRef.current = null;
+    pendingSelectionRef.current = null;
   }, [value]);
 
   useEffect(() => {
@@ -111,6 +112,8 @@ export function NeuronMarkdownEditor({
     setDocumentMenuOpen(false);
     setRelationMenuOpen(false);
     setRelationQuery("");
+    savedSelectionRef.current = null;
+    pendingSelectionRef.current = null;
 
     void getNeuronMarkdown(neuronId, controller.signal)
       .then((note) => {
@@ -147,19 +150,19 @@ export function NeuronMarkdownEditor({
     const textarea = textareaRef.current;
     if (!textarea) return;
     const next = transform(currentRange(textarea, value));
-    selectionRef.current = { start: next.start, end: next.end };
+    pendingSelectionRef.current = { start: next.start, end: next.end };
     markUnsaved(next.value, value, true);
   };
 
   const rememberSelection = () => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-    selectionRef.current = { start: textarea.selectionStart, end: textarea.selectionEnd };
+    savedSelectionRef.current = { start: textarea.selectionStart, end: textarea.selectionEnd };
   };
 
   const rangeFromRememberedSelection = (): EditorRange => {
     const textarea = textareaRef.current;
-    const selection = selectionRef.current;
+    const selection = savedSelectionRef.current;
     if (selection) {
       return { value, start: selection.start, end: selection.end };
     }
@@ -169,7 +172,8 @@ export function NeuronMarkdownEditor({
 
   const insertFromRememberedSelection = (transform: (range: EditorRange) => EditorRange) => {
     const next = transform(rangeFromRememberedSelection());
-    selectionRef.current = { start: next.start, end: next.end };
+    pendingSelectionRef.current = { start: next.start, end: next.end };
+    savedSelectionRef.current = { start: next.start, end: next.end };
     markUnsaved(next.value, value, true);
     setLinkMenuOpen(false);
     setDocumentMenuOpen(false);
