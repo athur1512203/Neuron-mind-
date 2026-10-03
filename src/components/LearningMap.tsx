@@ -1,7 +1,25 @@
-import { Link2, Maximize2, Menu, Minimize2, Plus, RotateCcw, Search, ... } from "lucide-react";
+import {
+  Link2,
+  Maximize2,
+  Menu,
+  Minimize2,
+  Plus,
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+} from "lucide-react";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { LayoutMode } from "../hooks/useMediaQuery";
-import type { Neuron, NeuronConnection, Position3D, Selection, Subject } from "../types";
+import type {
+  Neuron,
+  NeuronConnection,
+  Position3D,
+  Selection,
+  Subject,
+} from "../types";
+
 import { getConnectionCount } from "../utils/neuron";
 import { BottomSheet } from "./BottomSheet";
 import { CreateNeuronModal } from "./CreateNeuronModal";
