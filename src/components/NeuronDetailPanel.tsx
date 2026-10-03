@@ -6,15 +6,20 @@ import {
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
+import { downloadDocument, listDocuments, type DocumentMeta } from "../api/documents";
+import { getNeuronMarkdown } from "../api/markdownNotes";
+import { neuronMarkdownStore } from "../markdown/neuronMarkdownStore";
 import type { Neuron, NeuronConnection } from "../types";
 import { NeuronColorPicker } from "./NeuronColorPicker";
 import { NeuronMarkdownEditor } from "./NeuronMarkdownEditor";
+import { NeuronMarkdownPreview } from "./NeuronMarkdownPreview";
 import { Button } from "./ui/Button";
 
-export type DetailTab = "markdown" | "custom";
+export type DetailTab = "content" | "markdown" | "custom";
 
 type NeuronDetailPanelProps = {
   neuron: Neuron;
+  subjectId: string;
   connections: NeuronConnection[];
   neurons: Neuron[];
   connectionCount: number;
@@ -23,6 +28,7 @@ type NeuronDetailPanelProps = {
   onDelete: (neuronId: string) => Promise<void>;
   onUpdate: (neuron: Neuron) => void;
   onSelectNeuron: (neuronId: string) => void;
+  onCreateConnection: (sourceId: string, targetId: string) => void | Promise<void>;
 
   onToggleSidebar?: () => void;
   initialTab?: DetailTab;
@@ -30,14 +36,21 @@ type NeuronDetailPanelProps = {
 
 export function NeuronDetailPanel({
   neuron,
+  subjectId,
+  neurons,
+  connections,
   connectionCount,
   onClose,
   onDelete,
   onUpdate,
+  onSelectNeuron,
+  onCreateConnection,
   onToggleSidebar,
-  initialTab = "markdown",
+  initialTab = "content",
 }: NeuronDetailPanelProps) {
   const [tab, setTab] = useState<DetailTab>(initialTab);
+  const [markdownContent, setMarkdownContent] = useState(() => neuronMarkdownStore.getSaved(neuron.id));
+  const [documents, setDocuments] = useState<DocumentMeta[]>([]);
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(neuron);
@@ -50,11 +63,50 @@ export function NeuronDetailPanel({
     setTab(initialTab);
     setEditing(false);
     setDraft(neuron);
+    setMarkdownContent(neuronMarkdownStore.getSaved(neuron.id));
 
     setShowDeleteConfirm(false);
     setDeleting(false);
     setDeleteError("");
   }, [initialTab, neuron.id]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    setMarkdownContent(neuronMarkdownStore.getSaved(neuron.id));
+
+    void getNeuronMarkdown(neuron.id, controller.signal)
+      .then((note) => {
+        const content = note.content ?? "";
+        neuronMarkdownStore.applyServer(neuron.id, content);
+        setMarkdownContent(neuronMarkdownStore.getSaved(neuron.id));
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [neuron.id]);
+
+  useEffect(() => {
+    let active = true;
+
+    setDocuments([]);
+    listDocuments(subjectId)
+      .then((items) => {
+        if (active) setDocuments(items);
+      })
+      .catch(() => {
+        if (active) setDocuments([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [subjectId]);
 
   useEffect(() => {
     if (!editing) {
@@ -124,10 +176,25 @@ export function NeuronDetailPanel({
             tab === "markdown" ? " is-markdown" : ""
           }`}
         >
+          {tab === "content" ? (
+            <NeuronContent
+              value={markdownContent}
+              neurons={neurons}
+              documents={documents}
+              onSelectNeuron={onSelectNeuron}
+              onOpenDocument={(document) => void downloadDocument(document)}
+            />
+          ) : null}
+
           {tab === "markdown" ? (
             <NeuronMarkdownEditor
               key={neuron.id}
               neuronId={neuron.id}
+              neurons={neurons}
+              documents={documents}
+              connections={connections}
+              onSaved={setMarkdownContent}
+              onEnsureConnection={(targetNeuronId) => onCreateConnection(neuron.id, targetNeuronId)}
             />
           ) : null}
 
@@ -319,8 +386,12 @@ function NeuronTabs({
     label: string;
   }> = [
     {
+      id: "content",
+      label: "Nội dung",
+    },
+    {
       id: "markdown",
-      label: "Ghi chú",
+      label: "Note Markdown",
     },
     {
       id: "custom",
@@ -346,6 +417,35 @@ function NeuronTabs({
         </button>
       ))}
     </nav>
+  );
+}
+
+function NeuronContent({
+  value,
+  neurons,
+  documents,
+  onSelectNeuron,
+  onOpenDocument,
+}: {
+  value: string;
+  neurons: Neuron[];
+  documents: DocumentMeta[];
+  onSelectNeuron: (neuronId: string) => void;
+  onOpenDocument: (document: DocumentMeta) => void;
+}) {
+  return (
+    <section className="neuron-content-read">
+      <div className="neuron-md-preview">
+        <NeuronMarkdownPreview
+          value={value}
+          emptyLabel="Chưa có nội dung."
+          neurons={neurons}
+          documents={documents}
+          onSelectNeuron={onSelectNeuron}
+          onOpenDocument={onOpenDocument}
+        />
+      </div>
+    </section>
   );
 }
 

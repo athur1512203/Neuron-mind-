@@ -302,6 +302,7 @@ export function LearningMap({
             >
               <NeuronDetailPanel
                 neuron={selectedNeuron}
+                subjectId={subject.id}
                 neurons={neurons}
                 connections={connections}
                 connectionCount={getConnectionCount(selectedNeuron.id, connections)}
@@ -309,6 +310,7 @@ export function LearningMap({
                 onDelete={onDeleteNeuron}
                 onUpdate={onUpdateNeuron}
                 onSelectNeuron={focusNeuron}
+                onCreateConnection={onCreateConnection}
                 onToggleSidebar={onToggleSidebar}
                 initialTab={detailInitialTab}
               />

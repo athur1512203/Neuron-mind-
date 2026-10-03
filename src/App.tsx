@@ -39,7 +39,7 @@ export default function App() {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
   const [pendingNeuronSelection, setPendingNeuronSelection] = useState<{ neuronId: string; tab: DetailTab } | null>(null);
-  const [detailInitialTab, setDetailInitialTab] = useState<DetailTab>("markdown");
+  const [detailInitialTab, setDetailInitialTab] = useState<DetailTab>("content");
   const [searchOpen, setSearchOpen] = useState(false);
   const [spaceModalOpen, setSpaceModalOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -141,7 +141,7 @@ export default function App() {
           restoredGraph.current = null;
         }
         if (navigation.selectedNeuronId) {
-          setDetailInitialTab("markdown");
+          setDetailInitialTab("content");
           setSelection({ type: "neuron", id: navigation.selectedNeuronId });
         } else {
           setSelection(null);
@@ -302,7 +302,7 @@ export default function App() {
     }
   };
 
-  const openNeuron = (subjectId: string, neuronId: string, tab: DetailTab = "markdown") => {
+  const openNeuron = (subjectId: string, neuronId: string, tab: DetailTab = "content") => {
     setSelectedSubjectId(subjectId);
     setActiveView("map");
     setMapExpanded(false);
@@ -322,7 +322,7 @@ export default function App() {
       return;
     }
     if (!result.neuronId) return;
-    const tab: DetailTab = result.type === "markdown" ? "markdown" : "markdown";
+    const tab: DetailTab = result.type === "markdown" ? "markdown" : "content";
     openNeuron(result.subjectId, result.neuronId, tab);
   };
 
@@ -332,7 +332,7 @@ export default function App() {
     setMapExpanded(false);
     setSelection(null);
     setPendingNeuronSelection(null);
-    setDetailInitialTab("markdown");
+    setDetailInitialTab("content");
     setNotice(null);
   };
 
@@ -344,6 +344,7 @@ export default function App() {
     }
 
     setMapExpanded(false);
+    setDetailInitialTab("content");
     setSelection({ type: "neuron", id: neuronId });
     setNotice(null);
   };

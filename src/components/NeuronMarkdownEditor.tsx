@@ -1,9 +1,10 @@
 import { Maximize2, Minimize2 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { NeuronMarkdownPreview } from "./NeuronMarkdownPreview";
+import type { DocumentMeta } from "../api/documents";
 import { getNeuronMarkdown, saveNeuronMarkdown } from "../api/markdownNotes";
 import {
   insertCodeBlock,
+  insertAtCursor,
   insertLink,
   insertTable,
   prefixSelectedLines,
@@ -11,6 +12,8 @@ import {
   type EditorRange,
 } from "../markdown/editMarkdown";
 import { neuronMarkdownStore } from "../markdown/neuronMarkdownStore";
+import type { Neuron, NeuronConnection } from "../types";
+import { areSameConnection } from "../utils/neuron";
 import { Button } from "./ui/Button";
 
 type SaveStatus = "saved" | "unsaved" | "saving" | "error";
@@ -33,7 +36,6 @@ const TOOLBAR: ToolbarAction[] = [
   { label: "❝", title: "Blockquote — Trích dẫn", apply: (range) => prefixSelectedLines(range, "> ") },
   { label: "`", title: "Inline code — Mã trong dòng", apply: (range) => wrapMarkers(range, "`") },
   { label: "{ }", title: "Code block — Khối mã", apply: insertCodeBlock },
-  { label: "Link", title: "Link — Chèn liên kết", apply: insertLink },
   { label: "Table", title: "Table — Chèn bảng", apply: insertTable },
 ];
 
@@ -44,11 +46,27 @@ const STATUS_LABEL: Record<SaveStatus, string> = {
   error: "Lưu thất bại",
 };
 
+type NeuronMarkdownEditorProps = {
+  neuronId: string;
+  neurons?: Neuron[];
+  documents?: DocumentMeta[];
+  connections?: NeuronConnection[];
+  onSaved?: (content: string) => void;
+  onEnsureConnection?: (targetNeuronId: string) => void | Promise<void>;
+};
+
 function currentRange(textarea: HTMLTextAreaElement, value: string): EditorRange {
   return { value, start: textarea.selectionStart, end: textarea.selectionEnd };
 }
 
-export function NeuronMarkdownEditor({ neuronId }: { neuronId: string }) {
+export function NeuronMarkdownEditor({
+  neuronId,
+  neurons = [],
+  documents = [],
+  connections = [],
+  onSaved,
+  onEnsureConnection,
+}: NeuronMarkdownEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState(() => neuronMarkdownStore.getWorking(neuronId));
   const [savedValue, setSavedValue] = useState(() => neuronMarkdownStore.getSaved(neuronId));
@@ -58,8 +76,16 @@ export function NeuronMarkdownEditor({ neuronId }: { neuronId: string }) {
   const [fullscreen, setFullscreen] = useState(false);
   const [past, setPast] = useState<string[]>([]);
   const [future, setFuture] = useState<string[]>([]);
+  const [linkMenuOpen, setLinkMenuOpen] = useState(false);
+  const [documentMenuOpen, setDocumentMenuOpen] = useState(false);
+  const [relationMenuOpen, setRelationMenuOpen] = useState(false);
+  const [relationQuery, setRelationQuery] = useState("");
   const selectionRef = useRef<{ start: number; end: number } | null>(null);
   const loadRequestRef = useRef(0);
+
+  const relationTargets = neurons
+    .filter((neuron) => neuron.id !== neuronId)
+    .filter((neuron) => neuron.name.toLowerCase().includes(relationQuery.trim().toLowerCase()));
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current;
@@ -81,6 +107,10 @@ export function NeuronMarkdownEditor({ neuronId }: { neuronId: string }) {
     setPast([]);
     setFuture([]);
     setFullscreen(false);
+    setLinkMenuOpen(false);
+    setDocumentMenuOpen(false);
+    setRelationMenuOpen(false);
+    setRelationQuery("");
 
     void getNeuronMarkdown(neuronId, controller.signal)
       .then((note) => {
@@ -121,6 +151,43 @@ export function NeuronMarkdownEditor({ neuronId }: { neuronId: string }) {
     markUnsaved(next.value, value, true);
   };
 
+  const rememberSelection = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    selectionRef.current = { start: textarea.selectionStart, end: textarea.selectionEnd };
+  };
+
+  const rangeFromRememberedSelection = (): EditorRange => {
+    const textarea = textareaRef.current;
+    const selection = selectionRef.current;
+    if (selection) {
+      return { value, start: selection.start, end: selection.end };
+    }
+    if (textarea) return currentRange(textarea, value);
+    return { value, start: value.length, end: value.length };
+  };
+
+  const insertFromRememberedSelection = (transform: (range: EditorRange) => EditorRange) => {
+    const next = transform(rangeFromRememberedSelection());
+    selectionRef.current = { start: next.start, end: next.end };
+    markUnsaved(next.value, value, true);
+    setLinkMenuOpen(false);
+    setDocumentMenuOpen(false);
+    setRelationMenuOpen(false);
+  };
+
+  const insertDocumentToken = (documentId: string) => {
+    insertFromRememberedSelection((range) => insertAtCursor(range, `[[document:${documentId}]]`, `[[document:${documentId}]]`.length));
+  };
+
+  const insertRelationToken = (targetNeuronId: string) => {
+    insertFromRememberedSelection((range) => insertAtCursor(range, `[[relation:${targetNeuronId}]]`, `[[relation:${targetNeuronId}]]`.length));
+    const exists = connections.some((connection) =>
+      areSameConnection(neuronId, targetNeuronId, connection.sourceNeuronId, connection.targetNeuronId),
+    );
+    if (!exists) void onEnsureConnection?.(targetNeuronId);
+  };
+
   const save = async () => {
     if (status === "saving") return;
     setStatus("saving");
@@ -130,6 +197,7 @@ export function NeuronMarkdownEditor({ neuronId }: { neuronId: string }) {
       neuronMarkdownStore.commit(neuronId, snapshot);
       setSavedValue(snapshot);
       setStatus("saved");
+      onSaved?.(snapshot);
     } catch {
       setStatus("error");
     }
@@ -165,7 +233,7 @@ export function NeuronMarkdownEditor({ neuronId }: { neuronId: string }) {
         </Button>
       </header>
 
-      <div className="neuron-md-split">
+      <div className="neuron-md-split neuron-md-editor-layout">
         <div className="neuron-md-pane">
           <div className="neuron-md-toolbar" role="toolbar" aria-label="Markdown">
             {TOOLBAR.map((action) => (
@@ -180,6 +248,94 @@ export function NeuronMarkdownEditor({ neuronId }: { neuronId: string }) {
                 {action.label}
               </Button>
             ))}
+            <span className="neuron-md-tool-group">
+              <Button
+                variant="toolbar"
+                type="button"
+                title="Link — Tài liệu hoặc website"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  rememberSelection();
+                  setLinkMenuOpen((open) => !open);
+                  setDocumentMenuOpen(false);
+                  setRelationMenuOpen(false);
+                }}
+              >
+                Link
+              </Button>
+              {linkMenuOpen ? (
+                <span className="neuron-md-popover">
+                  <button
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      setLinkMenuOpen(false);
+                      setDocumentMenuOpen((open) => !open);
+                    }}
+                  >
+                    Tài liệu
+                  </button>
+                  <button
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => insertFromRememberedSelection(insertLink)}
+                  >
+                    Website
+                  </button>
+                </span>
+              ) : null}
+              {documentMenuOpen ? (
+                <span className="neuron-md-popover neuron-md-picker">
+                  {documents.length ? documents.map((document) => (
+                    <button
+                      key={document.id}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => insertDocumentToken(document.id)}
+                    >
+                      {document.originalName}
+                    </button>
+                  )) : <span className="neuron-md-picker-empty">Chưa có tài liệu.</span>}
+                </span>
+              ) : null}
+            </span>
+            <span className="neuron-md-tool-group">
+              <Button
+                variant="toolbar"
+                type="button"
+                title="Liên kết — Chèn relation tới neuron"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  rememberSelection();
+                  setRelationMenuOpen((open) => !open);
+                  setLinkMenuOpen(false);
+                  setDocumentMenuOpen(false);
+                }}
+              >
+                Liên kết
+              </Button>
+              {relationMenuOpen ? (
+                <span className="neuron-md-popover neuron-md-picker">
+                  <input
+                    value={relationQuery}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onChange={(event) => setRelationQuery(event.target.value)}
+                    placeholder="Tìm neuron..."
+                    aria-label="Tìm neuron để liên kết"
+                  />
+                  {relationTargets.length ? relationTargets.map((neuron) => (
+                    <button
+                      key={neuron.id}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => insertRelationToken(neuron.id)}
+                    >
+                      {neuron.name}
+                    </button>
+                  )) : <span className="neuron-md-picker-empty">Không có neuron phù hợp.</span>}
+                </span>
+              ) : null}
+            </span>
           </div>
           <textarea
             ref={textareaRef}
@@ -189,6 +345,9 @@ export function NeuronMarkdownEditor({ neuronId }: { neuronId: string }) {
             placeholder="Bắt đầu viết ghi chú bằng Markdown..."
             value={value}
             onChange={(event) => markUnsaved(event.target.value, value, true)}
+            onSelect={rememberSelection}
+            onClick={rememberSelection}
+            onKeyUp={rememberSelection}
             onKeyDown={(event) => {
               const modifier = event.ctrlKey || event.metaKey;
               if (!modifier) return;
@@ -220,12 +379,6 @@ export function NeuronMarkdownEditor({ neuronId }: { neuronId: string }) {
               }
             }}
           />
-        </div>
-        <div className="neuron-md-pane neuron-md-preview-wrap">
-          <p className="neuron-md-preview-label">Xem trước</p>
-          <div className="neuron-md-preview">
-            <NeuronMarkdownPreview value={value} />
-          </div>
         </div>
       </div>
 

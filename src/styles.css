@@ -1478,12 +1478,20 @@ textarea:focus-visible {
   grid-template-columns: 1fr 1fr;
 }
 
+.neuron-md-editor-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .neuron-md-pane {
   display: flex;
   min-width: 0;
   min-height: 0;
   flex-direction: column;
   border-right: 2px solid #111111;
+}
+
+.neuron-md-editor-layout .neuron-md-pane {
+  border-right: 0;
 }
 
 .neuron-md-pane:last-child {
@@ -1498,6 +1506,61 @@ textarea:focus-visible {
   padding: 8px 10px;
   border-bottom: 2px solid #111111;
   background: #fffdf3;
+}
+
+.neuron-md-tool-group {
+  position: relative;
+  display: inline-flex;
+}
+
+.neuron-md-popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  left: 0;
+  display: grid;
+  min-width: 180px;
+  max-width: min(320px, 80vw);
+  gap: 4px;
+  border: 2px solid #111111;
+  border-radius: 7px;
+  background: #fffdf3;
+  padding: 6px;
+  box-shadow: 4px 4px 0 #111111;
+}
+
+.neuron-md-picker {
+  max-height: 260px;
+  overflow: auto;
+}
+
+.neuron-md-popover button,
+.neuron-md-popover input,
+.neuron-md-picker-empty {
+  width: 100%;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  padding: 7px 8px;
+  color: #191515;
+  font-size: 12px;
+  font-weight: 750;
+  text-align: left;
+}
+
+.neuron-md-popover button {
+  cursor: pointer;
+}
+
+.neuron-md-popover button:hover,
+.neuron-md-popover button:focus-visible {
+  background: rgba(45, 140, 240, 0.12);
+}
+
+.neuron-md-popover input {
+  border: 1px solid #111111;
+  background: #ffffff;
+  outline: none;
 }
 
 .neuron-md-tool {
@@ -1677,6 +1740,54 @@ textarea:focus-visible {
 .neuron-md-empty {
   color: #666666;
   font-weight: 700;
+}
+
+.neuron-md-ref-chip {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+  vertical-align: baseline;
+  border: 1px solid #111111;
+  border-radius: 999px;
+  background: #fffdf3;
+  padding: 2px 8px;
+  color: #191515;
+  font: inherit;
+  font-size: 0.92em;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.neuron-md-ref-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.neuron-md-ref-chip.is-relation {
+  border-color: #7f0d12;
+  background: #fff2f2;
+  color: #7f0d12;
+}
+
+.neuron-md-ref-chip.is-document {
+  border-color: #1d4ed8;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.neuron-md-ref-chip.is-missing {
+  border-color: #d1d5db;
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: default;
+}
+
+.neuron-content-read {
+  width: 100%;
+  min-height: 100%;
 }
 
 .neuron-md-foot p,
