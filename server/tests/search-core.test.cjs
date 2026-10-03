@@ -24,10 +24,10 @@ test('Search Core hierarchy and independent backend execution', async (t) => {
     const neuron = { id, name, subjectId: space.id, subject: space, textContent: `${name} overview`, note: '',
       keyPoints: '', memoryMethod: '', application: '', updatedAt: now, documents: [], markdownNote: null };
     const note = { id: `md-${id}`, neuronId: id, neuron, content, updatedAt: now };
-    const doc = { id: `doc-${id}`, neuronId: id, neuron, originalName: file, storedName: `stored-${id}`,
+    const doc = { id: `doc-${id}`, subjectId: space.id, subject: space, originalName: file, storedName: `stored-${id}`,
       mimeType: 'application/octet-stream', extension: '.docx', checksum: 'abc', size: 1024,
       storageKey: 'SECRET_KEY', storagePath: 'SECRET_PATH', passwordHash: 'SECRET_HASH', updatedAt: now };
-    neuron.markdownNote = note; neuron.documents.push(doc); space.neurons.push(neuron);
+    neuron.markdownNote = note; space.documents ??= []; space.documents.push(doc); space.neurons.push(neuron);
     neurons.push(neuron); notes.push(note); documents.push(doc);
   };
   const website = 'Phần giao diện do Tuấn phụ trách và phần backend do Hùng phụ trách.\nTuấn đã hoàn thành giao diện nhưng backend vẫn đang trong quá trình phát triển.\nDự án website mới phải hoàn thành trước ngày 20/10.';
@@ -150,14 +150,18 @@ test('Search Core hierarchy and independent backend execution', async (t) => {
   await t.test('O/P: exact neuron and space scope restrict all source types', async () => {
     const result = await core.execute(plan({ neuron: { id: 'marketing' }, requests: [{ id: 'all', query: 'marketing' }] }));
     assert.deepEqual(result.plan.resolvedNeuronIds, ['marketing']);
-    assert.ok(result.requests[0].results.every((item) => item.neuronId === 'marketing' && item.subjectId === 'nova'));
+    assert.ok(result.requests[0].results.every((item) => item.subjectId === 'nova' &&
+      (item.sourceType === 'DOCUMENT' ? item.neuronId === undefined : item.neuronId === 'marketing')));
   });
   await t.test('candidate loading stays inside resolved IDs and PostgreSQL narrows content', () => {
     const loads = calls.filter((call) => call.type === 'document' || call.type === 'markdownNote');
     assert.ok(loads.length);
     for (const call of loads) {
-      assert.ok(call.where.neuron.id.in.length > 0);
-      assert.ok(call.where.neuron.subjectId.in.length > 0);
+      if (call.type === 'document') assert.ok(call.where.subjectId.in.length > 0);
+      else {
+        assert.ok(call.where.neuron.id.in.length > 0);
+        assert.ok(call.where.neuron.subjectId.in.length > 0);
+      }
       assert.ok(call.where.OR || call.where.content);
       assert.ok(call.take <= 50);
     }

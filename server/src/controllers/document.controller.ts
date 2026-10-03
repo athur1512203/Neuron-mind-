@@ -4,12 +4,12 @@ import { documentMetadata, documentService } from "../services/document.service"
 import { routeParam } from "../utils/request";
 
 export async function uploadDocument(request: Request, response: Response) {
-  const document = await documentService.upload(routeParam(request, "neuronId"), request.userId, request.file);
+  const document = await documentService.upload(routeParam(request, "subjectId"), request.userId, request.file);
   response.status(201).json(documentMetadata(document));
 }
 
 export async function listDocuments(request: Request, response: Response) {
-  const documents = await documentService.list(routeParam(request, "neuronId"), request.userId);
+  const documents = await documentService.list(routeParam(request, "subjectId"), request.userId);
   response.json(documents.map(documentMetadata));
 }
 

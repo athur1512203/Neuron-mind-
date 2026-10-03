@@ -10,7 +10,7 @@ import { requireAuth } from "../middleware/auth";
 import { uploadRateLimitMiddleware } from "../middleware/rate-limit";
 import { DOCUMENT_MAX_BYTES, validateDocumentFile } from "../services/document-storage";
 import { asyncHandler } from "../utils/async-handler";
-import { requireOwnedNeuron } from "../services/ownership";
+import { requireOwnedSubject } from "../services/ownership";
 import { routeParam } from "../utils/request";
 
 const upload = multer({
@@ -26,13 +26,13 @@ const upload = multer({
   },
 });
 
-export const neuronDocumentRouter = Router({ mergeParams: true });
+export const subjectDocumentRouter = Router({ mergeParams: true });
 export const documentRouter = Router();
 
-neuronDocumentRouter.use(requireAuth);
-neuronDocumentRouter.get("/", asyncHandler(listDocuments));
-neuronDocumentRouter.post("/", uploadRateLimitMiddleware, asyncHandler(async (request, _response, next) => {
-  await requireOwnedNeuron(routeParam(request, "neuronId"), request.userId);
+subjectDocumentRouter.use(requireAuth);
+subjectDocumentRouter.get("/", asyncHandler(listDocuments));
+subjectDocumentRouter.post("/", uploadRateLimitMiddleware, asyncHandler(async (request, _response, next) => {
+  await requireOwnedSubject(routeParam(request, "subjectId"), request.userId);
   next();
 }), upload.single("file"), asyncHandler(uploadDocument));
 

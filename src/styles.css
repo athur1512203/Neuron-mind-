@@ -4021,6 +4021,71 @@ textarea:focus-visible {
   font-weight: 650;
 }
 
+.space-documents-page {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  padding: 28px 32px 40px;
+  background: var(--nm-bg);
+}
+
+.space-documents-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.space-documents-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.space-documents-title h1,
+.space-documents-title p {
+  margin: 0;
+}
+
+.space-documents-title h1 {
+  font-size: 24px;
+  font-weight: 750;
+}
+
+.space-documents-title p {
+  margin-top: 4px;
+  color: #746A65;
+  font-size: 13px;
+}
+
+.space-documents-content {
+  max-width: none;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .space-documents-page {
+    padding: 20px 16px 28px;
+  }
+
+  .space-documents-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .space-documents-header > .nm-button {
+    width: 100%;
+  }
+
+  .nm-doc-row {
+    flex-wrap: wrap;
+  }
+}
+
 .nm-docs-head p {
   margin: 4px 0 0;
   color: #746A65;

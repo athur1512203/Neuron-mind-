@@ -2,7 +2,7 @@ import { ApiError, apiRequest, apiUrl, getToken } from "./client";
 
 export type DocumentMeta = {
   id: string;
-  neuronId: string;
+  subjectId: string;
   originalName: string;
   storedName: string;
   mimeType: string;
@@ -14,7 +14,7 @@ export type DocumentMeta = {
 
 export const DOCUMENT_MAX_BYTES = 50 * 1024 * 1024;
 
-const allowedExtensions = new Set([".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".txt", ".md"]);
+const allowedExtensions = new Set([".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".txt", ".md", ".zip"]);
 
 function fileExtension(fileName: string) {
   const dotIndex = fileName.lastIndexOf(".");
@@ -33,15 +33,15 @@ export function validateDocumentFile(file: File) {
   return "";
 }
 
-export async function listDocuments(neuronId: string) {
-  return apiRequest<DocumentMeta[]>(`/neurons/${neuronId}/documents`);
+export async function listDocuments(subjectId: string) {
+  return apiRequest<DocumentMeta[]>(`/subjects/${subjectId}/documents`);
 }
 
-export async function uploadDocument(neuronId: string, file: File) {
+export async function uploadDocument(subjectId: string, file: File) {
   const formData = new FormData();
   formData.append("file", file);
 
-  return apiRequest<DocumentMeta>(`/neurons/${neuronId}/documents`, {
+  return apiRequest<DocumentMeta>(`/subjects/${subjectId}/documents`, {
     method: "POST",
     body: formData,
   });

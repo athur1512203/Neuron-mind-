@@ -129,7 +129,7 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
           continue;
         }
         try {
-          await uploadDocumentApi(neuronId, file);
+          await uploadDocumentApi(subjectId, file);
         } catch {
           remaining.push(file);
           failedCount += 1;
@@ -205,7 +205,7 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
 
           <div className="nm-field">
             <span>Tài liệu</span>
-            <p className="nm-field-hint">Thêm tài liệu liên quan đến neuron.</p>
+            <p className="nm-field-hint">Tài liệu sẽ được lưu dùng chung trong không gian hiện tại.</p>
             <button
               type="button"
               className="nm-drop"
@@ -219,13 +219,13 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
             >
               <Upload size={18} />
               <strong>Chọn hoặc kéo thả tài liệu</strong>
-              <small>PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, MD</small>
+              <small>PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX, TXT, MD, ZIP</small>
             </button>
             <input
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md"
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.zip"
               className="sr-only"
               onChange={(event) => {
                 addPendingFiles(event.target.files);

@@ -26,7 +26,7 @@ export async function requireOwnedConnection(connectionId: string, userId: strin
 
 export async function requireOwnedDocument(documentId: string, userId: string) {
   const document = await prisma.document.findFirst({
-    where: { id: documentId, neuron: { subject: { userId } } },
+    where: { id: documentId, subject: { userId } },
   });
   if (!document) throw new AppError(404, "DOCUMENT_NOT_FOUND", "Document not found");
   return document;

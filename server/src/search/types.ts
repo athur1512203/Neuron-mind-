@@ -21,7 +21,9 @@ export interface SearchPlan {
     ranking?: "context" | "navigation";
   };
 }
-export interface SearchSource extends KnowledgeSource {
+export interface SearchSource extends Omit<KnowledgeSource, "neuronId" | "provenance"> {
+  neuronId?: string;
+  provenance: Omit<KnowledgeSource["provenance"], "neuronId"> & { neuronId?: string };
   subjectName?: string;
   metadata?: { fileName?: string; mimeType?: string; fileSize?: number };
   /** Repository-only searchable aliases; never included in output DTOs. */
@@ -33,12 +35,12 @@ export interface RetrievedItem {
   sourceType: SearchSourceType;
   sourceId: string;
   subjectId: string;
-  neuronId: string;
+  neuronId?: string;
   title: string;
   heading: string;
   content: string;
   score: number;
-  provenance: KnowledgeSource["provenance"];
+  provenance: Omit<KnowledgeSource["provenance"], "neuronId"> & { neuronId?: string };
   metadata: { updatedAt: string; fileName?: string; mimeType?: string; fileSize?: number };
   subjectName?: string;
   snippet?: string;
@@ -52,7 +54,7 @@ export interface RetrievedInformation {
 export interface RetrievedChunk {
   sourceType: KnowledgeSource["type"];
   sourceId: string;
-  neuronId: string;
+  neuronId?: string;
   subjectId: string;
   title: string;
   updatedAt: string;

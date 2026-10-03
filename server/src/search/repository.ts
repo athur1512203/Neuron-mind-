@@ -24,7 +24,6 @@ export class PrismaSearchRepository implements SearchRepository {
     const contentMatches: Prisma.NeuronWhereInput[] = [
       ...neuronMatches(terms),
       { markdownNote: { is: { OR: terms.map((term) => ({ content: match(term) })) } } },
-      { documents: { some: { OR: documentMatches(terms) } } },
     ];
     const neuronFilter: Prisma.NeuronWhereInput = {
       ...(plan.neuron?.id ? { id: plan.neuron.id } : {}),
@@ -35,7 +34,10 @@ export class PrismaSearchRepository implements SearchRepository {
       where: { userId: plan.userId, ...(plan.space?.id ? { id: plan.space.id } : {}),
         ...(plan.space?.query ? { name: match(plan.space.query) } : {}),
         // Unscoped search resolves only spaces with potential content matches.
-        ...(!plan.space?.id && !plan.space?.query ? { neurons: { some: neuronFilter } } : {}) },
+        ...(!plan.space?.id && !plan.space?.query ? { OR: [
+          { neurons: { some: neuronFilter } },
+          { documents: { some: { OR: documentMatches(terms) } } },
+        ] } : {}) },
       select: { id: true }, orderBy: { id: "asc" }, take: plan.options?.maxSpaces ?? 50,
     });
     if (plan.space?.id && !subjects.length) throw new AppError(404, "SUBJECT_NOT_FOUND", "Subject not found");
@@ -49,7 +51,6 @@ export class PrismaSearchRepository implements SearchRepository {
   }
 
   async load(plan: SearchPlan, scope: ResolvedScope, request: SearchRequest): Promise<SearchSource[]> {
-    if (!scope.neuronIds.length) return [];
     const terms = termsFor(plan, request.query);
     if (!terms.length) return [];
     const types = request.sources ?? ["NEURON", "MARKDOWN", "DOCUMENT"];
@@ -57,18 +58,19 @@ export class PrismaSearchRepository implements SearchRepository {
     const neuronScope = { subject: { userId: plan.userId }, id: { in: scope.neuronIds }, subjectId: { in: scope.spaceIds } };
     const navigation = plan.options?.ranking === "navigation";
     const [neurons, notes, documents] = await Promise.all([
-      types.includes("NEURON") ? prisma.neuron.findMany({ where: { ...neuronScope, OR: neuronMatches(terms) },
+      types.includes("NEURON") && scope.neuronIds.length ? prisma.neuron.findMany({ where: { ...neuronScope, OR: neuronMatches(terms) },
         select: { ...parentSelect, textContent: true, note: true, keyPoints: true, memoryMethod: true, application: true, updatedAt: true },
         orderBy: [{ updatedAt: "desc" }, { id: "asc" }], take }) : [],
-      types.includes("MARKDOWN") ? prisma.markdownNote.findMany({ where: { neuron: neuronScope,
+      types.includes("MARKDOWN") && scope.neuronIds.length ? prisma.markdownNote.findMany({ where: { neuron: neuronScope,
         ...(navigation ? { content: match(request.query.trim()) } : { OR: [
           ...terms.map((term) => ({ content: match(term) })),
           ...terms.map((term) => ({ neuron: { name: match(term) } })),
         ] }) }, select: { id: true, neuronId: true, content: true, updatedAt: true, neuron: { select: parentSelect } },
         orderBy: [{ updatedAt: "desc" }, { id: "asc" }], take }) : [],
-      types.includes("DOCUMENT") ? prisma.document.findMany({ where: { neuron: neuronScope, OR: documentMatches(terms) },
-        select: { id: true, neuronId: true, originalName: true, mimeType: true, extension: true,
-          size: true, updatedAt: true, neuron: { select: parentSelect } }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }], take }) : [],
+      types.includes("DOCUMENT") ? prisma.document.findMany({ where: {
+        subject: { userId: plan.userId }, subjectId: { in: scope.spaceIds }, OR: documentMatches(terms) },
+        select: { id: true, subjectId: true, originalName: true, mimeType: true, extension: true,
+          size: true, updatedAt: true, subject: { select: { name: true } } }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }], take }) : [],
     ]);
     const base = (type: SearchSource["type"], id: string, neuron: { id: string; name: string; subjectId: string; subject: { name: string } }, updatedAt: Date) => ({
       type, sourceId: id, neuronId: neuron.id, subjectId: neuron.subjectId, title: neuron.name,
@@ -81,7 +83,9 @@ export class PrismaSearchRepository implements SearchRepository {
         return { ...base("NEURON", neuron.id, neuron, neuron.updatedAt), content: fields.filter(Boolean).join("\n\n") || neuron.name, snippetFields: fields };
       }),
       ...notes.map((note): SearchSource => ({ ...base("MARKDOWN", note.id, note.neuron, note.updatedAt), content: note.content, snippetFields: [note.content] })),
-      ...documents.map((doc): SearchSource => ({ ...base("DOCUMENT", doc.id, doc.neuron, doc.updatedAt), title: doc.originalName,
+      ...documents.map((doc): SearchSource => ({ type: "DOCUMENT", sourceId: doc.id, subjectId: doc.subjectId,
+        title: doc.originalName, subjectName: doc.subject.name, updatedAt: doc.updatedAt.toISOString(),
+        provenance: { sourceType: "DOCUMENT", sourceId: doc.id, subjectId: doc.subjectId },
         content: `${doc.originalName}\n${doc.mimeType}`, metadata: { fileName: doc.originalName, mimeType: doc.mimeType, fileSize: doc.size },
         searchText: [doc.originalName, doc.mimeType, doc.extension].filter(Boolean).join(" "),
         snippetFields: [doc.originalName, doc.mimeType, doc.extension] })),

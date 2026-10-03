@@ -11,6 +11,7 @@ import { createConnection, listConnections } from "../controllers/connection.con
 import { createNeuron, listNeurons } from "../controllers/neuron.controller";
 import { requireAuth } from "../middleware/auth";
 import { asyncHandler } from "../utils/async-handler";
+import { subjectDocumentRouter } from "./document.routes";
 import {
   createConnectionSchema,
   createNeuronSchema,
@@ -22,6 +23,7 @@ import {
 export const subjectRouter = Router();
 
 subjectRouter.use(requireAuth);
+subjectRouter.use("/:subjectId/documents", subjectDocumentRouter);
 subjectRouter.get("/", asyncHandler(listSubjects));
 subjectRouter.post("/", validateBody(createSubjectSchema), asyncHandler(createSubject));
 subjectRouter.get("/:subjectId/graph", asyncHandler(getGraph));

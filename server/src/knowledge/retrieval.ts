@@ -23,14 +23,15 @@ export function retrieveContext(context: KnowledgeContext, question: string): Re
 export function selectedKnowledgeContext(retrieved: RetrievedContext): KnowledgeContext {
   const sources = new Map<string, KnowledgeSource>();
   for (const chunk of retrieved.chunks) {
-    const key = JSON.stringify([chunk.sourceType, chunk.sourceId, chunk.neuronId, chunk.subjectId]);
+    const neuronId = chunk.neuronId ?? retrieved.neuronId;
+    const key = JSON.stringify([chunk.sourceType, chunk.sourceId, neuronId, chunk.subjectId]);
     const content = chunk.heading ? `## ${chunk.heading}\n${chunk.content}` : chunk.content;
     const source = sources.get(key);
     if (source) source.content += `\n\n${content}`;
-    else sources.set(key, { type: chunk.sourceType, sourceId: chunk.sourceId, neuronId: chunk.neuronId,
+    else sources.set(key, { type: chunk.sourceType, sourceId: chunk.sourceId, neuronId,
       subjectId: chunk.subjectId, title: chunk.title, content, updatedAt: chunk.updatedAt,
       provenance: { sourceType: chunk.sourceType, sourceId: chunk.sourceId,
-        neuronId: chunk.neuronId, subjectId: chunk.subjectId } });
+        neuronId, subjectId: chunk.subjectId } });
   }
   return { neuronId: retrieved.neuronId, subjectId: retrieved.subjectId, sources: [...sources.values()] };
 }

@@ -26,7 +26,7 @@ function snippet(values: string[], query: string): string | undefined {
   }
   return undefined;
 }
-const sourceKey = (source: { type?: string; sourceType?: string; sourceId: string; neuronId: string; subjectId: string }) =>
+const sourceKey = (source: { type?: string; sourceType?: string; sourceId: string; neuronId?: string; subjectId: string }) =>
   JSON.stringify([source.type ?? source.sourceType, source.sourceId, source.subjectId, source.neuronId]);
 
 /** One execution engine; navigation is a compatibility ranking profile, not another engine. */
@@ -47,7 +47,7 @@ export class SearchCore {
     const requests: RetrievedInformation["requests"] = [];
     for (const request of plan.requests) {
       const sources = request.query.trim() ? await this.repository.load(plan, scope, request) : [];
-      const allowed = sources.filter((source) => scope.spaceIds.includes(source.subjectId) && scope.neuronIds.includes(source.neuronId)
+      const allowed = sources.filter((source) => scope.spaceIds.includes(source.subjectId) && (!source.neuronId || scope.neuronIds.includes(source.neuronId))
         && (!request.sources || request.sources.includes(source.type)));
       const results = this.rank(allowed, request.query.trim(), plan.options?.maxResultsPerRequest ?? 20, plan.options?.ranking);
       for (const item of results) {

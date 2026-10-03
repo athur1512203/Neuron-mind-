@@ -31,7 +31,7 @@ test("Global Search HTTP regression with mocked Prisma", async (t) => {
     { id: "note-foreign", neuronId: "n-foreign", neuron: neurons[4], content: "alpha", updatedAt: recent },
   ];
   const document = (id, originalName, extra = {}) => ({
-    id, originalName, neuronId: "n-body", neuron: neurons[3], storedName: "opaque-filename",
+    id, originalName, subjectId: subject.id, subject, storedName: "opaque-filename",
     mimeType: "application/pdf", extension: ".pdf", checksum: "checksumneedle",
     storagePath: "private-path", storageKey: "private-key", updatedAt: old, ...extra,
   });
@@ -39,7 +39,7 @@ test("Global Search HTTP regression with mocked Prisma", async (t) => {
     document("doc-exact", "alpha", { updatedAt: recent }),
     document("doc-prefix", "alpha.pdf"),
     document("doc-meta", "Report", { mimeType: "alpha/type" }),
-    document("doc-foreign", "alpha", { neuronId: "n-foreign", neuron: neurons[4] }),
+    document("doc-foreign", "alpha", { subjectId: "foreign", subject: { ...subject, id: "foreign", userId: "bob" } }),
   ];
   const calls = [];
   mockPrisma(prisma.subject, "findMany", async ({ where, take }) => {
@@ -59,10 +59,10 @@ test("Global Search HTTP regression with mocked Prisma", async (t) => {
         return neurons.filter((row) => row.subject.userId === where.subject.userId).map(({ id }) => ({ id }));
       }
       calls.push({ type, where, take });
-      const userId = type === "neuron" ? where.subject.userId : where.neuron.subject.userId;
+      const userId = type === "neuron" ? where.subject.userId : type === "markdown" ? where.neuron.subject.userId : where.subject.userId;
       assert.equal(typeof userId, "string");
       assert.deepEqual(orderBy, [{ updatedAt: "desc" }, { id: "asc" }]);
-      return rows.filter((row) => (type === "neuron" ? row.subject : row.neuron.subject).userId === userId)
+      return rows.filter((row) => (type === "neuron" ? row.subject : type === "markdown" ? row.neuron.subject : row.subject).userId === userId)
         .filter((row) => type === "markdown" ? match(row, { content: where.content }) : where.OR.some((clause) => match(row, clause)))
         .sort((a, b) => b.updatedAt - a.updatedAt).slice(0, take);
     });
@@ -92,7 +92,9 @@ test("Global Search HTTP regression with mocked Prisma", async (t) => {
       });
       assert.equal(body.results.find((r) => r.id === "n-body").snippet, "Learn ALPHA today");
       for (const result of body.results) {
-        assert.ok(result.neuronId && result.subjectId);
+        assert.ok(result.subjectId);
+        if (result.type !== "document") assert.ok(result.neuronId);
+        else assert.equal(result.neuronId, undefined);
         assert.equal(result.rank, undefined);
       }
       const serialized = JSON.stringify(body);

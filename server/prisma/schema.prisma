@@ -26,6 +26,7 @@ model Subject {
   user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   neurons     Neuron[]
   connections NeuronConnection[]
+  documents   Document[]
 
   @@index([userId])
 }
@@ -50,7 +51,6 @@ model Neuron {
   targetConnections NeuronConnection[] @relation("ConnectionTarget")
   images            NeuronImage[]
   audio             NeuronAudio[]
-  documents         Document[]
   markdownNote      MarkdownNote?
 
   @@index([subjectId])
@@ -103,7 +103,7 @@ model NeuronAudio {
 
 model Document {
   id              String   @id @default(cuid())
-  neuronId        String
+  subjectId       String
   originalName    String
   storedName      String
   mimeType        String
@@ -115,7 +115,7 @@ model Document {
   checksum        String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  neuron          Neuron   @relation(fields: [neuronId], references: [id], onDelete: Cascade)
+  subject         Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
-  @@index([neuronId])
+  @@index([subjectId])
 }

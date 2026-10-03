@@ -1,4 +1,4 @@
-import { Link2, Maximize2, Menu, Minimize2, Minus, MousePointer2, Plus, RotateCcw, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Link2, Maximize2, Menu, Minimize2, Plus, RotateCcw, Search, ... } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { LayoutMode } from "../hooks/useMediaQuery";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject } from "../types";
@@ -236,12 +236,8 @@ export function LearningMap({
         <div className={`learning-map-layout min-h-0 flex-1 overflow-hidden ${selectedNeuron ? "has-neuron-detail" : ""}`}>
           <div className="nm-graph-stage" data-onboarding="graph">
             <div className="nm-graph-tools">
-              <Button variant="icon" title="Chọn" aria-label="Chọn" onClick={() => setConnectionMode(false)}>
-                <MousePointer2 size={16} />
-              </Button>
-              <Button variant="icon" title="Vừa khung" aria-label="Vừa khung" onClick={() => canvasRef.current?.fit()}>
-                <Maximize2 size={16} />
-              </Button>
+
+
               {selectedConnection && !connectionMode ? (
                 <Button variant="danger" size="sm" className="nm-graph-delete" onClick={() => { setDeleteError(""); setPendingDelete(selectedConnection); }}>
                   <Trash2 size={16} />Xóa liên kết
@@ -264,10 +260,7 @@ export function LearningMap({
               onCreateConnection={onCreateConnection}
               neuronSpacing={neuronSpacing}
             />
-            <div className="nm-zoom">
-              <Button variant="icon" aria-label="Phóng to" onClick={() => canvasRef.current?.zoomBy(1.15)}><Plus size={16} /></Button>
-              <Button variant="icon" aria-label="Thu nhỏ" onClick={() => canvasRef.current?.zoomBy(1 / 1.15)}><Minus size={16} /></Button>
-            </div>
+            
             <Button variant="primary" className="nm-fab-create" aria-label="Tạo neuron" data-onboarding="create-neuron" onClick={() => setShowCreateNeuron(true)}>
               <Plus size={22} />
             </Button>

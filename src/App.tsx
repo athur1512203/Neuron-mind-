@@ -14,6 +14,7 @@ import type { DetailTab } from "./components/NeuronDetailPanel";
 import { Settings } from "./components/Settings";
 import { Sidebar } from "./components/Sidebar";
 import { WorkspaceEmpty } from "./components/WorkspaceEmpty";
+import { SpaceDocuments } from "./components/SpaceDocuments";
 import type { Neuron, NeuronConnection, Position3D, Selection, Subject, ViewName } from "./types";
 import { areSameConnection } from "./utils/neuron";
 import { clearNavigation, readNavigation, restoreNavigation, saveNavigation } from "./utils/navigation";
@@ -312,15 +313,22 @@ export default function App() {
   };
 
   const openSearchResult = (result: SearchResult) => {
-    if (!result.subjectId || !result.neuronId) return;
-    const tab: DetailTab =
-      result.type === "markdown" ? "markdown" : result.type === "document" ? "documents" : "overview";
+    if (!result.subjectId) return;
+    if (result.type === "document") {
+      setSelectedSubjectId(result.subjectId);
+      setActiveView("documents");
+      setSelection(null);
+      setPendingNeuronSelection(null);
+      return;
+    }
+    if (!result.neuronId) return;
+    const tab: DetailTab = result.type === "markdown" ? "markdown" : "overview";
     openNeuron(result.subjectId, result.neuronId, tab);
   };
 
   const openSubject = (subjectId: string) => {
     setSelectedSubjectId(subjectId);
-    setActiveView("map");
+    setActiveView((current) => current === "documents" ? "documents" : "map");
     setMapExpanded(false);
     setSelection(null);
     setPendingNeuronSelection(null);
@@ -475,6 +483,9 @@ export default function App() {
         />
       );
     }
+    if (activeView === "documents" && selectedSubject) {
+      return <SpaceDocuments subject={selectedSubject} onToggleSidebar={() => setSidebarOpen((open) => !open)} />;
+    }
     if (!selectedSubject) {
       return (
         <WorkspaceEmpty
@@ -519,7 +530,7 @@ export default function App() {
   const navigate = (view: ViewName) => {
     setActiveView(view);
     if (view !== "map") setMapExpanded(false);
-    if (view !== "map" && view !== "connections" && view !== "searchCoreTest") {
+    if (view !== "map" && view !== "documents" && view !== "connections" && view !== "searchCoreTest") {
       setSelection(null);
       setPendingNeuronSelection(null);
     }

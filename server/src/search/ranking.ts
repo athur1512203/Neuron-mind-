@@ -1,8 +1,7 @@
 import { buildRetrievalTemplate, extractKnownTerms as tokens, normalize } from "../knowledge/query";
 import { chunkMarkdown } from "../knowledge/chunking";
-import type { KnowledgeSource } from "../knowledge/types";
-import type { RetrievedChunk } from "./types";
-export function rankContextSources(sources: KnowledgeSource[], question: string, limit = 3): RetrievedChunk[] {
+import type { RetrievedChunk, SearchSource } from "./types";
+export function rankContextSources(sources: SearchSource[], question: string, limit = 3): RetrievedChunk[] {
   const retrievalQuery = buildRetrievalTemplate(question);
   const query = [...new Set(retrievalQuery.knownTerms)];
   const candidates = sources

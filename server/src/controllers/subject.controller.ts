@@ -45,7 +45,7 @@ export async function updateSubject(request: Request, response: Response) {
 export async function deleteSubject(request: Request, response: Response) {
   const subject = await requireOwnedSubject(routeParam(request, "id"), request.userId);
   const documents = await prisma.document.findMany({
-    where: { neuron: { subjectId: subject.id, subject: { userId: request.userId } } },
+    where: { subjectId: subject.id, subject: { userId: request.userId } },
     select: { id: true, storageProvider: true, storageKey: true },
   });
   const deletions = await Promise.allSettled(

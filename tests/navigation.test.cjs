@@ -46,6 +46,20 @@ test('Space and selected neuron survive reload after API validation', async () =
   }
 });
 
+test('Space Documents view survives reload and keeps only the owned Space', async () => {
+  const nav = setup();
+  nav.saveNavigation('alice', { activeView: 'documents', selectedSubjectId: 'space-a', selectedNeuronId: null });
+  const result = await nav.restoreNavigation(nav.readNavigation('alice'), subjects, async (id) => {
+    assert.equal(id, 'space-a');
+    return graph;
+  });
+  assert.deepEqual(plain(result.navigation), {
+    activeView: 'documents', selectedSubjectId: 'space-a', selectedNeuronId: null,
+  });
+  assert.deepEqual(plain((await nav.restoreNavigation(result.navigation, [], () => assert.fail('No graph'))).navigation),
+    plain(nav.dashboardNavigation));
+});
+
 test('Deleted neuron restores the space without a selection', async () => {
   const nav = setup();
   const result = await nav.restoreNavigation(saved, subjects, async () => ({ ...graph, neurons: [] }));
@@ -63,9 +77,8 @@ test('Logout and account mismatch discard old navigation', () => {
   const nav = setup();
   nav.saveNavigation('alice', saved);
   assert.deepEqual(plain(nav.readNavigation('bob')), plain(nav.dashboardNavigation));
-  assert.equal(nav.storage.size, 0);
-  nav.saveNavigation('alice', saved);
-  nav.clearNavigation();
+  assert.equal(nav.storage.size, 1);
+  nav.clearNavigation('alice');
   assert.equal(nav.storage.size, 0);
   assert.deepEqual(plain(nav.readNavigation('alice')), plain(nav.dashboardNavigation));
 });
@@ -95,7 +108,7 @@ test('Closing neuron clears its ID; non-graph views clear both IDs', () => {
   nav.saveNavigation('alice', { ...saved, selectedNeuronId: null });
   assert.equal(nav.readNavigation('alice').selectedNeuronId, null);
   nav.saveNavigation('alice', { ...saved, activeView: 'settings', privateData: 'must not persist' });
-  assert.deepEqual(JSON.parse(nav.storage.get(nav.NAVIGATION_KEY)), {
+  assert.deepEqual(JSON.parse(nav.storage.get(`${nav.NAVIGATION_KEY}:alice`)), {
     userId: 'alice', activeView: 'settings', selectedSubjectId: null, selectedNeuronId: null,
   });
 });

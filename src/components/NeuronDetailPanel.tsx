@@ -6,22 +6,14 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { apiMessage } from "../api/client";
-import {
-  deleteDocument as deleteDocumentApi,
-  downloadDocument as downloadDocumentApi,
-  listDocuments as listDocumentsApi,
-  uploadDocument as uploadDocumentApi,
-  validateDocumentFile,
-  type DocumentMeta,
-} from "../api/documents";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import type { DocumentMeta } from "../api/documents";
 import type { Neuron, NeuronConnection } from "../types";
 import { NeuronColorPicker } from "./NeuronColorPicker";
 import { NeuronMarkdownEditor } from "./NeuronMarkdownEditor";
 import { Button } from "./ui/Button";
 
-export type DetailTab = "overview" | "markdown" | "documents" | "custom";
+export type DetailTab = "overview" | "markdown" | "custom";
 
 type NeuronDetailPanelProps = {
   neuron: Neuron;
@@ -54,13 +46,6 @@ export function NeuronDetailPanel({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
-  const [documentNotice, setDocumentNotice] = useState("");
-  const [documents, setDocuments] = useState<DocumentMeta[]>([]);
-  const [documentsLoading, setDocumentsLoading] = useState(false);
-  const [documentsUploading, setDocumentsUploading] = useState(false);
-  const [documentDeletingId, setDocumentDeletingId] = useState<string | null>(null);
-  const [documentDownloadingId, setDocumentDownloadingId] = useState<string | null>(null);
-  const documentInputRef = useRef<HTMLInputElement>(null);
 
   const directConnections = useMemo(
     () => connections.filter((connection) => connection.sourceNeuronId === neuron.id || connection.targetNeuronId === neuron.id),
@@ -84,30 +69,7 @@ export function NeuronDetailPanel({
     setShowDeleteConfirm(false);
     setDeleting(false);
     setDeleteError("");
-    setDocumentNotice("");
   }, [initialTab, neuron.id]);
-
-  useEffect(() => {
-    let active = true;
-
-    setDocuments([]);
-    setDocumentsLoading(true);
-    setDocumentNotice("");
-    listDocumentsApi(neuron.id)
-      .then((nextDocuments) => {
-        if (active) setDocuments(nextDocuments);
-      })
-      .catch((error) => {
-        if (active) setDocumentNotice(apiMessage(error, "Không tải được danh sách tài liệu."));
-      })
-      .finally(() => {
-        if (active) setDocumentsLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [neuron.id]);
 
   useEffect(() => {
     if (!editing) setDraft(neuron);
@@ -118,66 +80,6 @@ export function NeuronDetailPanel({
     setEditing(false);
   };
 
-  const refreshDocuments = async () => {
-    const nextDocuments = await listDocumentsApi(neuron.id);
-    setDocuments(nextDocuments);
-  };
-
-  const uploadDocuments = async (files: FileList | null) => {
-    const selectedFiles = Array.from(files ?? []);
-    if (!selectedFiles.length || documentsUploading) return;
-
-    const invalidFile = selectedFiles
-      .map((file) => ({ file, message: validateDocumentFile(file) }))
-      .find((result) => result.message);
-    if (invalidFile) {
-      setDocumentNotice(`${invalidFile.file.name}: ${invalidFile.message}`);
-      return;
-    }
-
-    setDocumentsUploading(true);
-    setDocumentNotice("");
-    try {
-      for (const file of selectedFiles) {
-        await uploadDocumentApi(neuron.id, file);
-      }
-      await refreshDocuments();
-      setDocumentNotice("Tải tài liệu thành công");
-    } catch (error) {
-      setDocumentNotice(apiMessage(error, "Không tải được tài liệu."));
-    } finally {
-      setDocumentsUploading(false);
-    }
-  };
-
-  const removeDocument = async (document: DocumentMeta) => {
-    if (documentDeletingId || !window.confirm("Bạn có chắc muốn xóa tài liệu này?")) return;
-
-    setDocumentDeletingId(document.id);
-    setDocumentNotice("");
-    try {
-      await deleteDocumentApi(document.id);
-      await refreshDocuments();
-    } catch (error) {
-      setDocumentNotice(apiMessage(error, "Không xóa được tài liệu."));
-    } finally {
-      setDocumentDeletingId(null);
-    }
-  };
-
-  const downloadDocument = async (document: DocumentMeta) => {
-    if (documentDownloadingId) return;
-
-    setDocumentDownloadingId(document.id);
-    setDocumentNotice("");
-    try {
-      await downloadDocumentApi(document);
-    } catch (error) {
-      setDocumentNotice(apiMessage(error, "Không tải xuống được tài liệu."));
-    } finally {
-      setDocumentDownloadingId(null);
-    }
-  };
 
   const confirmDelete = async () => {
     if (deleting) return;
@@ -223,20 +125,6 @@ export function NeuronDetailPanel({
             />
           ) : null}
           {tab === "markdown" ? <NeuronMarkdownEditor key={neuron.id} neuronId={neuron.id} /> : null}
-          {tab === "documents" ? (
-            <NeuronDocuments
-              notice={documentNotice}
-              documents={documents}
-              loading={documentsLoading}
-              uploading={documentsUploading}
-              deletingId={documentDeletingId}
-              downloadingId={documentDownloadingId}
-              onPickDocuments={() => documentInputRef.current?.click()}
-              onDocumentFiles={uploadDocuments}
-              onDownloadDocument={downloadDocument}
-              onDeleteDocument={removeDocument}
-            />
-          ) : null}
           {tab === "custom" ? (
             <NeuronCustom
               color={draft.color}
@@ -255,17 +143,6 @@ export function NeuronDetailPanel({
           ) : null}
         </div>
 
-        <input
-          ref={documentInputRef}
-          type="file"
-          multiple
-          accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md"
-          className="hidden"
-          onChange={(event) => {
-            void uploadDocuments(event.target.files);
-            event.target.value = "";
-          }}
-        />
       </aside>
 
       {showDeleteConfirm ? (
@@ -323,7 +200,6 @@ function NeuronTabs({ tab, onChange }: { tab: DetailTab; onChange: (tab: DetailT
   const tabs: Array<{ id: DetailTab; label: string }> = [
     { id: "overview", label: "Tổng quan" },
     { id: "markdown", label: "Note Markdown" },
-    { id: "documents", label: "Tài liệu" },
     { id: "custom", label: "Tùy chỉnh" },
   ];
   return (

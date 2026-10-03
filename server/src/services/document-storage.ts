@@ -15,6 +15,7 @@ const allowedMimeTypesByExtension: Record<string, Set<string>> = {
   ".xlsx": new Set(["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]),
   ".txt": new Set(["text/plain"]),
   ".md": new Set(["text/markdown", "text/x-markdown", "text/plain"]),
+  ".zip": new Set(["application/zip", "application/x-zip-compressed"]),
 };
 
 export const allowedDocumentExtensions = new Set(Object.keys(allowedMimeTypesByExtension));
@@ -52,7 +53,7 @@ export function validateDocumentContent(file: Express.Multer.File) {
   const starts = (hex: string) => buffer.subarray(0, hex.length / 2).equals(Buffer.from(hex, "hex"));
   const valid = extension === ".pdf" ? buffer.subarray(0, 5).toString() === "%PDF-"
     : [".doc", ".ppt", ".xls"].includes(extension) ? starts("d0cf11e0a1b11e1")
-    : [".docx", ".pptx", ".xlsx"].includes(extension) ? starts("504b0304")
+    : [".docx", ".pptx", ".xlsx", ".zip"].includes(extension) ? starts("504b0304")
     : !buffer.includes(0) && !starts("4d5a") && !starts("7f454c46");
   if (!valid) throw new AppError(400, "INVALID_FILE_CONTENT", "File content does not match the document format");
   return extension;

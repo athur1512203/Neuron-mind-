@@ -46,7 +46,7 @@ export function readNavigation(userId: string): NavigationState {
       return { ...dashboardNavigation };
     }
     if (
-      !["dashboard", "map", "connections", "settings"].includes(String(saved.activeView)) ||
+      !["dashboard", "map", "documents", "connections", "settings"].includes(String(saved.activeView)) ||
       !validId(saved.selectedSubjectId) ||
       !validId(saved.selectedNeuronId)
     ) {
@@ -63,7 +63,7 @@ export function readNavigation(userId: string): NavigationState {
 }
 
 export function saveNavigation(userId: string, state: NavigationState) {
-  const graphView = state.activeView === "map" || state.activeView === "connections";
+  const graphView = state.activeView === "map" || state.activeView === "documents" || state.activeView === "connections";
   try {
     localStorage.removeItem(NAVIGATION_KEY);
     localStorage.setItem(storageKey(userId), JSON.stringify({

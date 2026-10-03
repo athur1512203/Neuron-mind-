@@ -80,15 +80,15 @@ test('Document HTTP API with real local storage and mocked Prisma', async (t) =>
     delegate[method] = implementation;
     t.after(() => { delegate[method] = original; });
   };
-  mockPrisma(prisma.neuron, 'findFirst', async ({ where }) => where.id === 'neuron' && where.subject.userId === 'owner' ? { id: 'neuron', subjectId: 'subject' } : null);
+  mockPrisma(prisma.subject, 'findFirst', async ({ where }) => where.id === 'subject' && where.userId === 'owner' ? { id: 'subject', userId: 'owner' } : null);
   mockPrisma(prisma.document, 'create', async ({ data }) => {
     if (failCreate) throw new Error('test database failure');
     const record = { ...data, id: `doc-${records.size}`, createdAt: new Date(), updatedAt: new Date() };
     records.set(record.id, record);
     return record;
   });
-  mockPrisma(prisma.document, 'findFirst', async ({ where }) => where.neuron.subject.userId === 'owner' ? records.get(where.id) ?? null : null);
-  mockPrisma(prisma.document, 'findMany', async () => [...records.values()]);
+  mockPrisma(prisma.document, 'findFirst', async ({ where }) => where.subject.userId === 'owner' ? records.get(where.id) ?? null : null);
+  mockPrisma(prisma.document, 'findMany', async ({ where }) => [...records.values()].filter((record) => record.subjectId === where.subjectId));
   mockPrisma(prisma.document, 'delete', async ({ where }) => { const record = records.get(where.id); records.delete(where.id); return record; });
   const server = app.listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));
@@ -97,11 +97,11 @@ test('Document HTTP API with real local storage and mocked Prisma', async (t) =>
   const upload = (body = '%PDF-1.7\nhello', name = 'report.pdf', type = 'application/pdf', user = 'owner') => {
     const form = new FormData();
     form.append('file', new Blob([body], { type }), name);
-    return fetch(`${base}/neurons/neuron/documents`, { method: 'POST', headers: headers(user), body: form });
+    return fetch(`${base}/subjects/subject/documents`, { method: 'POST', headers: headers(user), body: form });
   };
   try {
     await t.test('auth and owner checks run before upload', async () => {
-      assert.equal((await fetch(`${base}/neurons/neuron/documents`, { method: 'POST' })).status, 401);
+      assert.equal((await fetch(`${base}/subjects/subject/documents`, { method: 'POST' })).status, 401);
       assert.equal((await upload(undefined, undefined, undefined, 'other')).status, 404);
       assert.equal(records.size, 0);
     });
@@ -112,6 +112,8 @@ test('Document HTTP API with real local storage and mocked Prisma', async (t) =>
       const data = await response.json(); id = data.id;
       assert.equal(data.storageKey, undefined);
       assert.equal(data.storagePath, undefined);
+      assert.equal(data.checksum, undefined);
+      assert.equal(data.subjectId, 'subject');
       const record = records.get(id);
       assert.match(record.storageKey, /^users\/owner\/workspaces\/subject\/documents\/.+\.pdf$/);
       assert.match(record.checksum, /^[a-f0-9]{64}$/);
@@ -122,12 +124,20 @@ test('Document HTTP API with real local storage and mocked Prisma', async (t) =>
       assert.equal(await download.text(), '%PDF-1.7\nhello');
       assert.equal((await fetch(`${base}/documents/${id}/download`, { headers: headers('other') })).status, 404);
       assert.equal((await fetch(`${base}/documents/${id}`, { method: 'DELETE', headers: headers('other') })).status, 404);
+      const listed = await fetch(`${base}/subjects/subject/documents`, { headers: headers() });
+      assert.equal(listed.status, 200);
+      assert.deepEqual((await listed.json()).map((item) => item.id), [id]);
+      assert.equal((await fetch(`${base}/subjects/subject/documents`, { headers: headers('other') })).status, 404);
     });
     await t.test('validation rejects empty, spoofed and unexpected uploads', async () => {
       assert.equal((await upload('')).status, 400);
       assert.equal((await upload('MZexecutable')).status, 400);
       assert.equal((await upload('script', 'bad.exe', 'application/octet-stream')).status, 400);
-      assert.equal((await fetch(`${base}/neurons/neuron/documents`, { method: 'POST', headers: headers() })).status, 400);
+      assert.equal((await fetch(`${base}/subjects/subject/documents`, { method: 'POST', headers: headers() })).status, 400);
+      const zip = await upload('PK\u0003\u0004archive', 'bundle.zip', 'application/zip');
+      assert.equal(zip.status, 201);
+      const zipDocument = await zip.json();
+      assert.equal((await fetch(`${base}/documents/${zipDocument.id}`, { method: 'DELETE', headers: headers() })).status, 204);
     });
     await t.test('upload failure and database rollback', async () => {
       failUpload = true;
@@ -191,7 +201,7 @@ test('Delete space removes owned storage objects after ownership check', async (
     where.id === 'space-1' && where.userId === 'owner' ? { id: 'space-1', userId: 'owner' } : null
   );
   prisma.document.findMany = async ({ where }) => {
-    if (where?.neuron?.subjectId !== 'space-1' || where.neuron.subject.userId !== 'owner') return [];
+    if (where?.subjectId !== 'space-1' || where.subject.userId !== 'owner') return [];
     return [{ id: 'doc-1', storageProvider: 'local', storageKey: 'users/owner/workspaces/space-1/documents/a.pdf' }];
   };
   let dbDeleted = false;

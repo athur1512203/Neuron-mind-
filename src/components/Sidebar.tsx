@@ -1,4 +1,4 @@
-import { Brain, MoreHorizontal, Plus, Search, Settings, Share2, X } from "lucide-react";
+import { Brain, FileText, MoreHorizontal, Plus, Search, Settings, Share2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { LayoutMode } from "../hooks/useMediaQuery";
@@ -158,6 +158,16 @@ export function Sidebar({
         </button>
         <button
           type="button"
+          className={`sidebar-nav-item ${activeView === "documents" ? "is-active" : ""}`}
+          disabled={!selectedSubjectId}
+          onClick={() => { onNavigate("documents"); afterChoose(); }}
+        >
+          <FileText size={18} />
+          <span className="sidebar-nav-label">Tài liệu</span>
+          <span className="sidebar-tooltip">Tài liệu không gian</span>
+        </button>
+        <button
+          type="button"
           className={`sidebar-nav-item ${activeView === "settings" ? "is-active" : ""}`}
           onClick={() => { onNavigate("settings"); afterChoose(); }}
         >
@@ -178,7 +188,7 @@ export function Sidebar({
         </div>
         <ul className="sidebar-space-list">
           {subjects.map((subject) => {
-            const active = subject.id === selectedSubjectId && (activeView === "map" || activeView === "connections");
+            const active = subject.id === selectedSubjectId && (activeView === "map" || activeView === "documents" || activeView === "connections");
             const menuOpenForSpace = spaceMenuId === subject.id;
             return (
               <li key={subject.id} className={`sidebar-space-row${menuOpenForSpace ? " is-menu-open" : ""}`} data-space-row={subject.id}>
