@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
-import { buildRetrievalTemplate } from "../knowledge/query";
+import { buildRetrievalTemplate, normalize } from "../knowledge/query";
 import { AppError } from "../utils/app-error";
 import type { SearchPlan, SearchSource, SearchRequest } from "./types";
 
@@ -18,8 +18,32 @@ const neuronMatches = (terms: string[]): Prisma.NeuronWhereInput[] => terms.flat
 const documentMatches = (terms: string[]): Prisma.DocumentWhereInput[] => terms.flatMap((term) => documentFields.map((field) => ({ [field]: match(term) })));
 const parentSelect = { id: true, name: true, subjectId: true, subject: { select: { name: true } } } as const;
 
+// Names only: NFC/case/punctuation normalization must agree with context retrieval.
+// Page metadata rather than fetching content or truncating before relevance ordering.
+async function resolveNames<T extends { id: string; name: string }>(
+  fetchPage: (cursor?: string) => Promise<T[]>, query: string | undefined, limit: number,
+): Promise<T[]> {
+  const normalized = normalize(query ?? "");
+  const terms = normalized.split(/\s+/).filter(Boolean);
+  const score = (name: string) => !query ? 1 : name === query ? 4 :
+    normalize(name) === normalized && normalized ? 3 :
+    terms.length && terms.some((term) => normalize(name).includes(term)) ? 2 : 0;
+  let candidates: T[] = [], cursor: string | undefined;
+  while (true) {
+    const page = await fetchPage(cursor);
+    candidates = [...candidates, ...page.filter((row) => score(row.name) > 0)]
+      .sort((a, b) => score(b.name) - score(a.name) || a.id.localeCompare(b.id)).slice(0, limit);
+    if (page.length < 500) break;
+    cursor = page[page.length - 1].id;
+  }
+  return candidates;
+}
+
 export class PrismaSearchRepository implements SearchRepository {
   async resolve(plan: SearchPlan): Promise<ResolvedScope> {
+    if (plan.space?.id || plan.space?.query || plan.neuron?.id || plan.neuron?.query) {
+      return this.resolveHierarchy(plan);
+    }
     const terms = [...new Set(plan.requests.flatMap((request) => termsFor(plan, request.query)))];
     const contentMatches: Prisma.NeuronWhereInput[] = [
       ...neuronMatches(terms),
@@ -50,7 +74,37 @@ export class PrismaSearchRepository implements SearchRepository {
     return { spaceIds, neuronIds: neurons.map((neuron) => neuron.id) };
   }
 
+  private async resolveHierarchy(plan: SearchPlan): Promise<ResolvedScope> {
+    const hasSpace = Boolean(plan.space?.id || plan.space?.query);
+    const hasNeuron = Boolean(plan.neuron?.id || plan.neuron?.query);
+    const maxSpaces = plan.options?.maxSpaces ?? 50;
+    const maxNeurons = plan.options?.maxNeurons ?? 200;
+    const spaces = hasSpace ? await resolveNames((cursor) => prisma.subject.findMany({
+      where: { userId: plan.userId, ...(plan.space?.id ? { id: plan.space.id } : {}) },
+      select: { id: true, name: true }, orderBy: { id: "asc" }, take: 500,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    }), plan.space?.id ? undefined : plan.space?.query, maxSpaces) : [];
+    if (plan.space?.id && !spaces.length) throw new AppError(404, "SUBJECT_NOT_FOUND", "Subject not found");
+    let spaceIds = spaces.map((space) => space.id);
+    // A failed name scope must never fall back to global content retrieval.
+    if (hasSpace && !spaceIds.length) return { spaceIds: [], neuronIds: [] };
+    if (!hasNeuron && !plan.requests.some((request) => request.query.trim())) return { spaceIds, neuronIds: [] };
+    const terms = [...new Set(plan.requests.flatMap((request) => termsFor(plan, request.query)))];
+    const neurons = await resolveNames((cursor) => prisma.neuron.findMany({
+      where: { subject: { userId: plan.userId }, ...(hasSpace ? { subjectId: { in: spaceIds } } : {}),
+        ...(plan.neuron?.id ? { id: plan.neuron.id } : {}),
+        ...(!hasNeuron ? { OR: [ ...neuronMatches(terms),
+          { markdownNote: { is: { OR: terms.map((term) => ({ content: match(term) })) } } } ] } : {}),
+      }, select: { id: true, name: true, subjectId: true }, orderBy: { id: "asc" }, take: 500,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    }), plan.neuron?.id ? undefined : plan.neuron?.query, maxNeurons);
+    if (plan.neuron?.id && !neurons.length) throw new AppError(404, "NEURON_NOT_FOUND", "Neuron not found");
+    if (!hasSpace) spaceIds = [...new Set(neurons.map((neuron) => neuron.subjectId))].slice(0, maxSpaces);
+    return { spaceIds, neuronIds: neurons.filter((neuron) => spaceIds.includes(neuron.subjectId)).map((neuron) => neuron.id) };
+  }
+
   async load(plan: SearchPlan, scope: ResolvedScope, request: SearchRequest): Promise<SearchSource[]> {
+    if (!scope.spaceIds.length || ((plan.neuron?.id || plan.neuron?.query) && !scope.neuronIds.length)) return [];
     const terms = termsFor(plan, request.query);
     if (!terms.length) return [];
     const types = request.sources ?? ["NEURON", "MARKDOWN", "DOCUMENT"];

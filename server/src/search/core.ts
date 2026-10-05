@@ -10,7 +10,7 @@ const planSchema = z.object({
   userId: z.string().trim().min(1).max(200), space: scopeSchema.optional(), neuron: scopeSchema.optional(),
   requests: z.array(z.object({ id: z.string().trim().min(1).max(100), query: z.string().max(4000),
     sources: z.array(z.enum(["NEURON", "MARKDOWN", "DOCUMENT"])).min(1).max(3).optional(),
-    purpose: z.string().max(1000).optional() })).min(1).max(10),
+    purpose: z.string().max(1000).optional() })).max(10),
   options: z.object({ maxSpaces: z.number().int().min(1).max(100).optional(),
     maxNeurons: z.number().int().min(1).max(500).optional(), maxResultsPerRequest: z.number().int().min(1).max(50).optional(),
     includeRelatedNeurons: z.boolean().optional(), ranking: z.enum(["context", "navigation"]).optional() }).optional(),
@@ -42,7 +42,9 @@ export class SearchCore {
     const plan = parsed.data;
     if (plan.options?.includeRelatedNeurons) throw new AppError(400, "RELATED_SEARCH_NOT_SUPPORTED", "Related-neuron traversal is not enabled");
     const active = plan.requests.filter((request) => request.query.trim());
-    const scope = active.length ? await this.repository.resolve({ ...plan, requests: active }) : { spaceIds: [], neuronIds: [] };
+    const scoped = Boolean(plan.space?.id || plan.space?.query || plan.neuron?.id || plan.neuron?.query);
+    if (!scoped && !plan.requests.length) throw new AppError(400, "INVALID_SEARCH_PLAN", "A scope or search request is required");
+    const scope = active.length || scoped ? await this.repository.resolve({ ...plan, requests: active }) : { spaceIds: [], neuronIds: [] };
     const canonical = new Map<string, RetrievedInformation["sources"][number]>();
     const requests: RetrievedInformation["requests"] = [];
     for (const request of plan.requests) {

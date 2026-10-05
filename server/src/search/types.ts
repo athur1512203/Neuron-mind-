@@ -11,6 +11,7 @@ export interface SearchPlan {
   userId: string;
   space?: { id?: string; query?: string };
   neuron?: { id?: string; query?: string };
+  /** Empty for scope-only resolution; candidates are returned in plan.resolved*Ids. */
   requests: SearchRequest[];
   options?: {
     maxSpaces?: number;

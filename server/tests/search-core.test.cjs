@@ -65,12 +65,105 @@ test('Search Core hierarchy and independent backend execution', async (t) => {
           assert.equal(args.select[field], undefined);
         }
       }
-      return rows.filter((row) => matches(row, args.where)).sort((a, b) => a.id.localeCompare(b.id)).slice(0, args.take);
+      const sorted = rows.filter((row) => matches(row, args.where)).sort((a, b) => a.id.localeCompare(b.id));
+      const start = args.cursor ? sorted.findIndex((row) => row.id === args.cursor.id) + args.skip : 0;
+      return sorted.slice(start, start + args.take);
     };
   }
   const core = new SearchCore();
   const plan = (extra = {}) => ({ userId: 'alice', space: { query: 'Nova' }, neuron: { query: 'Website' },
     requests: [{ id: 'progress', query: 'backend', sources: ['MARKDOWN'] }], ...extra });
+
+  await t.test('Space-only exact, normalized and keyword queries load metadata only', async () => {
+    for (const query of ['Công ty Nova', 'CÔNG--TY NOVA', 'Nova', 'Công ty Nova'.normalize('NFD')]) {
+      const before = calls.length;
+      const result = await core.execute(plan({ space: { query }, neuron: undefined, requests: [] }));
+      assert.deepEqual(result.plan, { resolvedSpaceIds: ['nova'], resolvedNeuronIds: [] });
+      assert.deepEqual(result.requests, []);
+      assert.deepEqual(result.sources, []);
+      assert.ok(calls.slice(before).every((call) => call.type === 'subject' && !call.select.neurons));
+    }
+  });
+  await t.test('scope-only Neuron resolution disambiguates identical names by Space', async () => {
+    const before = calls.length;
+    const result = await core.execute(plan({ space: { id: 'personal' }, requests: [] }));
+    assert.deepEqual(result.plan, { resolvedSpaceIds: ['personal'], resolvedNeuronIds: ['personal-site'] });
+    assert.ok(calls.slice(before).every((call) => !['markdownNote', 'document'].includes(call.type)));
+    assert.deepEqual(calls.at(-1).where.subjectId, { in: ['personal'] });
+  });
+  await t.test('exact IDs override stale names and enforce ownership without content/name resolution', async () => {
+    const before = calls.length;
+    const result = await core.execute(plan({ space: { id: 'nova', query: 'wrong' }, neuron: { id: 'website', query: 'wrong' }, requests: [] }));
+    assert.deepEqual(result.plan, { resolvedSpaceIds: ['nova'], resolvedNeuronIds: ['website'] });
+    for (const call of calls.slice(before)) {
+      assert.equal(call.where.name, undefined);
+      assert.equal(call.where.OR, undefined);
+    }
+    const neuronOnly = await core.execute(plan({ space: undefined, neuron: { id: 'personal-site' }, requests: [] }));
+    assert.deepEqual(neuronOnly.plan, { resolvedSpaceIds: ['personal'], resolvedNeuronIds: ['personal-site'] });
+    await assert.rejects(core.execute(plan({ space: undefined, neuron: { id: 'bob-site' }, requests: [] })), { status: 404 });
+  });
+  await t.test('unmatched Space or Neuron returns empty results without content queries', async () => {
+    for (const extra of [{ space: { query: 'unmatched' } }, { neuron: { query: 'unmatched' } }]) {
+      const before = calls.length;
+      const result = await core.execute(plan(extra));
+      assert.deepEqual(result.plan.resolvedNeuronIds, []);
+      assert.deepEqual(result.requests[0].results, []);
+      assert.ok(calls.slice(before).every((call) => !['markdownNote', 'document'].includes(call.type)));
+    }
+  });
+  await t.test('foreign-only names and Markdown cannot become resolution candidates', async () => {
+    const foreignSpace = spaces[2], foreignNeuron = neurons.find((row) => row.id === 'bob-site');
+    const previousSpace = foreignSpace.name, previousNeuron = foreignNeuron.name;
+    foreignSpace.name = 'Private Space';
+    foreignNeuron.name = 'Private Neuron';
+    try {
+      const space = await core.execute(plan({ space: { query: 'Private Space' }, neuron: undefined, requests: [] }));
+      assert.deepEqual(space.plan.resolvedSpaceIds, []);
+      const neuron = await core.execute(plan({ space: undefined, neuron: { query: 'Private Neuron' }, requests: [] }));
+      assert.deepEqual(neuron.plan.resolvedNeuronIds, []);
+      const markdown = await core.execute(plan({ space: undefined, neuron: undefined,
+        requests: [{ id: 'private', query: 'BOB_PRIVATE', sources: ['MARKDOWN'] }] }));
+      assert.deepEqual(markdown.requests[0].results, []);
+    } finally {
+      foreignSpace.name = previousSpace;
+      foreignNeuron.name = previousNeuron;
+    }
+  });
+  await t.test('name priority precedes maxSpaces/maxNeurons, including metadata pagination', async () => {
+    const extraSpaces = Array.from({ length: 501 }, (_, i) => ({ id: `a-${String(i).padStart(3, '0')}`, name: 'Nova archive', userId: 'alice', neurons: [] }));
+    extraSpaces.push({ id: 'y-normalized', name: 'NOVA', userId: 'alice', neurons: [] },
+      { id: 'z-exact', name: 'Nova', userId: 'alice', neurons: [] });
+    spaces.push(...extraSpaces);
+    const extraNeurons = [
+      { id: 'a-prefix', name: 'Website archive', subjectId: 'nova', subject: spaces[0] },
+      { id: 'b-normalized', name: 'WEBSITE', subjectId: 'nova', subject: spaces[0] },
+    ];
+    neurons.push(...extraNeurons);
+    try {
+      const result = await core.execute(plan({ space: { query: 'Nova' }, neuron: undefined, requests: [], options: { maxSpaces: 2 } }));
+      assert.deepEqual(result.plan.resolvedSpaceIds, ['z-exact', 'y-normalized']);
+      const selected = await core.execute(plan({ space: { id: 'nova' }, requests: [], options: { maxNeurons: 2 } }));
+      assert.deepEqual(selected.plan.resolvedNeuronIds, ['website', 'b-normalized']);
+    } finally {
+      spaces.splice(-extraSpaces.length);
+      neurons.splice(-extraNeurons.length);
+    }
+  });
+  await t.test('content queries contain only selected Neuron IDs and owned Space IDs', async () => {
+    const before = calls.length;
+    const result = await core.execute(plan({ requests: [{ id: 'content', query: 'overview backend', sources: ['NEURON', 'MARKDOWN'] }] }));
+    assert.ok(result.requests[0].results.some((item) => item.sourceType === 'NEURON'));
+    assert.ok(result.requests[0].results.some((item) => item.sourceType === 'MARKDOWN'));
+    const loads = calls.slice(before).filter((call) => call.select.content || call.select.textContent);
+    assert.equal(loads.length, 2);
+    for (const call of loads) {
+      const where = call.type === 'markdownNote' ? call.where.neuron : call.where;
+      assert.deepEqual(where.id.in, ['website']);
+      assert.deepEqual(where.subjectId.in, ['nova']);
+      assert.equal(where.subject.userId, 'alice');
+    }
+  });
 
   await t.test('A/B/C: resolve owned space ID/query and neuron inside it', async () => {
     for (const space of [{ id: 'nova' }, { query: 'Nova' }]) {
@@ -132,7 +225,7 @@ test('Search Core hierarchy and independent backend execution', async (t) => {
   });
   await t.test('N: bounds and malformed requests fail before repository access', async () => {
     const before = calls.length;
-    for (const extra of [ { requests: [] }, { requests: Array.from({ length: 11 }, (_, i) => ({ id: String(i), query: 'backend' })) },
+    for (const extra of [ { space: undefined, neuron: undefined, requests: [] }, { requests: Array.from({ length: 11 }, (_, i) => ({ id: String(i), query: 'backend' })) },
       { requests: [{ id: 'x', query: 'x'.repeat(4001) }] }, { requests: [{ id: 'x', query: 'a' }, { id: 'x', query: 'b' }] },
       { options: { maxResultsPerRequest: 51 } }, { options: { maxSpaces: 101 } }, { options: { maxNeurons: 501 } },
       { options: { includeRelatedNeurons: true } }, { space: { id: ' ' } } ]) {
@@ -141,7 +234,8 @@ test('Search Core hierarchy and independent backend execution', async (t) => {
     assert.equal(calls.length, before);
     const empty = await core.execute(plan({ requests: [{ id: 'empty', query: '  ' }] }));
     assert.equal(empty.requests[0].found, false);
-    assert.equal(calls.length, before);
+    assert.deepEqual(empty.plan.resolvedNeuronIds, ['website']);
+    assert.ok(calls.slice(before).every((call) => ['subject', 'neuron'].includes(call.type)));
     const limited = await core.execute(plan({ neuron: undefined, requests: [{ id: 'all', query: 'phụ trách' }], options: { maxResultsPerRequest: 1, maxNeurons: 1, maxSpaces: 1 } }));
     assert.ok(limited.plan.resolvedNeuronIds.length <= 1);
     assert.ok(limited.plan.resolvedSpaceIds.length <= 1);
