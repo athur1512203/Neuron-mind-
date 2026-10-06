@@ -21,6 +21,13 @@ const graph = { subject: subjects[0], neurons: [{ id: 'neuron-b', subjectId: 'sp
 const saved = { activeView: 'map', selectedSubjectId: 'space-a', selectedNeuronId: 'neuron-b' };
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
+test('AI Agent restores without a Space or graph request', async () => {
+  const nav = setup();
+  nav.saveNavigation('alice', { activeView: 'aiAgent', selectedSubjectId: null, selectedNeuronId: null });
+  const result = await nav.restoreNavigation(nav.readNavigation('alice'), [], () => assert.fail('No graph needed'));
+  assert.deepEqual(plain(result.navigation), { activeView: 'aiAgent', selectedSubjectId: null, selectedNeuronId: null });
+});
+
 test('Dashboard survives reload without loading a graph', async () => {
   const first = setup();
   first.saveNavigation('alice', { ...saved, activeView: 'dashboard' });

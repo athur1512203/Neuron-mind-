@@ -1,4 +1,4 @@
-import { Brain, FileText, MoreHorizontal, Plus, Search, Settings, Share2, X } from "lucide-react";
+import { Bot, Brain, FileText, MoreHorizontal, Plus, Search, Settings, Share2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { LayoutMode } from "../hooks/useMediaQuery";
@@ -142,6 +142,13 @@ export function Sidebar({
       </div>
 
       <nav className="sidebar-navigation" aria-label="Điều hướng chính">
+        <button type="button" className={`sidebar-nav-item ${activeView === "aiAgent" ? "is-active" : ""}`}
+          aria-current={activeView === "aiAgent" ? "page" : undefined}
+          onClick={() => { onNavigate("aiAgent"); afterChoose(); }}>
+          <Bot size={18} aria-hidden="true" />
+          <span className="sidebar-nav-label">AI Agent</span>
+          <span className="sidebar-tooltip">AI Agent</span>
+        </button>
         <button type="button" className="sidebar-nav-item" data-onboarding="search" onClick={() => { onSearch(); afterChoose(); }}>
           <Search size={18} />
           <span className="sidebar-nav-label">Search</span>

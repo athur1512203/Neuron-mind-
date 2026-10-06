@@ -7,6 +7,7 @@ import type { SearchResult } from "./api/search";
 import { createSubject as createSubjectApi, deleteSubject as deleteSubjectApi, getSubjectGraph, listSubjects, updateSubject as updateSubjectApi } from "./api/subjects";
 import type { ApiUser } from "./api/mappers";
 import { AuthScreen } from "./components/AuthScreen";
+import { AIAgent } from "./components/AIAgent";
 import { CreateSubjectModal } from "./components/CreateSubjectModal";
 import { LearningMap } from "./components/LearningMap";
 import { GlobalSearchPalette } from "./components/GlobalSearchPalette";
@@ -469,6 +470,7 @@ export default function App() {
   };
 
   const renderView = () => {
+    if (activeView === "aiAgent") return <AIAgent key={user?.id} />;
     if (activeView === "settings") {
       return (
         <Settings
