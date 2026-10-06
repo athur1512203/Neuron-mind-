@@ -521,6 +521,10 @@ export default function App() {
         onCreateNeuron={addNeuron}
         onCreateConnection={createConnection}
         onUpdateNeuron={persistNeuron}
+        onRenameNeuron={async (id, name) => {
+          const saved = await updateNeuronApi(id, { name });
+          setNeurons((current) => current.map((neuron) => neuron.id === id ? { ...neuron, name: saved.name, updatedAt: saved.updatedAt } : neuron));
+        }}
         onDeleteNeuron={deleteNeuron}
         onUpdateConnection={() => {
           setNotice("Backend chưa có endpoint cập nhật mô tả liên kết.");

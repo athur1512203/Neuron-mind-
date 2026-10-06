@@ -15,6 +15,7 @@ import { neuronMarkdownStore } from "../markdown/neuronMarkdownStore";
 import type { Neuron, NeuronConnection } from "../types";
 import { areSameConnection } from "../utils/neuron";
 import { Button } from "./ui/Button";
+import { VisualNoteEditor } from "./VisualNoteEditor";
 
 type SaveStatus = "saved" | "unsaved" | "saving" | "error";
 
@@ -68,6 +69,8 @@ export function NeuronMarkdownEditor({
   onEnsureConnection,
 }: NeuronMarkdownEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [mode, setMode] = useState<"visual" | "markdown">("visual");
+  const savingRef = useRef(false);
   const [value, setValue] = useState(() => neuronMarkdownStore.getWorking(neuronId));
   const [savedValue, setSavedValue] = useState(() => neuronMarkdownStore.getSaved(neuronId));
   const [status, setStatus] = useState<SaveStatus>(() =>
@@ -193,7 +196,8 @@ export function NeuronMarkdownEditor({
   };
 
   const save = async () => {
-    if (status === "saving") return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setStatus("saving");
     const snapshot = value;
     try {
@@ -204,6 +208,8 @@ export function NeuronMarkdownEditor({
       onSaved?.(snapshot);
     } catch {
       setStatus("error");
+    } finally {
+      savingRef.current = false;
     }
   };
 
@@ -228,7 +234,9 @@ export function NeuronMarkdownEditor({
   };
 
   return (
-    <section className={`neuron-md ${fullscreen ? "is-fullscreen" : ""}`}>
+    <section className={`neuron-md ${fullscreen ? "is-fullscreen" : ""}`} onKeyDown={(event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); void save(); }
+    }}>
       <header className="neuron-md-head">
         <h3>Note Markdown</h3>
         <Button variant="secondary" size="sm" onClick={() => setFullscreen((open) => !open)}>
@@ -237,7 +245,13 @@ export function NeuronMarkdownEditor({
         </Button>
       </header>
 
-      <div className="neuron-md-split neuron-md-editor-layout">
+      <div className="nm-note-modes" role="group" aria-label="Chế độ ghi chú">
+        <button type="button" aria-pressed={mode === "visual"} onClick={() => setMode("visual")}>Soạn thảo</button>
+        <button type="button" aria-pressed={mode === "markdown"} onClick={() => setMode("markdown")}>Markdown</button>
+      </div>
+      {mode === "visual" ? <VisualNoteEditor value={value} onChange={(next) => markUnsaved(next, value, true)}
+        disabled={status === "saving"} onRaw={() => setMode("markdown")} neurons={neurons} documents={documents} /> :
+      <fieldset disabled={status === "saving"} className="neuron-md-split neuron-md-editor-layout" style={{ margin: 0, padding: 0, border: 0 }}>
         <div className="neuron-md-pane">
           <div className="neuron-md-toolbar" role="toolbar" aria-label="Markdown">
             {TOOLBAR.map((action) => (
@@ -385,7 +399,7 @@ export function NeuronMarkdownEditor({
             }}
           />
         </div>
-      </div>
+      </fieldset>}
 
       <footer className="neuron-md-foot">
         <p>Markdown • {value.length} ký tự</p>

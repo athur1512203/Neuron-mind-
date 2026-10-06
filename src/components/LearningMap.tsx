@@ -1,10 +1,8 @@
 import {
-  Link2,
   Maximize2,
   Menu,
   Minimize2,
   Plus,
-  RotateCcw,
   Search,
   SlidersHorizontal,
   Trash2,
@@ -46,6 +44,7 @@ type LearningMapProps = {
   onCreateNeuron: (neuron: Neuron) => Promise<Neuron>;
   onCreateConnection: (sourceId: string, targetId: string) => void | Promise<void>;
   onUpdateNeuron: (neuron: Neuron) => void;
+  onRenameNeuron: (id: string, name: string) => Promise<void>;
   onDeleteNeuron: (neuronId: string) => Promise<void>;
   onUpdateConnection: (connection: NeuronConnection) => void;
   onDeleteConnection: (connectionId: string) => Promise<void>;
@@ -78,6 +77,7 @@ export function LearningMap({
   onCreateNeuron,
   onCreateConnection,
   onUpdateNeuron,
+  onRenameNeuron,
   onDeleteNeuron,
   onUpdateConnection,
   onDeleteConnection,
@@ -209,25 +209,6 @@ export function LearningMap({
                 >
                   <SlidersHorizontal size={16} />
                 </button>
-                <button
-                  type="button"
-                  className={`nm-segmented-item${connectionMode ? " is-on" : ""}`}
-                  data-onboarding="create-connection"
-                  aria-label="Tạo liên kết"
-                  title="Tạo liên kết"
-                  onClick={() => setConnectionMode((value) => !value)}
-                >
-                  <Link2 size={16} />
-                </button>
-                <button
-                  type="button"
-                  className="nm-segmented-item"
-                  aria-label="Reset view"
-                  title="Reset View"
-                  onClick={() => setResetSignal((value) => value + 1)}
-                >
-                  <RotateCcw size={16} />
-                </button>
               </div>
               <Button variant="icon" title={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} aria-label={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} onClick={onToggleMapExpanded}>
                 {mapExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -237,12 +218,6 @@ export function LearningMap({
           <div className="nm-toolbar-actions">
             <Button variant="primary" size="sm" className="nm-create-neuron" data-onboarding="create-neuron" onClick={() => setShowCreateNeuron(true)}>
               <Plus size={16} /><span className="nm-btn-label">Tạo neuron</span>
-            </Button>
-            <Button variant={connectionMode ? "primary" : "secondary"} size="sm" data-onboarding="create-connection" onClick={() => setConnectionMode((value) => !value)}>
-              <Link2 size={16} /><span className="nm-btn-label">{connectionMode ? "Đang tạo liên kết" : "Tạo liên kết"}</span>
-            </Button>
-            <Button variant="secondary" size="sm" aria-label="Reset View" onClick={() => setResetSignal((value) => value + 1)}>
-              <RotateCcw size={16} /><span className="nm-btn-label">Reset View</span>
             </Button>
             <Button variant="icon" title={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} aria-label={mapExpanded ? "Thu nhỏ sơ đồ" : "Mở rộng sơ đồ"} onClick={onToggleMapExpanded}>
               {mapExpanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -309,6 +284,7 @@ export function LearningMap({
                 onClose={() => onSelectNeuron("")}
                 onDelete={onDeleteNeuron}
                 onUpdate={onUpdateNeuron}
+                onRename={onRenameNeuron}
                 onSelectNeuron={focusNeuron}
                 onCreateConnection={onCreateConnection}
                 onToggleSidebar={onToggleSidebar}

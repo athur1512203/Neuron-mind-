@@ -11,6 +11,7 @@ import { getNeuronMarkdown } from "../api/markdownNotes";
 import { neuronMarkdownStore } from "../markdown/neuronMarkdownStore";
 import type { Neuron, NeuronConnection } from "../types";
 import { NeuronColorPicker } from "./NeuronColorPicker";
+import { NeuronNameEditor } from "./NeuronNameEditor";
 import { NeuronMarkdownEditor } from "./NeuronMarkdownEditor";
 import { NeuronMarkdownPreview } from "./NeuronMarkdownPreview";
 import { Button } from "./ui/Button";
@@ -27,6 +28,7 @@ type NeuronDetailPanelProps = {
   onClose: () => void;
   onDelete: (neuronId: string) => Promise<void>;
   onUpdate: (neuron: Neuron) => void;
+  onRename: (id: string, name: string) => Promise<void>;
   onSelectNeuron: (neuronId: string) => void;
   onCreateConnection: (sourceId: string, targetId: string) => void | Promise<void>;
 
@@ -43,6 +45,7 @@ export function NeuronDetailPanel({
   onClose,
   onDelete,
   onUpdate,
+  onRename,
   onSelectNeuron,
   onCreateConnection,
   onToggleSidebar,
@@ -117,6 +120,7 @@ export function NeuronDetailPanel({
   const saveDraft = () => {
     onUpdate({
       ...draft,
+      name: neuron.name,
       updatedAt: new Date().toISOString(),
     });
 
@@ -150,6 +154,7 @@ export function NeuronDetailPanel({
       >
         <NeuronDetailHeader
           neuron={neuron}
+          onRename={(name) => onRename(neuron.id, name)}
           draftColor={draft.color}
           connectionCount={connectionCount}
           editing={editing}
@@ -294,6 +299,7 @@ export function NeuronDetailPanel({
 
 function NeuronDetailHeader({
   neuron,
+  onRename,
   draftColor,
   connectionCount,
   editing,
@@ -303,6 +309,7 @@ function NeuronDetailHeader({
   onClose,
 }: {
   neuron: Neuron;
+  onRename: (name: string) => Promise<void>;
   draftColor: string;
   connectionCount: number;
   editing: boolean;
@@ -335,9 +342,7 @@ function NeuronDetailHeader({
         />
 
         <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold text-[#191515]">
-            {neuron.name}
-          </h2>
+          <NeuronNameEditor key={neuron.id} name={neuron.name} onSave={onRename} />
 
           <p className="mt-0.5 text-xs text-[#746A65]">
             {connectionCount} kết nối

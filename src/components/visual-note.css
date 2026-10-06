@@ -1,0 +1,24 @@
+.nm-neuron-name-row, .nm-neuron-name form { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.nm-neuron-name button { display: grid; place-items: center; padding: 6px; border: 0; border-radius: 6px; color: var(--nm-primary); background: var(--nm-milk); flex-shrink: 0; }
+.nm-neuron-name input { min-width: 0; width: 100%; border: 1px solid var(--nm-border); border-radius: 6px; padding: 4px 8px; }
+.nm-neuron-name-error { color: var(--nm-primary); font-size: 12px; }
+.nm-note-modes { display: flex; gap: 4px; padding: 8px 16px; border-bottom: 1px solid var(--nm-border); }
+.nm-note-modes button, .nm-visual-toolbar button, .nm-visual-toolbar select { border: 1px solid var(--nm-border); background: var(--nm-surface); border-radius: 6px; padding: 5px 10px; color: var(--nm-text); }
+.nm-note-modes button[aria-pressed="true"] { background: var(--nm-milk); color: var(--nm-primary); border-color: var(--nm-primary); }
+.nm-visual-note { background: var(--nm-surface); min-width: 0; }
+.nm-visual-toolbar { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 16px; border-bottom: 1px solid var(--nm-border); }
+.nm-visual-hint { color: var(--nm-muted); font-size: 12px; padding: 0 20px; }
+.nm-visual-blocks { padding: 12px 20px 36px; }
+.nm-visual-block { position: relative; margin: 0 0 14px; border: 1px solid transparent; border-radius: 6px; overflow-wrap: anywhere; }
+.nm-visual-block:focus-within { border-color: var(--nm-border); }
+.nm-visual-block textarea { width: 100%; resize: vertical; border: 0; padding: 10px; background: var(--nm-bg); color: var(--nm-text); line-height: 1.7; }
+.nm-visual-block.is-h1 textarea { font-size: 26px; font-weight: bold; }
+.nm-visual-block.is-h2 textarea { font-size: 22px; font-weight: bold; }
+.nm-visual-block.is-h3 textarea { font-size: 18px; font-weight: bold; }
+.nm-visual-block.is-code textarea { font-family: monospace; }
+.nm-visual-rendered { padding: 8px; }
+.nm-visual-edit, .nm-visual-add { border: 0; background: var(--nm-milk); color: var(--nm-primary); padding: 5px 9px; border-radius: 5px; font-size: 12px; }
+.nm-visual-edit { margin-top: 6px; }
+.nm-slash-menu { z-index: 10; position: absolute; top: 100%; left: 0; width: 200px; max-height: 240px; overflow-y: auto; background: var(--nm-surface); border: 1px solid var(--nm-border); border-radius: 8px; box-shadow: 0 6px 20px #0001; }
+.nm-slash-menu button { display: block; width: 100%; border: 0; text-align: left; padding: 6px 12px; background: transparent; }
+.nm-slash-menu button[aria-selected="true"], .nm-slash-menu button:hover { background: var(--nm-milk); color: var(--nm-primary); }
