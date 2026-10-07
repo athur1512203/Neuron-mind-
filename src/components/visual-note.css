@@ -2,11 +2,11 @@
 .nm-neuron-name button { display: grid; place-items: center; padding: 6px; border: 0; border-radius: 6px; color: var(--nm-primary); background: var(--nm-milk); flex-shrink: 0; }
 .nm-neuron-name input { min-width: 0; width: 100%; border: 1px solid var(--nm-border); border-radius: 6px; padding: 4px 8px; }
 .nm-neuron-name-error { color: var(--nm-primary); font-size: 12px; }
-.nm-note-modes { display: flex; gap: 4px; padding: 8px 16px; border-bottom: 1px solid var(--nm-border); }
+.nm-note-modes { display: flex; flex-shrink: 0; gap: 4px; padding: 8px 16px; border-bottom: 1px solid var(--nm-border); }
 .nm-note-modes button, .nm-visual-toolbar button, .nm-visual-toolbar select { border: 1px solid var(--nm-border); background: var(--nm-surface); border-radius: 6px; padding: 5px 10px; color: var(--nm-text); }
 .nm-note-modes button[aria-pressed="true"] { background: var(--nm-milk); color: var(--nm-primary); border-color: var(--nm-primary); }
-.nm-visual-note { background: var(--nm-surface); min-width: 0; position: relative; }
-.nm-visual-toolbar { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 16px; border-bottom: 1px solid var(--nm-border); }
+.nm-visual-note { display: flex; flex-direction: column; flex: 1; min-height: 0; background: var(--nm-surface); min-width: 0; position: relative; }
+.nm-visual-toolbar { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 5px; padding: 10px 16px; border-bottom: 1px solid var(--nm-border); }
 .nm-visual-hint { color: var(--nm-muted); font-size: 12px; padding: 0 20px; }
 .nm-visual-blocks { padding: 12px 20px 36px; }
 .nm-visual-block { position: relative; margin: 0 0 14px; border: 1px solid transparent; border-radius: 6px; overflow-wrap: anywhere; }
@@ -28,8 +28,13 @@
 .nm-visual-toolbar button:hover { background: var(--nm-milk); color: var(--nm-primary); }
 .nm-visual-toolbar select { border-color: var(--nm-border); max-width: 126px; }
 .nm-note-save-status { margin-left: auto; font-size: 12px; color: var(--nm-muted); align-self: center; }
-.nm-note-page { position: relative; padding: 24px 32px 64px 54px; min-height: 340px; }
-.nm-note-document { min-height: 280px; outline: none; color: var(--nm-text); font-size: 16px; line-height: 1.75; overflow-wrap: anywhere; white-space: pre-wrap; }
+.nm-note-content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.nm-note-content, .neuron-md-editor { overscroll-behavior-y: contain; scrollbar-width: thin; scrollbar-color: #c9c2bc transparent; }
+.nm-note-content::-webkit-scrollbar, .neuron-md-editor::-webkit-scrollbar { width: 6px; height: 6px; }
+.nm-note-content::-webkit-scrollbar-thumb, .neuron-md-editor::-webkit-scrollbar-thumb { background: #c9c2bc; border-radius: 6px; }
+.nm-note-content::-webkit-scrollbar-track, .neuron-md-editor::-webkit-scrollbar-track { background: transparent; }
+.nm-note-page { position: relative; padding: 24px 32px 64px 54px; min-height: 100%; }
+.nm-note-document { min-height: 1.75em; outline: none; color: var(--nm-text); font-size: 16px; line-height: 1.75; overflow-wrap: anywhere; white-space: pre-wrap; }
 .nm-note-document p { margin: 3px 0; min-height: 1.75em; }
 .nm-note-document h1 { font-size: 28px; margin: 16px 0 5px; line-height: 1.35; }
 .nm-note-document h2 { font-size: 22px; margin: 14px 0 4px; line-height: 1.4; }

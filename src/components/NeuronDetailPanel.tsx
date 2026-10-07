@@ -49,9 +49,9 @@ export function NeuronDetailPanel({
   onSelectNeuron,
   onCreateConnection,
   onToggleSidebar,
-  initialTab = "content",
+  initialTab = "markdown",
 }: NeuronDetailPanelProps) {
-  const [tab, setTab] = useState<DetailTab>(initialTab);
+  const [tab, setTab] = useState<DetailTab>(initialTab === "content" ? "markdown" : initialTab);
   const [markdownContent, setMarkdownContent] = useState(() => neuronMarkdownStore.getSaved(neuron.id));
   const [documents, setDocuments] = useState<DocumentMeta[]>([]);
 
@@ -63,7 +63,7 @@ export function NeuronDetailPanel({
   const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
-    setTab(initialTab);
+    setTab(initialTab === "content" ? "markdown" : initialTab);
     setEditing(false);
     setDraft(neuron);
     setMarkdownContent(neuronMarkdownStore.getSaved(neuron.id));
@@ -394,12 +394,8 @@ function NeuronTabs({
     label: string;
   }> = [
     {
-      id: "content",
-      label: "Nội dung",
-    },
-    {
       id: "markdown",
-      label: "Note Markdown",
+      label: "Ghi chú",
     },
     {
       id: "custom",

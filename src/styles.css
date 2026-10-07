@@ -5236,3 +5236,30 @@ textarea:focus-visible {
     transition: none;
   }
 }
+
+/* Notes are a flat white workspace; only the document area scrolls. */
+.neuron-workspace-scroll.is-markdown { padding: 0; background: #fff; }
+.neuron-detail-panel .neuron-md { border: 0; border-radius: 0; box-shadow: none; background: #fff; }
+.neuron-md .neuron-md-head,
+.neuron-md .neuron-md-foot,
+.neuron-md .neuron-md-toolbar,
+.neuron-md .nm-note-modes,
+.neuron-md .nm-visual-note,
+.neuron-md .nm-visual-toolbar,
+.neuron-md .neuron-md-editor { background: #fff; }
+.neuron-md .nm-visual-toolbar,
+.neuron-md .neuron-md-toolbar { gap: 3px; padding: 8px 12px; align-items: center; }
+.neuron-md .nm-visual-toolbar button,
+.neuron-md .neuron-md-toolbar > .nm-button,
+.neuron-md .neuron-md-tool-group > .nm-button { width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--nm-text); box-shadow: none; }
+.neuron-md .neuron-md-toolbar .nm-button-shadow,
+.neuron-md .neuron-md-toolbar .nm-button-edge { display: none; }
+.neuron-md .neuron-md-toolbar .nm-button-front { width: 32px; height: 32px; min-height: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; box-shadow: none; transform: none; }
+.neuron-md .nm-visual-toolbar button:hover:not(:disabled),
+.neuron-md .neuron-md-toolbar .nm-button:hover:not(:disabled) { background: var(--nm-milk); color: var(--nm-primary); }
+.neuron-md .nm-visual-toolbar button:active:not(:disabled),
+.neuron-md .neuron-md-toolbar .nm-button:active:not(:disabled) { background: #eee8e3; color: var(--nm-primary); }
+.neuron-md .nm-visual-toolbar button:disabled,
+.neuron-md .neuron-md-toolbar .nm-button:disabled { opacity: .4; cursor: not-allowed; }
+.neuron-md .nm-visual-toolbar select,
+.neuron-md .neuron-md-toolbar select { height: 32px; padding: 4px 8px; border: 1px solid var(--nm-border); border-radius: 6px; background: #fff; color: var(--nm-text); font-size: 12px; }

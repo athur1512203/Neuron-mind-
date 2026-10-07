@@ -1,4 +1,4 @@
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Maximize2, Minimize2, Bold, Italic, List, ListOrdered, ListChecks, Quote, Code, CodeXml, Table, Link, Network, Undo2, Redo2 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DocumentMeta } from "../api/documents";
 import { getNeuronMarkdown } from "../api/markdownNotes";
@@ -47,6 +47,8 @@ const STATUS_LABEL: Record<SaveStatus, string> = {
   saving: "Đang lưu...",
   error: "Lưu thất bại",
 };
+
+const TOOLBAR_ICONS = { B: Bold, I: Italic, "•": List, "1.": ListOrdered, "☑": ListChecks, "❝": Quote, "`": Code, "{ }": CodeXml, Table };
 
 type NeuronMarkdownEditorProps = {
   neuronId: string;
@@ -263,7 +265,7 @@ export function NeuronMarkdownEditor({
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); void save(); }
     }}>
       <header className="neuron-md-head">
-        <h3>Note Markdown</h3>
+        <h3>Ghi chú</h3>
         <Button variant="secondary" size="sm" onClick={() => setFullscreen((open) => !open)}>
           {fullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
           {fullscreen ? "Thu nhỏ" : "Xem toàn màn hình"}
@@ -280,23 +282,33 @@ export function NeuronMarkdownEditor({
       <fieldset className="neuron-md-split neuron-md-editor-layout" style={{ margin: 0, padding: 0, border: 0 }}>
         <div className="neuron-md-pane">
           <div className="neuron-md-toolbar" role="toolbar" aria-label="Markdown">
-            {TOOLBAR.map((action) => (
+            <Button variant="toolbar" title="Hoàn tác" aria-label="Hoàn tác" disabled={!past.length} onMouseDown={(event) => event.preventDefault()} onClick={undo}><Undo2 size={17} /></Button>
+            <Button variant="toolbar" title="Làm lại" aria-label="Làm lại" disabled={!future.length} onMouseDown={(event) => event.preventDefault()} onClick={redo}><Redo2 size={17} /></Button>
+            <select aria-label="Heading" value="" onChange={(event) => { const action = TOOLBAR.find((item) => item.label === event.target.value); if (action) applyRange(action.apply); }}>
+              <option value="" disabled>Heading</option>
+              <option value="H1">Heading 1</option><option value="H2">Heading 2</option><option value="H3">Heading 3</option>
+            </select>
+            {TOOLBAR.filter((action) => !action.label.startsWith("H")).map((action) => {
+              const Icon = TOOLBAR_ICONS[action.label as keyof typeof TOOLBAR_ICONS];
+              return (
               <Button
                 key={action.title}
                 variant="toolbar"
                 type="button"
                 title={action.title}
+                aria-label={action.title}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => applyRange(action.apply)}
               >
-                {action.label}
+                <Icon size={17} />
               </Button>
-            ))}
+            ); })}
             <span className="neuron-md-tool-group">
               <Button
                 variant="toolbar"
                 type="button"
                 title="Link — Tài liệu hoặc website"
+                aria-label="Link"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
                   rememberSelection();
@@ -305,7 +317,7 @@ export function NeuronMarkdownEditor({
                   setRelationMenuOpen(false);
                 }}
               >
-                Link
+                <Link size={17} />
               </Button>
               {linkMenuOpen ? (
                 <span className="neuron-md-popover">
@@ -348,6 +360,7 @@ export function NeuronMarkdownEditor({
                 variant="toolbar"
                 type="button"
                 title="Liên kết — Chèn relation tới neuron"
+                aria-label="Liên kết Neuron"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
                   rememberSelection();
@@ -356,7 +369,7 @@ export function NeuronMarkdownEditor({
                   setDocumentMenuOpen(false);
                 }}
               >
-                Liên kết
+                <Network size={17} />
               </Button>
               {relationMenuOpen ? (
                 <span className="neuron-md-popover neuron-md-picker">

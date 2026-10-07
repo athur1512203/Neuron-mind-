@@ -4,7 +4,7 @@ import { EditorView } from "prosemirror-view";
 import { baseKeymap, setBlockType, toggleMark, chainCommands, splitBlock } from "prosemirror-commands";
 import { history, undo, redo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
-import { Plus, GripVertical, Undo2, Redo2, X } from "lucide-react";
+import { Plus, GripVertical, Undo2, Redo2, X, Bold, Italic, Underline, Highlighter, Link, Network, ListChecks, Table, Image } from "lucide-react";
 import { noteSchema, parseDocument, serializeDocument, createTable, safeLink, highlightColors } from "../markdown/documentEditor";
 import { imageTypes, loadDocumentImage, uploadDocument, validateImageFile, type DocumentMeta } from "../api/documents";
 import type { Neuron } from "../types";
@@ -116,11 +116,11 @@ export function VisualNoteEditor(props: Props) {
       {button("Hoàn tác", <Undo2 size={16} />, () => run(undo))}{button("Làm lại", <Redo2 size={16} />, () => run(redo))}
       <select aria-label="Kiểu đoạn văn" defaultValue="paragraph" disabled={busy} onChange={(event) => { const level = Number(event.target.value); run(setBlockType(level ? noteSchema.nodes.heading : noteSchema.nodes.paragraph, level ? { level } : undefined)); }}>
         <option value="paragraph">Paragraph</option><option value="1">Heading 1</option><option value="2">Heading 2</option><option value="3">Heading 3</option></select>
-      {button("In đậm", <b>B</b>, () => run(toggleMark(noteSchema.marks.strong)))}{button("In nghiêng", <i>I</i>, () => run(toggleMark(noteSchema.marks.em)))}{button("Gạch chân", <u>U</u>, () => run(toggleMark(noteSchema.marks.underline)))}
-      {button("Highlight", "Highlight", () => open("highlight"))}{button("Link", "Link", () => { setLabel(view.current?.state.doc.textBetween(view.current.state.selection.from, view.current.state.selection.to) ?? ""); setUrl(""); open("link"); })}
-      {button("Liên kết Neuron", "Liên kết", () => { setQuery(""); open("relation"); })}
-      {button("Checklist", "☑", () => insertBlock(noteSchema.nodes.check_list.create(null, noteSchema.nodes.check_item.create(null, noteSchema.nodes.paragraph.create()))))}
-      {button("Table", "Table", () => open("table"))}{button("Ảnh", "Ảnh", () => open("image"))}
+      {button("In đậm", <Bold size={17} />, () => run(toggleMark(noteSchema.marks.strong)))}{button("In nghiêng", <Italic size={17} />, () => run(toggleMark(noteSchema.marks.em)))}{button("Gạch chân", <Underline size={17} />, () => run(toggleMark(noteSchema.marks.underline)))}
+      {button("Highlight", <Highlighter size={17} />, () => open("highlight"))}{button("Link", <Link size={17} />, () => { setLabel(view.current?.state.doc.textBetween(view.current.state.selection.from, view.current.state.selection.to) ?? ""); setUrl(""); open("link"); })}
+      {button("Liên kết Neuron", <Network size={17} />, () => { setQuery(""); open("relation"); })}
+      {button("Checklist", <ListChecks size={17} />, () => insertBlock(noteSchema.nodes.check_list.create(null, noteSchema.nodes.check_item.create(null, noteSchema.nodes.paragraph.create()))))}
+      {button("Table", <Table size={17} />, () => open("table"))}{button("Ảnh", <Image size={17} />, () => open("image"))}
     </div>
     {menu && <div ref={popup} role="dialog" aria-modal="false" aria-label={`Chèn ${menu}`} className="nm-note-popover" onKeyDown={(event) => { if (event.key === "Escape" && !busy) { event.stopPropagation(); close(); opener.current?.focus(); } }}>
       <button type="button" aria-label="Đóng" className="nm-note-popup-close" disabled={busy} onClick={close}><X size={16} /></button>
@@ -144,6 +144,7 @@ export function VisualNoteEditor(props: Props) {
       {menu === "insert" && <>{[0, 1, 2, 3].map((level) => <button type="button" key={level} onClick={() => insertBlock(level ? noteSchema.nodes.heading.create({ level }) : noteSchema.nodes.paragraph.create())}>{level ? `Heading ${level}` : "Paragraph"}</button>)}</>}
       {error && <p role="alert">{error}</p>}
     </div>}
+    <div className="nm-note-content">
     <div className="nm-note-page" onMouseLeave={() => { if (!host.current?.contains(document.activeElement)) setHandle(null); }} onMouseMove={(event) => {
       const editor = view.current; if (!editor) return; const pos = editor.posAtCoords({ left: event.clientX, top: event.clientY }); if (!pos) return;
       const resolved = editor.state.doc.resolve(pos.pos); if (!resolved.depth) return; const dom = editor.nodeDOM(resolved.before(1)) as HTMLElement | null;
@@ -153,6 +154,7 @@ export function VisualNoteEditor(props: Props) {
     } }}>
       {handle && <div className="nm-note-block-controls" style={{ top: handle.top }}><button type="button" aria-label="Thêm block bên dưới" onClick={() => { blockAt.current = handle.pos; open("insert"); }}><Plus size={14} /></button><span title="Block" aria-hidden="true"><GripVertical size={15} /></span></div>}
       <div ref={host} />
+    </div>
     </div>
   </div>;
 }
