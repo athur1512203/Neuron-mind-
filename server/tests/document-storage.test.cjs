@@ -42,6 +42,9 @@ test('R2 command contract and missing-object behavior', async () => {
   await storage.upload({ key: 'key', buffer: Buffer.from('payload'), contentType: 'text/plain' });
   assert.equal(calls[0].input.Bucket, 'private-bucket');
   assert.equal(calls[0].input.ContentType, 'text/plain');
+  await storage.upload({ key: 'image.png', buffer: Buffer.from('image'), contentType: 'image/png' });
+  assert.equal(calls[1].input.ContentType, 'image/png');
+  assert.equal(calls[1].input.Key, 'image.png');
   assert.equal(await storage.exists('key'), true);
   assert.equal((await storage.getStream('key')) instanceof Readable, true);
   await storage.delete('key');
@@ -138,6 +141,27 @@ test('Document HTTP API with real local storage and mocked Prisma', async (t) =>
       assert.equal(zip.status, 201);
       const zipDocument = await zip.json();
       assert.equal((await fetch(`${base}/documents/${zipDocument.id}`, { method: 'DELETE', headers: headers() })).status, 204);
+    });
+    await t.test('images use authenticated Document storage and reject spoofed content', async () => {
+      for (const [name, type, bytes] of [
+        ['image.png', 'image/png', Buffer.from('89504e470d0a1a0a00112233', 'hex')],
+        ['image.jpg', 'image/jpeg', Buffer.from('ffd8ffe000112233', 'hex')],
+        ['image.webp', 'image/webp', Buffer.from('RIFF0000WEBPdata')],
+      ]) {
+        const response = await upload(bytes, name, type);
+        assert.equal(response.status, 201);
+        const image = await response.json();
+        assert.equal(image.mimeType, type);
+        assert.match(records.get(image.id).storageKey, /^users\/owner\/workspaces\/subject\/documents\//);
+        const download = await fetch(`${base}/documents/${image.id}/download`, { headers: headers() });
+        assert.equal(download.headers.get('content-type'), type);
+        assert.deepEqual(Buffer.from(await download.arrayBuffer()), bytes);
+        assert.equal((await fetch(`${base}/documents/${image.id}/download`)).status, 401);
+        assert.equal((await fetch(`${base}/documents/${image.id}/download`, { headers: headers('other') })).status, 404);
+        assert.equal((await fetch(`${base}/documents/${image.id}`, { method: 'DELETE', headers: headers() })).status, 204);
+        assert.equal((await upload('not an image', name, type)).status, 400);
+      }
+      assert.equal((await upload('<svg/>', 'image.svg', 'image/svg+xml')).status, 400);
     });
     await t.test('upload failure and database rollback', async () => {
       failUpload = true;

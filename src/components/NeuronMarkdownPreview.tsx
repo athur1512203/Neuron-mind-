@@ -2,6 +2,8 @@ import Markdown, { defaultUrlTransform, type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { DocumentMeta } from "../api/documents";
 import type { Neuron } from "../types";
+import { DocumentNoteImage } from "./DocumentNoteImage";
+import { highlightColors } from "../markdown/documentEditor";
 
 const TOKEN_PATTERN = /\[\[(relation|document):([^\]\s]+)\]\]/g;
 
@@ -65,6 +67,7 @@ function preprocessCustomTokens(value: string, neurons: Neuron[] = [], documents
 }
 
 function markdownUrlTransform(url: string) {
+  if (url === "nm-underline:" || /^nm-highlight:(yellow|pink|blue|green)$/.test(url)) return url;
   if (url.startsWith("relation://") || url.startsWith("document://")) return url;
   return defaultUrlTransform(url);
 }
@@ -77,6 +80,9 @@ function createMarkdownComponents({
 }: PreviewContext): Components {
   return {
   a({ href, children }) {
+    if (href === "nm-underline:") return <u>{children}</u>;
+    const color = href?.match(/^nm-highlight:(yellow|pink|blue|green)$/)?.[1] as keyof typeof highlightColors | undefined;
+    if (color) return <mark style={{ backgroundColor: highlightColors[color] }}>{children}</mark>;
     if (href?.startsWith("relation://")) {
       const neuronId = decodeTokenId(href.slice("relation://".length));
       const neuron = neurons.find((item) => item.id === neuronId);
@@ -126,6 +132,10 @@ function createMarkdownComponents({
         <table>{children}</table>
       </div>
     );
+  },
+  img({ src, alt }) {
+    if (src?.startsWith("document://")) return <DocumentNoteImage id={decodeTokenId(src.slice("document://".length))} alt={alt ?? "Ảnh"} />;
+    return <img src={src} alt={alt ?? ""} loading="lazy" referrerPolicy="no-referrer" />;
   },
   pre({ children }) {
     return <pre className="neuron-md-codeblock">{children}</pre>;

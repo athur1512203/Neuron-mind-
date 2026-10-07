@@ -5,7 +5,7 @@
 .nm-note-modes { display: flex; gap: 4px; padding: 8px 16px; border-bottom: 1px solid var(--nm-border); }
 .nm-note-modes button, .nm-visual-toolbar button, .nm-visual-toolbar select { border: 1px solid var(--nm-border); background: var(--nm-surface); border-radius: 6px; padding: 5px 10px; color: var(--nm-text); }
 .nm-note-modes button[aria-pressed="true"] { background: var(--nm-milk); color: var(--nm-primary); border-color: var(--nm-primary); }
-.nm-visual-note { background: var(--nm-surface); min-width: 0; }
+.nm-visual-note { background: var(--nm-surface); min-width: 0; position: relative; }
 .nm-visual-toolbar { display: flex; flex-wrap: wrap; gap: 5px; padding: 10px 16px; border-bottom: 1px solid var(--nm-border); }
 .nm-visual-hint { color: var(--nm-muted); font-size: 12px; padding: 0 20px; }
 .nm-visual-blocks { padding: 12px 20px 36px; }
@@ -22,3 +22,49 @@
 .nm-slash-menu { z-index: 10; position: absolute; top: 100%; left: 0; width: 200px; max-height: 240px; overflow-y: auto; background: var(--nm-surface); border: 1px solid var(--nm-border); border-radius: 8px; box-shadow: 0 6px 20px #0001; }
 .nm-slash-menu button { display: block; width: 100%; border: 0; text-align: left; padding: 6px 12px; background: transparent; }
 .nm-slash-menu button[aria-selected="true"], .nm-slash-menu button:hover { background: var(--nm-milk); color: var(--nm-primary); }
+/* Continuous document surface. ProseMirror owns caret, selections and keyboard editing. */
+.nm-visual-toolbar { padding: 8px 12px; gap: 3px; align-items: center; background: #fffdfa; }
+.nm-visual-toolbar button, .nm-visual-toolbar select { height: 32px; padding: 4px 8px; border-color: transparent; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
+.nm-visual-toolbar button:hover { background: var(--nm-milk); color: var(--nm-primary); }
+.nm-visual-toolbar select { border-color: var(--nm-border); max-width: 126px; }
+.nm-note-save-status { margin-left: auto; font-size: 12px; color: var(--nm-muted); align-self: center; }
+.nm-note-page { position: relative; padding: 24px 32px 64px 54px; min-height: 340px; }
+.nm-note-document { min-height: 280px; outline: none; color: var(--nm-text); font-size: 16px; line-height: 1.75; overflow-wrap: anywhere; white-space: pre-wrap; }
+.nm-note-document p { margin: 3px 0; min-height: 1.75em; }
+.nm-note-document h1 { font-size: 28px; margin: 16px 0 5px; line-height: 1.35; }
+.nm-note-document h2 { font-size: 22px; margin: 14px 0 4px; line-height: 1.4; }
+.nm-note-document h3 { font-size: 18px; margin: 12px 0 3px; line-height: 1.5; }
+.nm-note-document > :first-child { margin-top: 0; }
+.nm-note-document a { color: var(--nm-primary); text-decoration: underline; }
+.nm-note-document mark { color: inherit; padding: 1px 0; border-radius: 2px; }
+.nm-note-document table { width: 100%; table-layout: fixed; border-collapse: collapse; margin: 12px 0; }
+.nm-note-document td { border: 1px solid var(--nm-border); padding: 7px 10px; min-width: 32px; vertical-align: top; }
+.nm-note-document tr:first-child { background: var(--nm-milk); font-weight: 600; }
+.nm-check-list { margin: 6px 0; }
+.nm-check-item { display: flex; align-items: flex-start; gap: 9px; }
+.nm-check-item > input { margin-top: 10px; accent-color: var(--nm-primary); flex-shrink: 0; }
+.nm-check-item > div { min-width: 0; flex: 1; }
+.nm-note-image { display: inline-block; max-width: 100%; vertical-align: middle; margin: 10px 0; }
+.nm-note-image img, .nm-note-inline-image { display: block; max-width: 100%; max-height: 520px; object-fit: contain; border-radius: 5px; }
+.nm-note-raw { margin: 8px 0; padding: 8px 12px; border-left: 2px solid var(--nm-border); color: var(--nm-muted); font-size: 13px; }
+.nm-note-raw button { background: transparent; border: 0; text-align: left; color: inherit; }
+.nm-note-block-controls { position: absolute; left: 7px; display: flex; align-items: center; color: #9b918b; height: 28px; z-index: 2; }
+.nm-note-block-controls button { display: grid; place-items: center; border: 0; background: transparent; color: inherit; padding: 4px; border-radius: 4px; }
+.nm-note-block-controls button:hover { background: var(--nm-milk); color: var(--nm-primary); }
+.nm-note-page:not(:hover):not(:focus-within) .nm-note-block-controls { visibility: hidden; }
+.nm-note-popover { position: relative; margin: 0 12px; padding: 16px; padding-top: 34px; border: 1px solid var(--nm-border); border-radius: 8px; box-shadow: 0 4px 16px #3219100c; max-width: 460px; max-height: 300px; overflow-y: auto; z-index: 3; background: var(--nm-surface); }
+.nm-note-popover label { display: block; font-size: 13px; margin: 6px 0; }
+.nm-note-popover input { width: 100%; min-width: 0; padding: 6px 9px; border: 1px solid var(--nm-border); border-radius: 5px; background: var(--nm-bg); }
+.nm-note-popover button { padding: 5px 9px; margin: 3px; border: 1px solid var(--nm-border); border-radius: 5px; background: var(--nm-milk); color: var(--nm-primary); font-size: 13px; }
+.nm-note-popover > button:not(.nm-note-popup-close) { display: block; text-align: left; width: calc(100% - 6px); }
+.nm-note-popup-close { position: absolute; right: 6px; top: 3px; }
+.nm-note-popover [role=alert] { color: var(--nm-primary); font-size: 13px; }
+.nm-note-colors { display: flex; flex-wrap: wrap; gap: 4px; }
+@media (max-width: 600px) {
+  .nm-visual-toolbar { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
+  .nm-visual-toolbar > * { flex-shrink: 0; }
+  .nm-note-page { padding: 20px 12px 44px 38px; }
+  .nm-note-block-controls { left: 0; }
+  .nm-note-document { font-size: 16px; }
+  .nm-note-document td { padding: 5px; }
+}

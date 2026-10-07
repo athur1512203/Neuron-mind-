@@ -366,6 +366,7 @@ export default function App() {
       setNotice("Đã tạo liên kết");
     } catch (error) {
       setNotice(apiMessage(error, "Không tạo được liên kết."));
+      throw error;
     }
   };
 

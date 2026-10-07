@@ -14,7 +14,23 @@ export type DocumentMeta = {
 
 export const DOCUMENT_MAX_BYTES = 50 * 1024 * 1024;
 
-const allowedExtensions = new Set([".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".txt", ".md", ".zip"]);
+const allowedExtensions = new Set([".pdf", ".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx", ".txt", ".md", ".zip", ".jpg", ".jpeg", ".png", ".webp"]);
+export const imageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+export function validateImageFile(file: File) {
+  const types: Record<string, string> = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
+  return types[fileExtension(file.name)] !== file.type || !imageTypes.has(file.type) || !file.size
+    ? "Chỉ hỗ trợ ảnh JPEG, PNG hoặc WebP." : validateDocumentFile(file);
+}
+
+export async function loadDocumentImage(id: string, signal: AbortSignal): Promise<string> {
+  const response = await fetch(apiUrl(`/documents/${encodeURIComponent(id)}/download`), {
+    headers: { Authorization: `Bearer ${getToken() ?? ""}` }, signal,
+  });
+  if (!response.ok || !imageTypes.has(response.headers.get("Content-Type")?.split(";")[0] ?? "")) throw new Error("Image unavailable");
+  const blob = await response.blob();
+  if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+  return URL.createObjectURL(blob);
+}
 
 function fileExtension(fileName: string) {
   const dotIndex = fileName.lastIndexOf(".");

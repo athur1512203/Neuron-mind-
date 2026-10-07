@@ -5,6 +5,7 @@ export type NeuronMarkdownStore = {
   setWorking(neuronId: string, markdown: string): void;
   applyServer(neuronId: string, markdown: string): boolean;
   commit(neuronId: string, markdown: string): void;
+  acknowledge(neuronId: string, markdown: string): void;
 };
 
 const savedByNeuronId = new Map<string, string>();
@@ -33,5 +34,9 @@ export const neuronMarkdownStore: NeuronMarkdownStore = {
   commit(neuronId, markdown) {
     savedByNeuronId.set(neuronId, markdown);
     workingByNeuronId.set(neuronId, markdown);
+  },
+  acknowledge(neuronId, markdown) {
+    savedByNeuronId.set(neuronId, markdown);
+    if (!workingByNeuronId.has(neuronId)) workingByNeuronId.set(neuronId, markdown);
   },
 };

@@ -1,93 +1,158 @@
-import { useRef, useState } from "react";
-import { blockCommands, formatBlock, parseNoteBlocks, replaceNoteBlock, type BlockKind, type NoteBlock } from "../markdown/visualBlocks";
-import { insertLink, wrapMarkers } from "../markdown/editMarkdown";
-import { NeuronMarkdownPreview } from "./NeuronMarkdownPreview";
+import { useEffect, useRef, useState } from "react";
+import { EditorState, TextSelection, type Command } from "prosemirror-state";
+import { EditorView } from "prosemirror-view";
+import { baseKeymap, setBlockType, toggleMark, chainCommands, splitBlock } from "prosemirror-commands";
+import { history, undo, redo } from "prosemirror-history";
+import { keymap } from "prosemirror-keymap";
+import { Plus, GripVertical, Undo2, Redo2, X } from "lucide-react";
+import { noteSchema, parseDocument, serializeDocument, createTable, safeLink, highlightColors } from "../markdown/documentEditor";
+import { imageTypes, loadDocumentImage, uploadDocument, validateImageFile, type DocumentMeta } from "../api/documents";
 import type { Neuron } from "../types";
-import type { DocumentMeta } from "../api/documents";
+import "prosemirror-view/style/prosemirror.css";
 import "./visual-note.css";
 
-export function VisualNoteEditor({ value, onChange, disabled, onRaw, neurons, documents }: {
-  value: string; onChange: (value: string) => void; disabled: boolean; onRaw: () => void;
-  neurons: Neuron[]; documents: DocumentMeta[];
-}) {
-  const [active, setActive] = useState<NoteBlock | null>(null);
-  // Keep an empty edited block anchored at its source offset so deleting its text
-  // never moves the editor into the following block.
-  const blocks = active ? [...parseNoteBlocks(value).filter((item) =>
-    item.start !== active.start && (item.end <= active.start || item.start >= active.end)), active].sort((a, b) => a.start - b.start)
-    : parseNoteBlocks(value);
-  const [menu, setMenu] = useState(false);
-  const [command, setCommand] = useState(0);
-  const input = useRef<HTMLTextAreaElement>(null);
-  const block = active;
-  const change = (text: string, kind: BlockKind = block?.kind ?? "text") => {
-    if (!block || disabled) return;
-    const raw = formatBlock(kind, text, block);
-    setActive({ ...block, kind, text, raw, end: block.start + raw.length });
-    onChange(replaceNoteBlock(value, block, raw));
+type Props = { value: string; onChange: (value: string) => void; onRaw: () => void; neurons: Neuron[]; documents: DocumentMeta[];
+  neuronId: string; onEnsureConnection: (id: string) => Promise<void> };
+export const tableTab: Command = (state, dispatch) => {
+  const cells: number[] = []; state.doc.descendants((node, pos) => { if (node.type.name === "table_cell") cells.push(pos + 1); });
+  const current = cells.findIndex((pos) => pos <= state.selection.from && state.selection.from <= pos + state.doc.nodeAt(pos - 1)!.content.size);
+  if (current < 0 || current + 1 >= cells.length) return false;
+  dispatch?.(state.tr.setSelection(TextSelection.create(state.doc, cells[current + 1])).scrollIntoView()); return true;
+};
+export const checklistEnter: Command = (state, dispatch) => {
+  const { $from, $to } = state.selection;
+  if ($from.parent.type.name !== "paragraph" || $from.depth < 2 || $from.node(-1).type.name !== "check_item" || !$from.sameParent($to)) return false;
+  const item = $from.node(-1), start = $from.before($from.depth - 1);
+  if (!$from.parent.content.size) return false;
+  const left = noteSchema.nodes.check_item.create(item.attrs, noteSchema.nodes.paragraph.create(null, $from.parent.content.cut(0, $from.parentOffset)));
+  const right = noteSchema.nodes.check_item.create({ checked: false }, noteSchema.nodes.paragraph.create(null, $from.parent.content.cut($to.parentOffset)));
+  if (dispatch) { const tr = state.tr.replaceWith(start, start + item.nodeSize, [left, right]); dispatch(tr.setSelection(TextSelection.create(tr.doc, start + left.nodeSize + 2)).scrollIntoView()); }
+  return true;
+};
+export function VisualNoteEditor(props: Props) {
+  const host = useRef<HTMLDivElement>(null), view = useRef<EditorView | null>(null);
+  const latest = useRef(props); latest.current = props;
+  const emitted = useRef(props.value);
+  const [menu, setMenu] = useState<"highlight" | "link" | "relation" | "table" | "image" | "insert" | null>(null);
+  const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState(""); const [label, setLabel] = useState(""); const [url, setUrl] = useState("");
+  const [rows, setRows] = useState(2), [columns, setColumns] = useState(3);
+  const [addedImages, setAddedImages] = useState<DocumentMeta[]>([]);
+  const [handle, setHandle] = useState<{ top: number; pos: number } | null>(null);
+  const blockAt = useRef<number | null>(null), popup = useRef<HTMLDivElement>(null), opener = useRef<HTMLElement | null>(null);
+  const currentNeuron = props.neurons.find((n) => n.id === props.neuronId);
+  const targets = props.neurons.filter((n) => n.id !== props.neuronId && n.subjectId === currentNeuron?.subjectId && n.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
+  const close = () => { setMenu(null); setError(""); view.current?.focus(); };
+  const open = (next: typeof menu) => { opener.current = document.activeElement as HTMLElement; setError(""); setMenu(next); };
+  useEffect(() => {
+    if (!host.current) return;
+    const editor = new EditorView(host.current, {
+      state: EditorState.create({ schema: noteSchema, doc: parseDocument(latest.current.value), plugins: [history(), keymap({
+        "Mod-z": undo, "Mod-Shift-z": redo, "Mod-y": redo, "Mod-b": toggleMark(noteSchema.marks.strong), "Mod-i": toggleMark(noteSchema.marks.em), "Mod-u": toggleMark(noteSchema.marks.underline),
+        "Enter": chainCommands(checklistEnter, splitBlock), "Tab": tableTab,
+        "Shift-Enter": (state, dispatch) => { dispatch?.(state.tr.replaceSelectionWith(noteSchema.nodes.hard_break.create()).scrollIntoView()); return true; },
+      }), keymap(baseKeymap)] }),
+      attributes: { class: "nm-note-document", role: "textbox", "aria-label": "Nội dung ghi chú", "aria-multiline": "true", spellcheck: "true" },
+      dispatchTransaction(transaction) {
+        editor.updateState(editor.state.apply(transaction));
+        if (transaction.docChanged) { emitted.current = serializeDocument(editor.state.doc); latest.current.onChange(emitted.current); }
+      },
+      handlePaste(_view, event) { const text = event.clipboardData?.getData("text/plain"); if (text === undefined) return false; editor.dispatch(editor.state.tr.insertText(text)); return true; },
+      nodeViews: {
+        reference(node) {
+          const dom = document.createElement("span"); dom.className = "neuron-md-ref-chip"; dom.contentEditable = "false";
+          const name = node.attrs.kind === "relation" ? latest.current.neurons.find((n) => n.id === node.attrs.id)?.name : latest.current.documents.find((d) => d.id === node.attrs.id)?.originalName;
+          dom.textContent = `${node.attrs.kind === "relation" ? "↗" : "▤"} ${name ?? "Liên kết không khả dụng"}`; return { dom };
+        },
+        image(node) {
+          const dom = document.createElement("span"); dom.className = "nm-note-image"; dom.contentEditable = "false";
+          const img = document.createElement("img"); img.alt = node.attrs.alt || "Ảnh ghi chú"; img.referrerPolicy = "no-referrer";
+          const controller = new AbortController(); let objectUrl = "";
+          if (node.attrs.url.startsWith("document://")) {
+            dom.textContent = "Đang tải ảnh...";
+            void loadDocumentImage(decodeURIComponent(node.attrs.url.slice(11)), controller.signal).then((url) => {
+              objectUrl = url; if (controller.signal.aborted) URL.revokeObjectURL(url); else { img.src = url; dom.replaceChildren(img); }
+            }).catch(() => { if (!controller.signal.aborted) dom.textContent = "Không tải được ảnh."; });
+          } else if (safeLink(node.attrs.url)) { img.src = node.attrs.url; dom.append(img); }
+          return { dom, destroy() { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); } };
+        },
+        check_item(node, _view, getPos) {
+          let current = node;
+          const dom = document.createElement("div"); dom.className = "nm-check-item";
+          const check = document.createElement("input"); check.type = "checkbox"; check.checked = node.attrs.checked; check.contentEditable = "false"; check.setAttribute("aria-label", "Hoàn thành công việc");
+          const contentDOM = document.createElement("div"); dom.append(check, contentDOM);
+          check.addEventListener("change", () => { const pos = getPos(); if (pos !== undefined) editor.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...current.attrs, checked: check.checked })); });
+          return { dom, contentDOM, update(next) { if (next.type !== current.type) return false; current = next; check.checked = next.attrs.checked; return true; }, stopEvent: (event) => event.target === check };
+        },
+        raw() {
+          const dom = document.createElement("div"); dom.className = "nm-note-raw"; dom.contentEditable = "false";
+          const button = document.createElement("button"); button.type = "button"; button.textContent = "Nội dung Markdown nâng cao — mở nguồn";
+          button.onclick = () => latest.current.onRaw(); dom.append(button); return { dom, stopEvent: () => true };
+        },
+      },
+    });
+    view.current = editor; return () => { editor.destroy(); view.current = null; };
+  }, []);
+  useEffect(() => {
+    const editor = view.current;
+    if (editor && props.value !== emitted.current) { emitted.current = props.value;
+      // Loading a server snapshot is not an edit; preserve its document attributes too.
+      editor.updateState(EditorState.create({ schema: noteSchema, doc: parseDocument(props.value), plugins: editor.state.plugins })); }
+  }, [props.value]);
+  useEffect(() => { view.current?.setProps({ editable: () => !busy }); }, [busy]);
+  useEffect(() => { if (menu) popup.current?.querySelector<HTMLElement>("input,button,select")?.focus(); }, [menu]);
+  const run = (command: Command) => { const editor = view.current; if (editor) { command(editor.state, editor.dispatch, editor); editor.focus(); } };
+  const insertBlock = (node: ReturnType<typeof createTable>) => {
+    const editor = view.current; if (!editor) return;
+    const pos = blockAt.current ?? (editor.state.selection.$from.depth ? editor.state.selection.$from.after(1) : editor.state.selection.to); blockAt.current = null;
+    const tr = editor.state.tr.insert(pos, [node, noteSchema.nodes.paragraph.create()]);
+    editor.dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(pos + 1))).scrollIntoView()); close();
   };
-  const choose = (kind: BlockKind) => {
-    if (block?.kind === "raw") return;
-    if (block) change(menu ? "" : block.text, kind);
-    else { const next = `${value}${value ? "\n\n" : ""}${formatBlock(kind, "")}`; onChange(next); setActive(parseNoteBlocks(next).at(-1)!); }
-    setMenu(false);
-    requestAnimationFrame(() => input.current?.focus());
-  };
-  const inline = (marker: string) => {
-    if (!block || !input.current || disabled) return;
-    const range = { value: block.text, start: input.current.selectionStart, end: input.current.selectionEnd };
-    const next = marker === "link" ? insertLink(range) : wrapMarkers(range, marker);
-    change(next.value);
-    requestAnimationFrame(() => { input.current?.focus(); input.current?.setSelectionRange(next.start, next.end); });
-  };
+  const insertImage = (file: DocumentMeta) => { const editor = view.current; if (!editor) return;
+    editor.dispatch(editor.state.tr.replaceSelectionWith(noteSchema.nodes.image.create({ url: `document://${encodeURIComponent(file.id)}`, alt: file.originalName })).scrollIntoView()); close(); };
+  const button = (title: string, content: React.ReactNode, action: () => void) => <button type="button" aria-label={title} title={title} disabled={busy} onMouseDown={(event) => event.preventDefault()} onClick={action}>{content}</button>;
   return <div className="nm-visual-note">
-    <div className="nm-visual-toolbar" role="toolbar" aria-label="Soạn thảo">
-      <select aria-label="Kiểu block" value={block?.kind ?? "text"} disabled={disabled || block?.kind === "raw"}
-        onChange={(event) => choose(event.target.value as BlockKind)}>
-        {blockCommands.map((item) => <option key={item.kind} value={item.kind}>{item.kind === "text" ? "Paragraph" : item.label}</option>)}
-        <option value="raw" disabled>Markdown gốc</option>
-      </select>
-      {[["B", "In đậm", "**"], ["I", "In nghiêng", "*"], ["Link", "Liên kết web", "link"], ["`", "Mã trong dòng", "`"]].map(([label, title, marker]) =>
-        <button key={marker} type="button" title={title} aria-label={title} disabled={disabled || !block || block.kind === "raw"}
-          onMouseDown={(event) => event.preventDefault()} onClick={() => inline(marker)}>{label}</button>)}
+    <div className="nm-visual-toolbar" role="toolbar" aria-label="Định dạng ghi chú">
+      {button("Hoàn tác", <Undo2 size={16} />, () => run(undo))}{button("Làm lại", <Redo2 size={16} />, () => run(redo))}
+      <select aria-label="Kiểu đoạn văn" defaultValue="paragraph" disabled={busy} onChange={(event) => { const level = Number(event.target.value); run(setBlockType(level ? noteSchema.nodes.heading : noteSchema.nodes.paragraph, level ? { level } : undefined)); }}>
+        <option value="paragraph">Paragraph</option><option value="1">Heading 1</option><option value="2">Heading 2</option><option value="3">Heading 3</option></select>
+      {button("In đậm", <b>B</b>, () => run(toggleMark(noteSchema.marks.strong)))}{button("In nghiêng", <i>I</i>, () => run(toggleMark(noteSchema.marks.em)))}{button("Gạch chân", <u>U</u>, () => run(toggleMark(noteSchema.marks.underline)))}
+      {button("Highlight", "Highlight", () => open("highlight"))}{button("Link", "Link", () => { setLabel(view.current?.state.doc.textBetween(view.current.state.selection.from, view.current.state.selection.to) ?? ""); setUrl(""); open("link"); })}
+      {button("Liên kết Neuron", "Liên kết", () => { setQuery(""); open("relation"); })}
+      {button("Checklist", "☑", () => insertBlock(noteSchema.nodes.check_list.create(null, noteSchema.nodes.check_item.create(null, noteSchema.nodes.paragraph.create()))))}
+      {button("Table", "Table", () => open("table"))}{button("Ảnh", "Ảnh", () => open("image"))}
     </div>
-    <p className="nm-visual-hint">Chọn một block để sửa · Gõ / trong block trống để chọn định dạng</p>
-    <div className="nm-visual-blocks">
-      {blocks.map((item, index) => <div key={index} className={`nm-visual-block is-${item.kind}`}>
-        {active?.start === item.start && item.kind !== "raw" && item.kind !== "divider" ? <textarea ref={input} autoFocus
-          aria-label={`Nội dung block ${index + 1}`} value={item.text} disabled={disabled} rows={Math.max(2, item.text.split("\n").length)}
-          onChange={(event) => { change(event.target.value); setMenu(event.target.value === "/"); setCommand(0); }}
-          onBlur={(event) => { if (!event.relatedTarget?.closest(".nm-visual-toolbar, .nm-slash-menu")) { setActive(null); setMenu(false); } }}
-          onKeyDown={(event) => {
-            if (menu) {
-              if (["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(event.key)) event.preventDefault();
-              if (event.key === "ArrowDown") setCommand((command + 1) % blockCommands.length);
-              if (event.key === "ArrowUp") setCommand((command + blockCommands.length - 1) % blockCommands.length);
-              if (event.key === "Enter") choose(blockCommands[command].kind);
-              if (event.key === "Escape") setMenu(false);
-            } else if (event.key === "Escape") setActive(null);
-          }} /> : <div className="nm-visual-rendered neuron-md-preview">
-          {item.kind === "check" ? item.raw.split("\n").map((line, lineIndex) => <label key={lineIndex} style={{ display: "flex", gap: 8 }}>
-            <input type="checkbox" disabled={disabled} checked={/^- \[[xX]\]/.test(line)} aria-label={`Hoàn thành: ${line.slice(6)}`}
-              onChange={(event) => {
-                const lines = item.raw.split("\n"); lines[lineIndex] = line.replace(/^- \[[ xX]\]/, event.target.checked ? "- [x]" : "- [ ]");
-                onChange(replaceNoteBlock(value, item, lines.join("\n")));
-              }} />
-            <NeuronMarkdownPreview value={line.slice(6)} neurons={neurons} documents={documents} />
-          </label>) : <NeuronMarkdownPreview value={item.raw} neurons={neurons} documents={documents} />}
-          <button type="button" disabled={disabled} className="nm-visual-edit" onClick={() => { if (item.kind === "raw" || item.kind === "divider") onRaw(); else setActive(item); }}>
-            {item.kind === "raw" ? "Sửa Markdown gốc" : "Sửa block"}
-          </button>
-        </div>}
-        {menu && active?.start === item.start && <div className="nm-slash-menu" role="listbox" aria-label="Chọn kiểu block">
-          {blockCommands.map((item, i) => <button type="button" role="option" aria-selected={command === i} key={item.kind}
-            onMouseDown={(event) => event.preventDefault()} onClick={() => choose(item.kind)}>{item.label}</button>)}
-        </div>}
-      </div>)}
-      <button type="button" className="nm-visual-add" disabled={disabled} onClick={() => {
-        const next = `${value}${value ? "\n\n" : ""}`;
-        onChange(next); setActive(parseNoteBlocks(next).at(-1)!);
-      }}>+ Thêm đoạn văn</button>
+    {menu && <div ref={popup} role="dialog" aria-modal="false" aria-label={`Chèn ${menu}`} className="nm-note-popover" onKeyDown={(event) => { if (event.key === "Escape" && !busy) { event.stopPropagation(); close(); opener.current?.focus(); } }}>
+      <button type="button" aria-label="Đóng" className="nm-note-popup-close" disabled={busy} onClick={close}><X size={16} /></button>
+      {menu === "highlight" && <div className="nm-note-colors">{Object.entries(highlightColors).map(([color, background]) => <button key={color} type="button" aria-label={`Highlight ${color}`} style={{ background }} onClick={() => { const editor = view.current!; editor.dispatch(editor.state.tr.addMark(editor.state.selection.from, editor.state.selection.to, noteSchema.marks.highlight.create({ color }))); close(); }}>{color}</button>)}
+        <button type="button" onClick={() => { const editor = view.current!; editor.dispatch(editor.state.tr.removeMark(editor.state.selection.from, editor.state.selection.to, noteSchema.marks.highlight)); close(); }}>Xóa highlight</button></div>}
+      {menu === "link" && <form onSubmit={(event) => { event.preventDefault(); if (!safeLink(url) || !label.trim()) { setError("Nhập tên và URL https://, http:// hoặc mailto: hợp lệ."); return; }
+        const editor = view.current!; const { from, to, empty } = editor.state.selection; const mark = noteSchema.marks.link.create({ href: url });
+        editor.dispatch(empty ? editor.state.tr.insertText(label, from, to).addMark(from, from + label.length, mark) : editor.state.tr.addMark(from, to, mark)); close(); }}>
+        <label>Tên liên kết<input value={label} onChange={(e) => setLabel(e.target.value)} /></label><label>URL<input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" /></label><button type="submit">Chèn Link</button></form>}
+      {menu === "table" && <form onSubmit={(event) => { event.preventDefault(); try { insertBlock(createTable(rows, columns)); } catch { setError("Bảng cần 2–20 hàng và 1–8 cột."); } }}>
+        <label>Hàng (gồm tiêu đề)<input type="number" min={2} max={20} value={rows} onChange={(e) => setRows(Number(e.target.value))} /></label><label>Cột<input type="number" min={1} max={8} value={columns} onChange={(e) => setColumns(Number(e.target.value))} /></label><button type="submit">Chèn bảng</button></form>}
+      {menu === "relation" && <><label>Tìm Neuron<input value={query} onChange={(e) => setQuery(e.target.value)} /></label>{targets.map((neuron) => <button type="button" key={neuron.id} disabled={busy} onClick={async () => {
+        if (busy) return; setBusy(true); try { await props.onEnsureConnection(neuron.id); const editor = view.current; if (editor) editor.dispatch(editor.state.tr.replaceSelectionWith(noteSchema.nodes.reference.create({ kind: "relation", id: neuron.id }))); close(); }
+        catch { setError("Không tạo được liên kết. Vui lòng thử lại."); } finally { setBusy(false); }
+      }}>{neuron.name}</button>)}{!targets.length && <p>Không có Neuron phù hợp.</p>}</>}
+      {menu === "image" && <><label>Tải ảnh JPEG, PNG, WebP<input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || !currentNeuron} onChange={async (event) => {
+        const file = event.target.files?.[0]; if (!file || !currentNeuron) return; const problem = validateImageFile(file); if (problem) { setError(problem); return; }
+        setBusy(true); setError(""); try { const uploaded = await uploadDocument(currentNeuron.subjectId, file); setAddedImages((images) => [...images, uploaded]); insertImage(uploaded); }
+        catch { setError("Không tải ảnh lên được. Vui lòng thử lại."); } finally { setBusy(false); }
+      }} /></label>{[...props.documents, ...addedImages].filter((d) => d.subjectId === currentNeuron?.subjectId && imageTypes.has(d.mimeType)).map((file) => <button type="button" key={file.id} disabled={busy} onClick={() => insertImage(file)}>{file.originalName}</button>)}{busy && <p role="status">Đang tải ảnh...</p>}</>}
+      {menu === "insert" && <>{[0, 1, 2, 3].map((level) => <button type="button" key={level} onClick={() => insertBlock(level ? noteSchema.nodes.heading.create({ level }) : noteSchema.nodes.paragraph.create())}>{level ? `Heading ${level}` : "Paragraph"}</button>)}</>}
+      {error && <p role="alert">{error}</p>}
+    </div>}
+    <div className="nm-note-page" onMouseLeave={() => { if (!host.current?.contains(document.activeElement)) setHandle(null); }} onMouseMove={(event) => {
+      const editor = view.current; if (!editor) return; const pos = editor.posAtCoords({ left: event.clientX, top: event.clientY }); if (!pos) return;
+      const resolved = editor.state.doc.resolve(pos.pos); if (!resolved.depth) return; const dom = editor.nodeDOM(resolved.before(1)) as HTMLElement | null;
+      if (dom) setHandle({ top: dom.getBoundingClientRect().top - event.currentTarget.getBoundingClientRect().top, pos: resolved.after(1) });
+    }} onFocusCapture={() => { const editor = view.current; if (!editor) return; const selection = editor.state.selection.$from; if (selection.depth) {
+      const dom = editor.nodeDOM(selection.before(1)) as HTMLElement | null; if (dom) setHandle({ top: dom.offsetTop, pos: selection.after(1) });
+    } }}>
+      {handle && <div className="nm-note-block-controls" style={{ top: handle.top }}><button type="button" aria-label="Thêm block bên dưới" onClick={() => { blockAt.current = handle.pos; open("insert"); }}><Plus size={14} /></button><span title="Block" aria-hidden="true"><GripVertical size={15} /></span></div>}
+      <div ref={host} />
     </div>
   </div>;
 }

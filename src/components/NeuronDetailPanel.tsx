@@ -75,11 +75,14 @@ export function NeuronDetailPanel({
 
   useEffect(() => {
     const controller = new AbortController();
+    const savedAtLoad = neuronMarkdownStore.getSaved(neuron.id);
+    const workingAtLoad = neuronMarkdownStore.getWorking(neuron.id);
 
     setMarkdownContent(neuronMarkdownStore.getSaved(neuron.id));
 
     void getNeuronMarkdown(neuron.id, controller.signal)
       .then((note) => {
+        if (controller.signal.aborted || neuronMarkdownStore.getSaved(neuron.id) !== savedAtLoad || neuronMarkdownStore.getWorking(neuron.id) !== workingAtLoad) return;
         const content = note.content ?? "";
         neuronMarkdownStore.applyServer(neuron.id, content);
         setMarkdownContent(neuronMarkdownStore.getSaved(neuron.id));

@@ -1,7 +1,8 @@
 import { Maximize2, Minimize2 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DocumentMeta } from "../api/documents";
-import { getNeuronMarkdown, saveNeuronMarkdown } from "../api/markdownNotes";
+import { getNeuronMarkdown } from "../api/markdownNotes";
+import { saveWorkingNote } from "../markdown/noteAutosave";
 import {
   insertCodeBlock,
   insertAtCursor,
@@ -70,7 +71,10 @@ export function NeuronMarkdownEditor({
 }: NeuronMarkdownEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [mode, setMode] = useState<"visual" | "markdown">("visual");
+  const mountedRef = useRef(true);
   const savingRef = useRef(false);
+  const relationPending = useRef(new Set<string>());
+  const relationCreated = useRef(new Set<string>());
   const [value, setValue] = useState(() => neuronMarkdownStore.getWorking(neuronId));
   const [savedValue, setSavedValue] = useState(() => neuronMarkdownStore.getSaved(neuronId));
   const [status, setStatus] = useState<SaveStatus>(() =>
@@ -105,6 +109,7 @@ export function NeuronMarkdownEditor({
     const controller = new AbortController();
     const dirty = neuronMarkdownStore.isDirty(neuronId);
     const working = neuronMarkdownStore.getWorking(neuronId);
+    const savedAtLoad = neuronMarkdownStore.getSaved(neuronId);
     setValue(working);
     setSavedValue(neuronMarkdownStore.getSaved(neuronId));
     setStatus(dirty ? "unsaved" : "saved");
@@ -120,7 +125,9 @@ export function NeuronMarkdownEditor({
 
     void getNeuronMarkdown(neuronId, controller.signal)
       .then((note) => {
+        if (controller.signal.aborted) return;
         if (requestId !== loadRequestRef.current) return;
+        if (neuronMarkdownStore.getSaved(neuronId) !== savedAtLoad || neuronMarkdownStore.getWorking(neuronId) !== working) return;
         if (neuronMarkdownStore.isDirty(neuronId)) return;
         const content = note.content ?? "";
         if (!neuronMarkdownStore.applyServer(neuronId, content)) return;
@@ -187,30 +194,48 @@ export function NeuronMarkdownEditor({
     insertFromRememberedSelection((range) => insertAtCursor(range, `[[document:${documentId}]]`, `[[document:${documentId}]]`.length));
   };
 
-  const insertRelationToken = (targetNeuronId: string) => {
-    insertFromRememberedSelection((range) => insertAtCursor(range, `[[relation:${targetNeuronId}]]`, `[[relation:${targetNeuronId}]]`.length));
-    const exists = connections.some((connection) =>
-      areSameConnection(neuronId, targetNeuronId, connection.sourceNeuronId, connection.targetNeuronId),
-    );
-    if (!exists) void onEnsureConnection?.(targetNeuronId);
+  const insertRelationToken = async (targetNeuronId: string) => {
+    try {
+      await ensureRelation(targetNeuronId);
+      if (mountedRef.current) insertFromRememberedSelection((range) => insertAtCursor(range, `[[relation:${targetNeuronId}]]`, `[[relation:${targetNeuronId}]]`.length));
+    } catch { if (mountedRef.current) setStatus("error"); }
   };
 
   const save = async () => {
     if (savingRef.current) return;
     savingRef.current = true;
     setStatus("saving");
-    const snapshot = value;
     try {
-      await saveNeuronMarkdown(neuronId, snapshot);
-      neuronMarkdownStore.commit(neuronId, snapshot);
+      const snapshot = await saveWorkingNote(neuronId);
+      if (!mountedRef.current) return;
       setSavedValue(snapshot);
-      setStatus("saved");
+      setStatus(neuronMarkdownStore.isDirty(neuronId) ? "unsaved" : "saved");
       onSaved?.(snapshot);
     } catch {
-      setStatus("error");
+      if (mountedRef.current) setStatus("error");
     } finally {
       savingRef.current = false;
     }
+  };
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; if (neuronMarkdownStore.isDirty(neuronId)) void saveWorkingNote(neuronId).catch(() => {}); };
+  }, [neuronId]);
+  useEffect(() => {
+    if (!neuronMarkdownStore.isDirty(neuronId)) return;
+    const timer = setTimeout(() => { void save(); }, 800);
+    return () => clearTimeout(timer);
+  }, [value, neuronId]);
+
+  const ensureRelation = async (targetId: string) => {
+    if (targetId === neuronId || !neurons.some((n) => n.id === targetId && n.subjectId === neurons.find((n) => n.id === neuronId)?.subjectId)) throw new Error("Invalid target");
+    if (connections.some((c) => areSameConnection(neuronId, targetId, c.sourceNeuronId, c.targetNeuronId)) || relationCreated.current.has(targetId)) return;
+    if (relationPending.current.has(targetId)) throw new Error("Relation pending");
+    if (!onEnsureConnection) throw new Error("Relation unavailable");
+    relationPending.current.add(targetId);
+    try { await onEnsureConnection(targetId); relationCreated.current.add(targetId); }
+    finally { relationPending.current.delete(targetId); }
   };
 
   const undo = () => {
@@ -248,10 +273,11 @@ export function NeuronMarkdownEditor({
       <div className="nm-note-modes" role="group" aria-label="Chế độ ghi chú">
         <button type="button" aria-pressed={mode === "visual"} onClick={() => setMode("visual")}>Soạn thảo</button>
         <button type="button" aria-pressed={mode === "markdown"} onClick={() => setMode("markdown")}>Markdown</button>
+        <span role="status" className="nm-note-save-status">{STATUS_LABEL[status]}</span>
       </div>
       {mode === "visual" ? <VisualNoteEditor value={value} onChange={(next) => markUnsaved(next, value, true)}
-        disabled={status === "saving"} onRaw={() => setMode("markdown")} neurons={neurons} documents={documents} /> :
-      <fieldset disabled={status === "saving"} className="neuron-md-split neuron-md-editor-layout" style={{ margin: 0, padding: 0, border: 0 }}>
+        onRaw={() => setMode("markdown")} neurons={neurons} documents={documents} neuronId={neuronId} onEnsureConnection={ensureRelation} /> :
+      <fieldset className="neuron-md-split neuron-md-editor-layout" style={{ margin: 0, padding: 0, border: 0 }}>
         <div className="neuron-md-pane">
           <div className="neuron-md-toolbar" role="toolbar" aria-label="Markdown">
             {TOOLBAR.map((action) => (

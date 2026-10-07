@@ -6,6 +6,10 @@ export const DOCUMENT_MAX_BYTES = 50 * 1024 * 1024;
 
 
 const allowedMimeTypesByExtension: Record<string, Set<string>> = {
+  ".jpg": new Set(["image/jpeg"]),
+  ".jpeg": new Set(["image/jpeg"]),
+  ".png": new Set(["image/png"]),
+  ".webp": new Set(["image/webp"]),
   ".pdf": new Set(["application/pdf"]),
   ".doc": new Set(["application/msword"]),
   ".docx": new Set(["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]),
@@ -52,6 +56,9 @@ export function validateDocumentContent(file: Express.Multer.File) {
   }
   const starts = (hex: string) => buffer.subarray(0, hex.length / 2).equals(Buffer.from(hex, "hex"));
   const valid = extension === ".pdf" ? buffer.subarray(0, 5).toString() === "%PDF-"
+    : [".jpg", ".jpeg"].includes(extension) ? starts("ffd8ff")
+    : extension === ".png" ? starts("89504e470d0a1a0a")
+    : extension === ".webp" ? starts("52494646") && buffer.subarray(8, 12).toString() === "WEBP"
     : [".doc", ".ppt", ".xls"].includes(extension) ? starts("d0cf11e0a1b11e1")
     : [".docx", ".pptx", ".xlsx", ".zip"].includes(extension) ? starts("504b0304")
     : !buffer.includes(0) && !starts("4d5a") && !starts("7f454c46");
