@@ -124,7 +124,7 @@ test('visual editor hides IDs, has no edit-block buttons, and Link never calls r
   let relations = 0, output = '';
   const ui = await mount(m.VisualNoteEditor, { value: '[[relation:N2]]', neuronId: 'N1', neurons, documents: [], onRaw() {}, onChange: (v) => { output = v; }, onEnsureConnection: async () => { relations++; } });
   assert.match(ui.container.textContent, /Friendly name/); assert.doesNotMatch(ui.container.textContent, /N2|Sửa block/);
-  await ui.click('Link');
+  await ui.click('Chèn liên kết');
   await act(async () => {
     const inputs = ui.container.querySelectorAll('form input');
     for (const [i, text] of ['Website', 'https://example.com'].entries()) {
@@ -133,7 +133,7 @@ test('visual editor hides IDs, has no edit-block buttons, and Link never calls r
     }
   });
   await ui.click('Chèn Link'); assert.equal(relations, 0); assert.match(output, /\[Website\]\(https:\/\/example.com\)/);
-  await ui.click('Liên kết Neuron');
+  await ui.click('Liên kết neuron');
   const dialog = ui.container.querySelector('[role=dialog]'); assert.doesNotMatch(dialog.textContent, /Current|Other Space/);
   await ui.click('Friendly name'); assert.equal(relations, 1); assert.match(output, /\[\[relation:N2\]\]/);
   await ui.close();
@@ -194,7 +194,14 @@ test('Visual → Markdown → Visual retains references, links, checklist, table
     : Response.json({ content: source });
   const ui = await mount(m.NeuronMarkdownEditor, { neuronId: id, neurons: [...neurons, { id, subjectId: 'S1' }], documents: [{ id: 'D1', originalName: 'Picture', subjectId: 'S1', mimeType: 'image/png' }] });
   try {
+    const toolbarShape = () => [...ui.container.querySelector('.nm-shared-toolbar').querySelectorAll('button, select, [role=separator]')].map((element) => [element.tagName, element.getAttribute('aria-label'), element.getAttribute('title')]);
+    const visualToolbar = toolbarShape();
     for (let pass = 0; pass < 2; pass++) {
+      assert.deepEqual(toolbarShape(), visualToolbar);
+      for (const label of ['Danh sách', 'Danh sách số', 'Trích dẫn', 'Code', 'Khối code']) {
+        const button = ui.container.querySelector(`button[aria-label="${label}"]`);
+        assert.equal(button.disabled, true); await act(async () => button.click());
+      }
       const editor = ui.container.querySelector('.ProseMirror');
       assert.equal(editor.querySelectorAll('.neuron-md-ref-chip').length, 2);
       assert.equal(editor.querySelector('a').getAttribute('href'), 'https://example.com');
@@ -204,6 +211,11 @@ test('Visual → Markdown → Visual retains references, links, checklist, table
       assert.equal(editor.querySelector('mark').textContent, 'Highlighted');
       assert.equal(editor.querySelectorAll('.nm-note-image').length, 1);
       await ui.click('Markdown');
+      assert.deepEqual(toolbarShape(), visualToolbar);
+      for (const label of ['Gạch chân', 'Tô sáng', 'Chèn ảnh']) {
+        const button = ui.container.querySelector(`button[aria-label="${label}"]`);
+        assert.equal(button.disabled, true); await act(async () => button.click());
+      }
       assert.equal(ui.container.querySelector('textarea').value, source);
       assert.doesNotMatch(ui.container.querySelector('textarea').value, /base64|data:image|blob:/);
       await ui.click('Soạn thảo');

@@ -4,7 +4,8 @@ import { EditorView } from "prosemirror-view";
 import { baseKeymap, setBlockType, toggleMark, chainCommands, splitBlock } from "prosemirror-commands";
 import { history, undo, redo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
-import { Plus, GripVertical, Undo2, Redo2, X, Bold, Italic, Underline, Highlighter, Link, Network, ListChecks, Table, Image } from "lucide-react";
+import { Plus, GripVertical, X } from "lucide-react";
+import { NoteToolbar } from "./NoteToolbar";
 import { noteSchema, parseDocument, serializeDocument, createTable, safeLink, highlightColors } from "../markdown/documentEditor";
 import { imageTypes, loadDocumentImage, uploadDocument, validateImageFile, type DocumentMeta } from "../api/documents";
 import type { Neuron } from "../types";
@@ -110,18 +111,16 @@ export function VisualNoteEditor(props: Props) {
   };
   const insertImage = (file: DocumentMeta) => { const editor = view.current; if (!editor) return;
     editor.dispatch(editor.state.tr.replaceSelectionWith(noteSchema.nodes.image.create({ url: `document://${encodeURIComponent(file.id)}`, alt: file.originalName })).scrollIntoView()); close(); };
-  const button = (title: string, content: React.ReactNode, action: () => void) => <button type="button" aria-label={title} title={title} disabled={busy} onMouseDown={(event) => event.preventDefault()} onClick={action}>{content}</button>;
   return <div className="nm-visual-note">
-    <div className="nm-visual-toolbar" role="toolbar" aria-label="Định dạng ghi chú">
-      {button("Hoàn tác", <Undo2 size={16} />, () => run(undo))}{button("Làm lại", <Redo2 size={16} />, () => run(redo))}
-      <select aria-label="Kiểu đoạn văn" defaultValue="paragraph" disabled={busy} onChange={(event) => { const level = Number(event.target.value); run(setBlockType(level ? noteSchema.nodes.heading : noteSchema.nodes.paragraph, level ? { level } : undefined)); }}>
-        <option value="paragraph">Paragraph</option><option value="1">Heading 1</option><option value="2">Heading 2</option><option value="3">Heading 3</option></select>
-      {button("In đậm", <Bold size={17} />, () => run(toggleMark(noteSchema.marks.strong)))}{button("In nghiêng", <Italic size={17} />, () => run(toggleMark(noteSchema.marks.em)))}{button("Gạch chân", <Underline size={17} />, () => run(toggleMark(noteSchema.marks.underline)))}
-      {button("Highlight", <Highlighter size={17} />, () => open("highlight"))}{button("Link", <Link size={17} />, () => { setLabel(view.current?.state.doc.textBetween(view.current.state.selection.from, view.current.state.selection.to) ?? ""); setUrl(""); open("link"); })}
-      {button("Liên kết Neuron", <Network size={17} />, () => { setQuery(""); open("relation"); })}
-      {button("Checklist", <ListChecks size={17} />, () => insertBlock(noteSchema.nodes.check_list.create(null, noteSchema.nodes.check_item.create(null, noteSchema.nodes.paragraph.create()))))}
-      {button("Table", <Table size={17} />, () => open("table"))}{button("Ảnh", <Image size={17} />, () => open("image"))}
-    </div>
+    <NoteToolbar busy={busy} onBlockType={(level) => run(setBlockType(level ? noteSchema.nodes.heading : noteSchema.nodes.paragraph, level ? { level } : undefined))} handlers={{
+      undo: () => run(undo), redo: () => run(redo),
+      bold: () => run(toggleMark(noteSchema.marks.strong)), italic: () => run(toggleMark(noteSchema.marks.em)), underline: () => run(toggleMark(noteSchema.marks.underline)),
+      highlight: () => open("highlight"),
+      link: () => { setLabel(view.current?.state.doc.textBetween(view.current.state.selection.from, view.current.state.selection.to) ?? ""); setUrl(""); open("link"); },
+      relation: () => { setQuery(""); open("relation"); },
+      checklist: () => insertBlock(noteSchema.nodes.check_list.create(null, noteSchema.nodes.check_item.create(null, noteSchema.nodes.paragraph.create()))),
+      table: () => open("table"), image: () => open("image"),
+    }} />
     {menu && <div ref={popup} role="dialog" aria-modal="false" aria-label={`Chèn ${menu}`} className="nm-note-popover" onKeyDown={(event) => { if (event.key === "Escape" && !busy) { event.stopPropagation(); close(); opener.current?.focus(); } }}>
       <button type="button" aria-label="Đóng" className="nm-note-popup-close" disabled={busy} onClick={close}><X size={16} /></button>
       {menu === "highlight" && <div className="nm-note-colors">{Object.entries(highlightColors).map(([color, background]) => <button key={color} type="button" aria-label={`Highlight ${color}`} style={{ background }} onClick={() => { const editor = view.current!; editor.dispatch(editor.state.tr.addMark(editor.state.selection.from, editor.state.selection.to, noteSchema.marks.highlight.create({ color }))); close(); }}>{color}</button>)}

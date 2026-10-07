@@ -1,4 +1,5 @@
-import { Maximize2, Minimize2, Bold, Italic, List, ListOrdered, ListChecks, Quote, Code, CodeXml, Table, Link, Network, Undo2, Redo2 } from "lucide-react";
+import { Maximize2, Minimize2 } from "lucide-react";
+import { NoteToolbar } from "./NoteToolbar";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DocumentMeta } from "../api/documents";
 import { getNeuronMarkdown } from "../api/markdownNotes";
@@ -48,7 +49,6 @@ const STATUS_LABEL: Record<SaveStatus, string> = {
   error: "Lưu thất bại",
 };
 
-const TOOLBAR_ICONS = { B: Bold, I: Italic, "•": List, "1.": ListOrdered, "☑": ListChecks, "❝": Quote, "`": Code, "{ }": CodeXml, Table };
 
 type NeuronMarkdownEditorProps = {
   neuronId: string;
@@ -281,44 +281,17 @@ export function NeuronMarkdownEditor({
         onRaw={() => setMode("markdown")} neurons={neurons} documents={documents} neuronId={neuronId} onEnsureConnection={ensureRelation} /> :
       <fieldset className="neuron-md-split neuron-md-editor-layout" style={{ margin: 0, padding: 0, border: 0 }}>
         <div className="neuron-md-pane">
-          <div className="neuron-md-toolbar" role="toolbar" aria-label="Markdown">
-            <Button variant="toolbar" title="Hoàn tác" aria-label="Hoàn tác" disabled={!past.length} onMouseDown={(event) => event.preventDefault()} onClick={undo}><Undo2 size={17} /></Button>
-            <Button variant="toolbar" title="Làm lại" aria-label="Làm lại" disabled={!future.length} onMouseDown={(event) => event.preventDefault()} onClick={redo}><Redo2 size={17} /></Button>
-            <select aria-label="Heading" value="" onChange={(event) => { const action = TOOLBAR.find((item) => item.label === event.target.value); if (action) applyRange(action.apply); }}>
-              <option value="" disabled>Heading</option>
-              <option value="H1">Heading 1</option><option value="H2">Heading 2</option><option value="H3">Heading 3</option>
-            </select>
-            {TOOLBAR.filter((action) => !action.label.startsWith("H")).map((action) => {
-              const Icon = TOOLBAR_ICONS[action.label as keyof typeof TOOLBAR_ICONS];
-              return (
-              <Button
-                key={action.title}
-                variant="toolbar"
-                type="button"
-                title={action.title}
-                aria-label={action.title}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => applyRange(action.apply)}
-              >
-                <Icon size={17} />
-              </Button>
-            ); })}
-            <span className="neuron-md-tool-group">
-              <Button
-                variant="toolbar"
-                type="button"
-                title="Link — Tài liệu hoặc website"
-                aria-label="Link"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  rememberSelection();
-                  setLinkMenuOpen((open) => !open);
-                  setDocumentMenuOpen(false);
-                  setRelationMenuOpen(false);
-                }}
-              >
-                <Link size={17} />
-              </Button>
+          <NoteToolbar paragraphSupported={false}
+            onBlockType={(level) => { const action = TOOLBAR.find((item) => item.label === `H${level}`); if (action) applyRange(action.apply); }}
+            disabled={[...(!past.length ? ["undo" as const] : []), ...(!future.length ? ["redo" as const] : [])]}
+            handlers={{
+              undo, redo,
+              bold: () => applyRange(TOOLBAR[3].apply), italic: () => applyRange(TOOLBAR[4].apply),
+              bullet: () => applyRange(TOOLBAR[5].apply), ordered: () => applyRange(TOOLBAR[6].apply), checklist: () => applyRange(TOOLBAR[7].apply),
+              quote: () => applyRange(TOOLBAR[8].apply), code: () => applyRange(TOOLBAR[9].apply), codeBlock: () => applyRange(TOOLBAR[10].apply), table: () => applyRange(TOOLBAR[11].apply),
+              link: () => { rememberSelection(); setLinkMenuOpen((open) => !open); setDocumentMenuOpen(false); setRelationMenuOpen(false); },
+              relation: () => { rememberSelection(); setRelationMenuOpen((open) => !open); setLinkMenuOpen(false); setDocumentMenuOpen(false); },
+            }} popovers={{ link: <>
               {linkMenuOpen ? (
                 <span className="neuron-md-popover">
                   <button
@@ -354,23 +327,7 @@ export function NeuronMarkdownEditor({
                   )) : <span className="neuron-md-picker-empty">Chưa có tài liệu.</span>}
                 </span>
               ) : null}
-            </span>
-            <span className="neuron-md-tool-group">
-              <Button
-                variant="toolbar"
-                type="button"
-                title="Liên kết — Chèn relation tới neuron"
-                aria-label="Liên kết Neuron"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  rememberSelection();
-                  setRelationMenuOpen((open) => !open);
-                  setLinkMenuOpen(false);
-                  setDocumentMenuOpen(false);
-                }}
-              >
-                <Network size={17} />
-              </Button>
+            </>, relation: <>
               {relationMenuOpen ? (
                 <span className="neuron-md-popover neuron-md-picker">
                   <input
@@ -392,8 +349,7 @@ export function NeuronMarkdownEditor({
                   )) : <span className="neuron-md-picker-empty">Không có neuron phù hợp.</span>}
                 </span>
               ) : null}
-            </span>
-          </div>
+            </> }} />
           <textarea
             ref={textareaRef}
             aria-label="Markdown editor"
