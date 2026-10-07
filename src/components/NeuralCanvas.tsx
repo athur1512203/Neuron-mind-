@@ -218,6 +218,8 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   };
 
   const applyHighlight = (hoveredNodeId: string | null) => {
+    const hoverColor = neurons.find((neuron) => neuron.id === hoveredNodeId)?.color ?? LINK_STROKE_ACTIVE;
+    const hoverFilter = `drop-shadow(0px 0px 3px ${hoverColor})`;
     const neighbors = hoveredNodeId ? adjacencyMap.get(hoveredNodeId) ?? new Set<string>() : new Set<string>();
     neurons.forEach((neuron) => {
       const hovered = neuron.id === hoveredNodeId;
@@ -249,10 +251,12 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
       const selected = connection.id === selectedConnectionId;
       const emphasized = selected || relatedHover || relatedSelected;
       const line = linkLineRefs.current.get(connection.id);
-      line?.setAttribute("stroke", selected ? LINK_STROKE_SELECTED : emphasized ? LINK_STROKE_ACTIVE : LINK_STROKE);
-      line?.setAttribute("stroke-width", selected ? "2" : emphasized ? "1.8" : "1.15");
-      line?.setAttribute("opacity", hoveredNodeId && !relatedHover && !selected ? "0.22" : selected ? "1" : emphasized ? "0.9" : "0.65");
-      line?.removeAttribute("filter");
+      line?.setAttribute("stroke", selected ? LINK_STROKE_SELECTED : relatedHover ? hoverColor : emphasized ? LINK_STROKE_ACTIVE : LINK_STROKE);
+      line?.setAttribute("stroke-width", selected ? "2" : relatedHover ? "2.4" : emphasized ? "1.8" : "1.15");
+      line?.setAttribute("opacity", hoveredNodeId && !relatedHover && !selected ? "0.22" : selected || relatedHover ? "1" : emphasized ? "0.9" : "0.65");
+      // Keep selected styling authoritative and never filter the invisible hit area.
+      if (relatedHover && !selected) line?.setAttribute("filter", hoverFilter);
+      else line?.removeAttribute("filter");
     });
   };
 
@@ -706,6 +710,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                   stroke={selected ? LINK_STROKE_SELECTED : LINK_STROKE}
                   strokeWidth={selected ? 2 : 1.15}
                   opacity={selected ? 1 : 0.65}
+                  style={{ transition: "stroke 180ms ease, stroke-width 180ms ease, opacity 180ms ease, filter 180ms ease" }}
                   vectorEffect="non-scaling-stroke"
                   className="pointer-events-none"
                 />
