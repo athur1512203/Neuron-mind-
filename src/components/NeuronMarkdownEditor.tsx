@@ -1,4 +1,5 @@
 import { Maximize2, Minimize2 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { NoteToolbar } from "./NoteToolbar";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DocumentMeta } from "../api/documents";
@@ -83,6 +84,36 @@ export function NeuronMarkdownEditor({
     neuronMarkdownStore.getWorking(neuronId) === neuronMarkdownStore.getSaved(neuronId) ? "saved" : "unsaved",
   );
   const [fullscreen, setFullscreen] = useState(false);
+  const inlineHost = useRef<HTMLDivElement>(null);
+  // Keep the portal destination identical so React never remounts the editor.
+  const [portalHost] = useState(() => document.createElement("div"));
+  useLayoutEffect(() => {
+    const active = document.activeElement as HTMLElement | null;
+    const selection = window.getSelection();
+    // DOM Ranges are live: save endpoints before moving their ancestor.
+    const endpoints = selection?.anchorNode && selection.focusNode ? {
+      anchor: selection.anchorNode, anchorOffset: selection.anchorOffset,
+      focus: selection.focusNode, focusOffset: selection.focusOffset,
+    } : null;
+    const scroll = Array.from(portalHost.querySelectorAll<HTMLElement>(".nm-note-content, textarea"))
+      .map((element) => ({ element, top: element.scrollTop, left: element.scrollLeft }));
+    portalHost.className = "nm-note-portal-host";
+    (fullscreen ? document.body : inlineHost.current)?.appendChild(portalHost);
+    if (active && portalHost.contains(active)) {
+      active.focus({ preventScroll: true });
+      if (endpoints && selection && portalHost.contains(endpoints.anchor)) {
+        selection.setBaseAndExtent(endpoints.anchor, endpoints.anchorOffset, endpoints.focus, endpoints.focusOffset);
+      }
+    }
+    scroll.forEach(({ element, top, left }) => { element.scrollTop = top; element.scrollLeft = left; });
+  }, [fullscreen, portalHost]);
+  useLayoutEffect(() => () => portalHost.remove(), [portalHost]);
+  useEffect(() => {
+    if (!fullscreen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [fullscreen]);
   const [past, setPast] = useState<string[]>([]);
   const [future, setFuture] = useState<string[]>([]);
   const [linkMenuOpen, setLinkMenuOpen] = useState(false);
@@ -260,13 +291,14 @@ export function NeuronMarkdownEditor({
     setStatus(next === savedValue ? "saved" : "unsaved");
   };
 
-  return (
+  return <><div ref={inlineHost} className="nm-note-inline-host" />{createPortal(
     <section className={`neuron-md ${fullscreen ? "is-fullscreen" : ""}`} onKeyDown={(event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); void save(); }
     }}>
       <header className="neuron-md-head">
-        <h3>Ghi chú</h3>
-        <Button variant="secondary" size="sm" onClick={() => setFullscreen((open) => !open)}>
+        <h3>{fullscreen ? neurons.find((neuron) => neuron.id === neuronId)?.name ?? "Ghi chú" : "Ghi chú"}</h3>
+        <span role="status" className="nm-note-save-status">{STATUS_LABEL[status]}</span>
+        <Button variant="secondary" size="sm" onMouseDown={(event) => event.preventDefault()} onClick={() => setFullscreen((open) => !open)}>
           {fullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
           {fullscreen ? "Thu nhỏ" : "Xem toàn màn hình"}
         </Button>
@@ -405,6 +437,5 @@ export function NeuronMarkdownEditor({
           </Button>
         </div>
       </footer>
-    </section>
-  );
+    </section>, portalHost)} </>;
 }

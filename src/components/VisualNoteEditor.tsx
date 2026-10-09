@@ -85,10 +85,12 @@ export function VisualNoteEditor(props: Props) {
           check.addEventListener("change", () => { const pos = getPos(); if (pos !== undefined) editor.dispatch(editor.state.tr.setNodeMarkup(pos, undefined, { ...current.attrs, checked: check.checked })); });
           return { dom, contentDOM, update(next) { if (next.type !== current.type) return false; current = next; check.checked = next.attrs.checked; return true; }, stopEvent: (event) => event.target === check };
         },
-        raw() {
+        raw(node) {
           const dom = document.createElement("div"); dom.className = "nm-note-raw"; dom.contentEditable = "false";
+          // Show unsupported syntax without interpreting HTML or rewriting its source.
+          const source = document.createElement("pre"); source.textContent = node.attrs.content;
           const button = document.createElement("button"); button.type = "button"; button.textContent = "Nội dung Markdown nâng cao — mở nguồn";
-          button.onclick = () => latest.current.onRaw(); dom.append(button); return { dom, stopEvent: () => true };
+          button.onclick = () => latest.current.onRaw(); dom.append(source, button); return { dom, stopEvent: () => true };
         },
       },
     });
