@@ -384,7 +384,8 @@ export default function App() {
     });
     setNeurons((current) => [...current, created]);
     bumpCounts(selectedSubject.id, 1, 0);
-    setSelection({ type: "neuron", id: created.id });
+    // Keep the user on the graph after creation; opening the note remains an explicit action.
+    setSelection(null);
     return created;
   };
 
