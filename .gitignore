@@ -9,3 +9,4 @@ server/dist/
 .env.*
 !.env.example
 server/.env
+mcp-worker/.dev.vars

@@ -1,0 +1,4 @@
+MCP_BEARER_TOKEN="replace-with-at-least-32-random-bytes"
+NEURONMIND_API_URL="https://your-neuromind-api.example.com/api"
+NEURONMIND_EMAIL="you@example.com"
+NEURONMIND_PASSWORD="replace-with-your-neuromind-password"
