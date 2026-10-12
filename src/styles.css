@@ -35,25 +35,33 @@
 @tailwind utilities;
 
 :root {
-  --nm-primary: #8B1E2D;
-  --nm-primary-hover: #B3263D;
-  --nm-primary-dark: #641521;
-  --nm-milk: #15161B;
-  --nm-milk-hover: #222329;
-  --nm-bg: #09090B;
-  --nm-sidebar: #101114;
-  --nm-surface: #101114;
-  --nm-panel: #111216;
-  --nm-input: #15161B;
-  --nm-hover: #222329;
-  --nm-text: #F5F5F5;
-  --nm-text-secondary: #A1A1AA;
-  --nm-muted: #A1A1AA;
-  --nm-border: #292A30;
-  --nm-sidebar-active: rgba(139, 30, 45, .18);
+  --nm-primary: #19D9D2;
+  --nm-primary-hover: #44D9AD;
+  --nm-primary-dark: #238BFA;
+  --nm-cyan: #19D9D2;
+  --nm-blue: #238BFA;
+  --nm-teal: #44D9AD;
+  --nm-yellow: #FFC45C;
+  --nm-orange: #FF873C;
+  --nm-spectrum: linear-gradient(110deg, #19D9D2 0%, #44D9AD 45%, #FFC45C 75%, #FF873C 100%);
+  --nm-milk: #141E2B;
+  --nm-milk-hover: #1A2938;
+  --nm-bg: #080C14;
+  --nm-space: #09090D;
+  --nm-sidebar: #0B1018;
+  --nm-toolbar: #0D1420;
+  --nm-surface: #101722;
+  --nm-panel: #101722;
+  --nm-input: #141E2B;
+  --nm-hover: #1A2938;
+  --nm-text: #F5F7FA;
+  --nm-text-secondary: #A6B2C2;
+  --nm-muted: #A6B2C2;
+  --nm-border: #29384A;
+  --nm-sidebar-active: linear-gradient(110deg, rgba(25, 217, 210, .20), rgba(255, 196, 92, .10));
   color-scheme: dark;
   color: var(--nm-text);
-  background: #09090B;
+  background: #080C14;
   font-synthesis: weight;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -3261,7 +3269,7 @@ textarea:focus-visible {
   height: 32px;
   margin-bottom: 0;
   border-radius: 8px;
-  background: #8B1E24;
+  background: #19D9D2;
   color: #fff;
 }
 
@@ -3477,7 +3485,7 @@ textarea:focus-visible {
   width: 28px;
   height: 28px;
   border-radius: 99px;
-  background: #8B1E24;
+  background: #19D9D2;
   color: #fff;
   font-size: 12px;
   font-weight: 650;
@@ -4837,9 +4845,9 @@ textarea:focus-visible {
   position: fixed;
   z-index: 81;
   border-radius: 10px;
-  outline: 2px solid #8B1E24;
+  outline: 2px solid #19D9D2;
   outline-offset: 4px;
-  box-shadow: 0 0 0 4px rgba(139, 30, 36, 0.1), 0 0 0 9999px rgba(20, 20, 20, 0.3);
+  box-shadow: 0 0 0 4px rgba(25, 217, 210, 0.12), 0 0 0 9999px rgba(8, 12, 20, 0.72);
   pointer-events: none;
 }
 
@@ -5169,8 +5177,8 @@ textarea:focus-visible {
 .nm-segmented-item.is-on,
 .nm-segmented-item.is-on:hover,
 .nm-segmented-item.is-on:active {
-  background: #8B1E24;
-  color: #fff;
+  background: #19D9D2;
+  color: #081018;
 }
 
 .nm-segmented-item:focus-visible {
@@ -5262,9 +5270,9 @@ textarea:focus-visible {
   width: min(460px, calc(100vw - 32px));
   height: auto;
   max-height: none;
-  background: #111216;
-  border-color: #292A30;
-  color: #F5F5F5;
+  background: #101722;
+  border-color: #29384A;
+  color: #F5F7FA;
 }
 .neuron-note-header {
   height: 58px;
@@ -5321,8 +5329,8 @@ textarea:focus-visible {
   display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0;
 }
 .neuron-md.neuron-md, .neuron-content-read {
-  --nm-bg: #0D0D0D; --nm-surface: #0D0D0D; --nm-milk: #262626;
-  --nm-text: #F5F5F5; --nm-muted: #A3A3A3; --nm-border: #303030;
+  --nm-bg: #080C14; --nm-surface: #101722; --nm-milk: #141E2B;
+  --nm-text: #F5F7FA; --nm-muted: #A6B2C2; --nm-border: #29384A;
   color-scheme: dark; color: var(--nm-text); background: var(--nm-bg);
   min-width: 0; border-color: var(--nm-border); box-shadow: none;
 }
@@ -5331,53 +5339,53 @@ textarea:focus-visible {
   z-index: 1000; margin: 0; border: 0; border-radius: 0;
 }
 .neuron-md.neuron-md :is(.neuron-md-head, .neuron-md-foot, .nm-note-modes, .nm-visual-note, .neuron-md-editor, .nm-note-content) {
-  background: #0D0D0D; color: #F5F5F5; border-color: #303030;
+  background: #080C14; color: #F5F7FA; border-color: #29384A;
 }
 .neuron-md .neuron-md-head h3 { min-width: 0; overflow-wrap: anywhere; text-transform: none; letter-spacing: normal; }
 .neuron-md .neuron-md-head > .nm-button { flex-shrink: 0; }
 .neuron-md .neuron-md-head, .neuron-md .neuron-md-foot { padding: 10px 14px; border-width: 1px; }
-.neuron-md :is(.neuron-md-foot p, .neuron-md-foot span, .nm-note-save-status) { color: #A3A3A3; }
-.neuron-md .nm-button--secondary .nm-button-front { background: #141414; color: #F5F5F5; border-color: #303030; }
-.neuron-md .nm-button--primary .nm-button-front { color: #F5F5F5; }
+.neuron-md :is(.neuron-md-foot p, .neuron-md-foot span, .nm-note-save-status) { color: #A6B2C2; }
+.neuron-md .nm-button--secondary .nm-button-front { background: #141E2B; color: #F5F7FA; border-color: #29384A; }
+.neuron-md .nm-button--primary .nm-button-front { color: #081018; }
 .neuron-md .nm-note-modes { flex-wrap: wrap; }
-.neuron-md .nm-note-modes button { background: #141414; color: #A3A3A3; border-color: #303030; }
-.neuron-md .nm-note-modes button[aria-pressed="true"] { background: var(--nm-primary); color: #F5F5F5; border-color: var(--nm-primary); }
-.neuron-md .nm-shared-toolbar { position: relative; background: #141414; min-width: 0; flex-wrap: wrap; border-color: #303030; }
-.neuron-md .nm-shared-toolbar :is(select, option) { background: #141414; color: #F5F5F5; border-color: #303030; }
-.neuron-md .nm-toolbar-slot > button { color: #F5F5F5; }
-.neuron-md .nm-toolbar-slot > button:hover:not(:disabled) { background: #262626; }
+.neuron-md .nm-note-modes button { background: #141E2B; color: #A6B2C2; border-color: #29384A; }
+.neuron-md .nm-note-modes button[aria-pressed="true"] { background: var(--nm-primary); color: #081018; border-color: var(--nm-primary); }
+.neuron-md .nm-shared-toolbar { position: relative; background: #0D1420; min-width: 0; flex-wrap: wrap; border-color: #29384A; }
+.neuron-md .nm-shared-toolbar :is(select, option) { background: #141E2B; color: #F5F7FA; border-color: #29384A; }
+.neuron-md .nm-toolbar-slot > button { color: #F5F7FA; }
+.neuron-md .nm-toolbar-slot > button:hover:not(:disabled) { background: #1A2938; }
 .neuron-md :is(.nm-note-page, .neuron-md-editor) { width: 100%; padding: 24px 32px 64px 54px; box-sizing: border-box; }
 .neuron-md .neuron-md-editor { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.neuron-md :is(textarea, input)::placeholder { color: #A3A3A3; opacity: 1; }
-.neuron-md ::selection, .neuron-content-read ::selection { background: #65404a; color: #F5F5F5; }
-.neuron-md :is(.nm-note-content, textarea, .nm-note-popover, .neuron-md-popover) { scrollbar-color: #525252 #0D0D0D; scrollbar-width: thin; }
-.neuron-md :is(.nm-note-content, textarea)::-webkit-scrollbar-thumb { background: #525252; }
-.neuron-md :is(.nm-note-popover, .neuron-md-popover) { background: #141414; color: #F5F5F5; border: 1px solid #303030; box-shadow: 0 8px 24px #0008; }
+.neuron-md :is(textarea, input)::placeholder { color: #A6B2C2; opacity: 1; }
+.neuron-md ::selection, .neuron-content-read ::selection { background: rgba(25, 217, 210, .28); color: #F5F7FA; }
+.neuron-md :is(.nm-note-content, textarea, .nm-note-popover, .neuron-md-popover) { scrollbar-color: #29384A #080C14; scrollbar-width: thin; }
+.neuron-md :is(.nm-note-content, textarea)::-webkit-scrollbar-thumb { background: #29384A; }
+.neuron-md :is(.nm-note-popover, .neuron-md-popover) { background: #101722; color: #F5F7FA; border: 1px solid #29384A; box-shadow: 0 8px 24px #0008; }
 .neuron-md .nm-note-popover { flex-shrink: 0; max-height: min(300px, 35dvh); }
 /* Anchor Markdown menus to the toolbar, not a right-edge icon. */
 .neuron-md .nm-toolbar-slot { position: static; }
 .neuron-md .neuron-md-popover { top: 100%; left: 12px; max-width: calc(100% - 24px); max-height: min(260px, 35dvh); overflow: auto; }
-.neuron-md :is(.nm-note-popover, .neuron-md-popover) :is(input, button, .neuron-md-picker-empty) { color: #F5F5F5; border-color: #303030; }
-.neuron-md :is(.nm-note-popover, .neuron-md-popover) input { background: #0D0D0D; }
-.neuron-md :is(.nm-note-popover, .neuron-md-popover) button:hover { background: #262626; }
+.neuron-md :is(.nm-note-popover, .neuron-md-popover) :is(input, button, .neuron-md-picker-empty) { color: #F5F7FA; border-color: #29384A; }
+.neuron-md :is(.nm-note-popover, .neuron-md-popover) input { background: #141E2B; }
+.neuron-md :is(.nm-note-popover, .neuron-md-popover) button:hover { background: #1A2938; }
 .neuron-md .nm-note-colors button[style], .neuron-md .nm-note-document mark { color: #191515; }
-.neuron-md .nm-note-document code, .neuron-content-read :is(code, pre, th) { background: #141414; color: #F5F5F5; border-color: #303030; }
+.neuron-md .nm-note-document code, .neuron-content-read :is(code, pre, th) { background: #141E2B; color: #F5F7FA; border-color: #29384A; }
 .neuron-md .nm-note-document code { padding: 2px 4px; border-radius: 4px; }
 .neuron-content-read { padding: 16px; border-radius: 8px; }
-.neuron-content-read .neuron-md-preview { color: #F5F5F5; }
-.neuron-content-read :is(td, th, blockquote, hr) { border-color: #303030; }
-.neuron-content-read blockquote { color: #A3A3A3; }
+.neuron-content-read .neuron-md-preview { color: #F5F7FA; }
+.neuron-content-read :is(td, th, blockquote, hr) { border-color: #29384A; }
+.neuron-content-read blockquote { color: #A6B2C2; }
 @media (max-width: 600px) {
   .neuron-md :is(.nm-note-page, .neuron-md-editor) { padding: 20px 12px 44px 38px; }
   .neuron-md .neuron-md-head { gap: 8px; flex-wrap: wrap; }
   .neuron-md .neuron-md-head h3 { flex: 1; }
   .neuron-md .neuron-md-foot { gap: 6px; flex-wrap: wrap; }
 }
-.neuron-md .nm-note-document :is(table, td, th), .neuron-content-read :is(table, td, th) { color: #F5F5F5; }
-.neuron-md .nm-button--secondary .nm-button-edge { background: #303030; }
+.neuron-md .nm-note-document :is(table, td, th), .neuron-content-read :is(table, td, th) { color: #F5F7FA; }
+.neuron-md .nm-button--secondary .nm-button-edge { background: #29384A; }
 .neuron-md .neuron-md-editor-layout { display: flex; min-width: 0; min-height: 0; }
 .neuron-md .neuron-md-editor-layout .neuron-md-pane { flex: 1; }
-.neuron-md .nm-note-raw pre { margin: 0 0 8px; padding: 10px; background: #141414; color: #F5F5F5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.neuron-md .nm-note-raw pre { margin: 0 0 8px; padding: 10px; background: #141E2B; color: #F5F7FA; white-space: pre-wrap; overflow-wrap: anywhere; }
 .neuron-content-read mark { color: #191515; }
 
 /* Dark Minimal — global black/white system with burgundy interaction states. */
@@ -5388,45 +5396,48 @@ input, textarea, select { color: var(--nm-text); caret-color: var(--nm-text); }
 input::placeholder, textarea::placeholder { color: var(--nm-muted); opacity: 1; }
 *:focus-visible { outline-color: var(--nm-primary) !important; }
 
-.nm-shell, .nm-shell-body, .nm-workspace, .learning-map-layout, .nm-graph-stage,
+.nm-shell, .nm-shell-body, .nm-workspace, .learning-map-layout,
 .nm-settings, .nm-empty-workspace, .space-documents-page, .nm-dashboard,
 .dashboard-main, .learning-map-detail-pane, .neuron-workspace { background: var(--nm-bg) !important; color: var(--nm-text); }
+.nm-graph-stage { background: var(--nm-space) !important; color: var(--nm-text); }
 
 /* Sidebar */
 .nm-shell .app-sidebar { background: var(--nm-sidebar); border-color: var(--nm-border); color: var(--nm-text); }
 .sidebar-brand { border-color: var(--nm-border); }
-.sidebar-brand-icon, .sidebar-brand-name { color: var(--nm-primary-hover); }
+.sidebar-brand-icon { background: var(--nm-spectrum) !important; color: #081018; }
+.sidebar-brand-name { color: var(--nm-text); background: var(--nm-spectrum); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .nm-shell .sidebar-nav-item, .sidebar-space, .sidebar-user, .sidebar-spaces-head { color: var(--nm-text); }
 .nm-shell .sidebar-nav-item:hover, .nm-shell .sidebar-nav-item:focus,
 .sidebar-space:hover, .sidebar-space:focus, .sidebar-user:hover { background: var(--nm-hover); color: var(--nm-text); }
+.nm-shell .sidebar-nav-item:hover svg, .sidebar-space:hover svg { color: var(--nm-cyan); }
 .nm-shell .sidebar-nav-item.is-active, .nm-shell .sidebar-nav-item.is-active:hover,
 .sidebar-space.is-active, .sidebar-space.is-active:hover { background: var(--nm-sidebar-active); color: var(--nm-text); box-shadow: inset 2px 0 0 var(--nm-primary); }
 .nm-shell .sidebar-divider { background: var(--nm-border); }
 .sidebar-space-menu, .sidebar-popover, .sidebar-tooltip { background: var(--nm-panel); border-color: var(--nm-border); color: var(--nm-text); box-shadow: 0 12px 30px #0008; }
 .sidebar-space-menu button, .sidebar-popover button { color: var(--nm-text); }
 .sidebar-space-menu button:hover, .sidebar-popover button:hover { background: var(--nm-hover); }
-.sidebar-avatar { background: var(--nm-primary); color: #fff; }
+.sidebar-avatar { background: var(--nm-primary); color: #081018; }
 
 /* Map toolbar and graph chrome */
-.nm-toolbar, .nm-mobile-top { background: var(--nm-panel) !important; border-color: var(--nm-border) !important; color: var(--nm-text); }
+.nm-toolbar, .nm-mobile-top { background: var(--nm-toolbar) !important; border-color: var(--nm-border) !important; color: var(--nm-text); }
 .nm-toolbar-search, .nm-toolbar-results, .nm-segmented { background: var(--nm-input); border-color: var(--nm-border); color: var(--nm-text); box-shadow: none; }
 .nm-toolbar-search input { background: transparent; color: var(--nm-text); }
-.nm-toolbar-search:focus-within { border-color: var(--nm-primary); box-shadow: 0 0 0 2px rgba(139, 30, 45, .2); }
+.nm-toolbar-search:focus-within { border-color: var(--nm-cyan); box-shadow: 0 0 0 2px rgba(25, 217, 210, .18); }
 .nm-toolbar-results button { color: var(--nm-text); border-color: var(--nm-border); }
 .nm-toolbar-results button:hover { background: var(--nm-hover); }
 .nm-toolbar-spacing, .nm-toolbar-spacing label { color: var(--nm-muted); }
 .nm-toolbar-spacing input, .nm-sheet-slider input { accent-color: #F5F5F5; }
 .nm-segmented-item { background: transparent; border-color: var(--nm-border); color: var(--nm-text); }
 .nm-segmented-item:hover { background: var(--nm-hover); color: var(--nm-text); }
-.nm-segmented-item.is-on, .nm-segmented-item.is-on:hover { background: var(--nm-primary); color: #fff; }
+.nm-segmented-item.is-on, .nm-segmented-item.is-on:hover { background: var(--nm-primary); color: #081018; }
 .nm-graph-tools, .nm-zoom, .nm-toast, .nm-graph-status, .nm-graph-error, .nm-graph-empty { background: var(--nm-panel); border-color: var(--nm-border); color: var(--nm-text); box-shadow: 0 8px 24px #0008; }
 .nm-notice { background: var(--nm-panel); border: 1px solid var(--nm-border); color: var(--nm-muted); }
 
 /* Buttons lose the light skeuomorphic layers while preserving their sizing and behavior. */
 .nm-button-shadow { background: #050506; }
-.nm-button-edge { background: var(--nm-primary-dark); }
-.nm-button-front { background: var(--nm-primary); color: #fff; }
-.nm-button--primary:hover .nm-button-front, .sidebar-add:hover .nm-button-front { background: var(--nm-primary-hover); }
+.nm-button-edge { background: #0E777A; }
+.nm-button-front { background: var(--nm-spectrum); color: #081018; }
+.nm-button--primary:hover .nm-button-front, .sidebar-add:hover .nm-button-front { background: linear-gradient(110deg, #25ECE5 0%, #55E8BB 45%, #FFD173 75%, #FF9A59 100%); color: #081018; }
 .nm-button--secondary .nm-button-edge, .nm-button--icon .nm-button-edge,
 .nm-button--ghost .nm-button-edge, .nm-button--toolbar .nm-button-edge { background: var(--nm-border); }
 .nm-button--secondary .nm-button-front, .nm-button--icon .nm-button-front,
@@ -5434,13 +5445,13 @@ input::placeholder, textarea::placeholder { color: var(--nm-muted); opacity: 1; 
 .nm-button--secondary:hover .nm-button-front, .nm-button--icon:hover .nm-button-front,
 .nm-button--ghost:hover .nm-button-front, .nm-button--toolbar:hover .nm-button-front { background: var(--nm-hover); color: var(--nm-text); }
 .nm-button--danger .nm-button-edge { background: #641521; }
-.nm-button--danger .nm-button-front { background: var(--nm-primary); color: #fff; }
-.nm-button--danger:hover .nm-button-front { background: var(--nm-primary-hover); }
+.nm-button--danger .nm-button-front { background: #8B1E2D; color: #fff; }
+.nm-button--danger:hover .nm-button-front { background: #B3263D; }
 .nm-btn, .nm-icon-btn { background: var(--nm-input); border-color: var(--nm-border); color: var(--nm-text); }
 .nm-btn:hover, .nm-icon-btn:hover { background: var(--nm-hover); }
-.nm-btn-primary { background: var(--nm-primary); border-color: var(--nm-primary); color: #fff; }
-.nm-btn-primary:hover { background: var(--nm-primary-hover); }
-.nm-btn-danger { background: rgba(139, 30, 45, .18); border-color: var(--nm-primary); color: #FCA5A5; }
+.nm-btn-primary { background: var(--nm-spectrum); border-color: var(--nm-cyan); color: #081018; }
+.nm-btn-primary:hover { background: linear-gradient(110deg, #25ECE5 0%, #55E8BB 45%, #FFD173 75%, #FF9A59 100%); }
+.nm-btn-danger { background: rgba(139, 30, 45, .18); border-color: #8B1E2D; color: #FCA5A5; }
 
 /* Cards, documents, settings, empty states and legacy panels. */
 .nm-settings-card, .nm-workspace-panel, .nm-workspace-card, .nm-activity,
@@ -5469,7 +5480,7 @@ input::placeholder, textarea::placeholder { color: var(--nm-muted); opacity: 1; 
   background: var(--nm-input) !important; border-color: var(--nm-border) !important; color: var(--nm-text) !important;
 }
 .nm-input:focus, .nm-textarea:focus, .nm-note-input:focus, .nm-md-editor:focus {
-  border-color: var(--nm-primary) !important; box-shadow: 0 0 0 3px rgba(139, 30, 45, .18) !important;
+  border-color: var(--nm-cyan) !important; box-shadow: 0 0 0 3px rgba(25, 217, 210, .16) !important;
 }
 .nm-swatch.is-on { box-shadow: 0 0 0 2px var(--nm-panel), 0 0 0 4px var(--nm-primary); }
 .nm-swatch-custom { background: var(--nm-input); border-color: var(--nm-border); }
@@ -5489,18 +5500,18 @@ input::placeholder, textarea::placeholder { color: var(--nm-muted); opacity: 1; 
 /* Authentication */
 .nm-auth-page { background: var(--nm-bg) !important; color: var(--nm-text); }
 .nm-auth-card { background: var(--nm-panel) !important; border-color: var(--nm-border) !important; color: var(--nm-text); box-shadow: 0 24px 70px #0009 !important; }
-.nm-auth-logo, .nm-auth-product { color: var(--nm-primary-hover); }
+.nm-auth-logo, .nm-auth-product { color: var(--nm-cyan); }
 .nm-auth-title, .nm-auth-field span { color: var(--nm-text); }
 .nm-auth-subtitle, .nm-auth-tagline, .nm-auth-switch { color: var(--nm-muted); }
 .nm-auth-field input { background: var(--nm-input); border-color: var(--nm-border); color: var(--nm-text); }
-.nm-auth-field input:focus { border-color: var(--nm-primary); box-shadow: 0 0 0 3px rgba(139, 30, 45, .18); }
+.nm-auth-field input:focus { border-color: var(--nm-cyan); box-shadow: 0 0 0 3px rgba(25, 217, 210, .16); }
 
 /* Fullscreen rich-text note. User-authored highlight colors remain untouched. */
-.neuron-note-modal, .neuron-note-modal > .neuron-md { --note-background: var(--nm-bg); background: var(--nm-bg) !important; color: var(--nm-text); }
-.neuron-note-header { background: var(--nm-sidebar); border-color: var(--nm-border); color: var(--nm-text); }
+.neuron-note-modal, .neuron-note-modal > .neuron-md { --note-background: var(--nm-bg); background: #080C14 !important; color: var(--nm-text); }
+.neuron-note-header { background: #101722; border-color: var(--nm-border); color: var(--nm-text); }
 .neuron-note-title-wrap h2 { color: var(--nm-text); }
 .neuron-md.neuron-md, .neuron-md.neuron-md :is(.nm-visual-note, .nm-note-content, .neuron-md-editor) { background: var(--nm-bg) !important; color: var(--nm-text); }
-.neuron-md .nm-shared-toolbar { background: var(--nm-panel) !important; border-color: var(--nm-border); }
+.neuron-md .nm-shared-toolbar { background: #0D1420 !important; border-color: var(--nm-border); }
 .neuron-md .nm-toolbar-slot > button { color: var(--nm-text); }
 .neuron-md .nm-toolbar-slot > button:hover:not(:disabled), .neuron-md .nm-toolbar-slot > button[aria-pressed="true"] { background: var(--nm-hover); color: #fff; }
 .neuron-md .nm-shared-toolbar :is(select, option), .neuron-md .nm-note-popover { background: var(--nm-input) !important; border-color: var(--nm-border) !important; color: var(--nm-text) !important; }
@@ -5510,7 +5521,7 @@ input::placeholder, textarea::placeholder { color: var(--nm-muted); opacity: 1; 
 .neuron-md .nm-note-document :is(table, td, th) { border-color: var(--nm-border); color: var(--nm-text); }
 .neuron-md .nm-note-document pre, .neuron-md .nm-note-document code { background: var(--nm-input); color: var(--nm-text); }
 .neuron-md .nm-note-document blockquote { border-color: var(--nm-muted); color: var(--nm-muted); }
-.neuron-md-ref-chip { background: rgba(139, 30, 45, .22); color: #F5F5F5; }
+.neuron-md-ref-chip { background: rgba(25, 217, 210, .16); color: #F5F7FA; }
 
 /* Connection/detail components still carrying utility light colors. */
 .learning-map-detail-pane :is(.bg-white, [class*="bg-white"]),

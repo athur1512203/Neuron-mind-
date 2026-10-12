@@ -34,13 +34,13 @@ type GraphTransform = { x: number; y: number; k: number };
 
 const LINK_STROKE = "#FFFFFF";
 const LINK_STROKE_ACTIVE = "#FFFFFF";
-const LINK_STROKE_SELECTED = "#B3263D";
+const LINK_STROKE_SELECTED = "#FF873C";
 const NODE_IDLE_FILL = "url(#nm-neuron-idle)";
 const NODE_DEPTH_FILTER = "url(#nm-neuron-depth)";
 const NODE_STROKE = "#D4D4D8";
 const NODE_STROKE_WIDTH = "1.25";
-const LABEL_FILL = "#F5F5F5";
-const LABEL_HALO = "#09090B";
+const LABEL_FILL = "#F5F7FA";
+const LABEL_HALO = "#09090D";
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 function nodeRadius(connectionCount: number) {
@@ -88,7 +88,7 @@ function neuronGradientId(neuronId: string) {
 }
 
 function neuronFill(neuronId: string, emphasized: boolean) {
-  return emphasized ? "#FFFFFF" : NODE_IDLE_FILL;
+  return `url(#${neuronGradientId(neuronId)})`;
 }
 
 function displayLabel(name: string, expanded: boolean) {
@@ -218,7 +218,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   };
 
   const applyHighlight = (hoveredNodeId: string | null) => {
-    const hoverColor = LINK_STROKE_ACTIVE;
+    const hoverColor = "#19D9D2";
     const hoverFilter = `drop-shadow(0px 0px 3px ${hoverColor})`;
     const neighbors = hoveredNodeId ? adjacencyMap.get(hoveredNodeId) ?? new Set<string>() : new Set<string>();
     neurons.forEach((neuron) => {
@@ -238,7 +238,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
       circle?.setAttribute("stroke-width", NODE_STROKE_WIDTH);
       circle?.setAttribute("filter", NODE_DEPTH_FILTER);
       ring?.setAttribute("r", String(radius + 3));
-      ring?.setAttribute("stroke", "#8B1E24");
+      ring?.setAttribute("stroke", "#19D9D2");
       ring?.setAttribute("stroke-width", "2");
       ring?.setAttribute("opacity", selected ? "1" : "0");
       label?.setAttribute("fill", LABEL_FILL);
@@ -646,7 +646,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   };
 
   return (
-    <div ref={containerRef} className="h-full min-h-0 min-w-0 w-full overflow-hidden bg-[#09090B]">
+    <div ref={containerRef} className="h-full min-h-0 min-w-0 w-full overflow-hidden bg-[#09090D]">
       <svg
         width="100%"
         height="100%"
@@ -662,7 +662,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
             <stop offset="0%" stopColor="#FFFFFF" />
             <stop offset="35%" stopColor="#FAFAFA" />
             <stop offset="72%" stopColor="#E4E4E7" />
-            <stop offset="100%" stopColor="#A1A1AA" />
+            <stop offset="100%" stopColor="#A6B2C2" />
           </radialGradient>
           <filter id="nm-neuron-depth" x="-50%" y="-50%" width="200%" height="200%">
             <feDropShadow dx="0" dy="1" stdDeviation="1.2" floodColor="#FFFFFF" floodOpacity="0.18" />
@@ -795,7 +795,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                   }}
                   r={radius + 3}
                   fill="none"
-                  stroke="#8B1E24"
+                  stroke="#19D9D2"
                   strokeWidth={2}
                   opacity={selected ? 1 : 0}
                   className="pointer-events-none"
