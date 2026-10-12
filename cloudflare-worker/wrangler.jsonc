@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "neuromind-api",
+  "main": "src/index.ts",
+  "workers_dev": true,
+  "compatibility_date": "2026-06-11",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "neuromind",
+      "database_id": "bbfd15a3-5439-4ba8-9350-d5a46e95ae06",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "DOCUMENTS",
+      "bucket_name": "neuromind-documents"
+    }
+  ],
+  "vars": {
+    "FRONTEND_URL": "https://neuron-mind.pages.dev"
+  }
+}
