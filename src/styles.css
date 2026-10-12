@@ -35,22 +35,25 @@
 @tailwind utilities;
 
 :root {
-  --nm-primary: #8B1E24;
-  --nm-primary-hover: #74191E;
-  --nm-primary-dark: #5E1419;
-  --nm-milk: #F7F3EA;
-  --nm-milk-hover: #F2EDE3;
-  --nm-bg: #FAF9F6;
-  --nm-sidebar: #FFFFFF;
-  --nm-surface: #FFFFFF;
-  --nm-panel: #FFFFFF;
-  --nm-text: #171717;
-  --nm-text-secondary: #686868;
-  --nm-muted: #686868;
-  --nm-border: #E5E0D8;
-  --nm-sidebar-active: #F7F3EA;
-  color: #171717;
-  background: #FAF9F6;
+  --nm-primary: #8B1E2D;
+  --nm-primary-hover: #B3263D;
+  --nm-primary-dark: #641521;
+  --nm-milk: #15161B;
+  --nm-milk-hover: #222329;
+  --nm-bg: #09090B;
+  --nm-sidebar: #101114;
+  --nm-surface: #101114;
+  --nm-panel: #111216;
+  --nm-input: #15161B;
+  --nm-hover: #222329;
+  --nm-text: #F5F5F5;
+  --nm-text-secondary: #A1A1AA;
+  --nm-muted: #A1A1AA;
+  --nm-border: #292A30;
+  --nm-sidebar-active: rgba(139, 30, 45, .18);
+  color-scheme: dark;
+  color: var(--nm-text);
+  background: #09090B;
   font-synthesis: weight;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -5367,3 +5370,150 @@ textarea:focus-visible {
 .neuron-md .neuron-md-editor-layout .neuron-md-pane { flex: 1; }
 .neuron-md .nm-note-raw pre { margin: 0 0 8px; padding: 10px; background: #141414; color: #F5F5F5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .neuron-content-read mark { color: #191515; }
+
+/* Dark Minimal — global black/white system with burgundy interaction states. */
+html, body, #root { background: var(--nm-bg); color: var(--nm-text); }
+body { color-scheme: dark; }
+button, input, textarea, select { transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, opacity 180ms ease; }
+input, textarea, select { color: var(--nm-text); caret-color: var(--nm-text); }
+input::placeholder, textarea::placeholder { color: var(--nm-muted); opacity: 1; }
+*:focus-visible { outline-color: var(--nm-primary) !important; }
+
+.nm-shell, .nm-shell-body, .nm-workspace, .learning-map-layout, .nm-graph-stage,
+.nm-settings, .nm-empty-workspace, .space-documents-page, .nm-dashboard,
+.dashboard-main, .learning-map-detail-pane, .neuron-workspace { background: var(--nm-bg) !important; color: var(--nm-text); }
+
+/* Sidebar */
+.nm-shell .app-sidebar { background: var(--nm-sidebar); border-color: var(--nm-border); color: var(--nm-text); }
+.sidebar-brand { border-color: var(--nm-border); }
+.sidebar-brand-icon, .sidebar-brand-name { color: var(--nm-primary-hover); }
+.nm-shell .sidebar-nav-item, .sidebar-space, .sidebar-user, .sidebar-spaces-head { color: var(--nm-text); }
+.nm-shell .sidebar-nav-item:hover, .nm-shell .sidebar-nav-item:focus,
+.sidebar-space:hover, .sidebar-space:focus, .sidebar-user:hover { background: var(--nm-hover); color: var(--nm-text); }
+.nm-shell .sidebar-nav-item.is-active, .nm-shell .sidebar-nav-item.is-active:hover,
+.sidebar-space.is-active, .sidebar-space.is-active:hover { background: var(--nm-sidebar-active); color: var(--nm-text); box-shadow: inset 2px 0 0 var(--nm-primary); }
+.nm-shell .sidebar-divider { background: var(--nm-border); }
+.sidebar-space-menu, .sidebar-popover, .sidebar-tooltip { background: var(--nm-panel); border-color: var(--nm-border); color: var(--nm-text); box-shadow: 0 12px 30px #0008; }
+.sidebar-space-menu button, .sidebar-popover button { color: var(--nm-text); }
+.sidebar-space-menu button:hover, .sidebar-popover button:hover { background: var(--nm-hover); }
+.sidebar-avatar { background: var(--nm-primary); color: #fff; }
+
+/* Map toolbar and graph chrome */
+.nm-toolbar, .nm-mobile-top { background: var(--nm-panel) !important; border-color: var(--nm-border) !important; color: var(--nm-text); }
+.nm-toolbar-search, .nm-toolbar-results, .nm-segmented { background: var(--nm-input); border-color: var(--nm-border); color: var(--nm-text); box-shadow: none; }
+.nm-toolbar-search input { background: transparent; color: var(--nm-text); }
+.nm-toolbar-search:focus-within { border-color: var(--nm-primary); box-shadow: 0 0 0 2px rgba(139, 30, 45, .2); }
+.nm-toolbar-results button { color: var(--nm-text); border-color: var(--nm-border); }
+.nm-toolbar-results button:hover { background: var(--nm-hover); }
+.nm-toolbar-spacing, .nm-toolbar-spacing label { color: var(--nm-muted); }
+.nm-toolbar-spacing input, .nm-sheet-slider input { accent-color: #F5F5F5; }
+.nm-segmented-item { background: transparent; border-color: var(--nm-border); color: var(--nm-text); }
+.nm-segmented-item:hover { background: var(--nm-hover); color: var(--nm-text); }
+.nm-segmented-item.is-on, .nm-segmented-item.is-on:hover { background: var(--nm-primary); color: #fff; }
+.nm-graph-tools, .nm-zoom, .nm-toast, .nm-graph-status, .nm-graph-error, .nm-graph-empty { background: var(--nm-panel); border-color: var(--nm-border); color: var(--nm-text); box-shadow: 0 8px 24px #0008; }
+.nm-notice { background: var(--nm-panel); border: 1px solid var(--nm-border); color: var(--nm-muted); }
+
+/* Buttons lose the light skeuomorphic layers while preserving their sizing and behavior. */
+.nm-button-shadow { background: #050506; }
+.nm-button-edge { background: var(--nm-primary-dark); }
+.nm-button-front { background: var(--nm-primary); color: #fff; }
+.nm-button--primary:hover .nm-button-front, .sidebar-add:hover .nm-button-front { background: var(--nm-primary-hover); }
+.nm-button--secondary .nm-button-edge, .nm-button--icon .nm-button-edge,
+.nm-button--ghost .nm-button-edge, .nm-button--toolbar .nm-button-edge { background: var(--nm-border); }
+.nm-button--secondary .nm-button-front, .nm-button--icon .nm-button-front,
+.nm-button--ghost .nm-button-front, .nm-button--toolbar .nm-button-front { background: var(--nm-input); color: var(--nm-text); }
+.nm-button--secondary:hover .nm-button-front, .nm-button--icon:hover .nm-button-front,
+.nm-button--ghost:hover .nm-button-front, .nm-button--toolbar:hover .nm-button-front { background: var(--nm-hover); color: var(--nm-text); }
+.nm-button--danger .nm-button-edge { background: #641521; }
+.nm-button--danger .nm-button-front { background: var(--nm-primary); color: #fff; }
+.nm-button--danger:hover .nm-button-front { background: var(--nm-primary-hover); }
+.nm-btn, .nm-icon-btn { background: var(--nm-input); border-color: var(--nm-border); color: var(--nm-text); }
+.nm-btn:hover, .nm-icon-btn:hover { background: var(--nm-hover); }
+.nm-btn-primary { background: var(--nm-primary); border-color: var(--nm-primary); color: #fff; }
+.nm-btn-primary:hover { background: var(--nm-primary-hover); }
+.nm-btn-danger { background: rgba(139, 30, 45, .18); border-color: var(--nm-primary); color: #FCA5A5; }
+
+/* Cards, documents, settings, empty states and legacy panels. */
+.nm-settings-card, .nm-workspace-panel, .nm-workspace-card, .nm-activity,
+.nm-doc-row, .nm-docs-empty, .nm-detail-card, .nm-delete-modal,
+.nm-graph-empty-card, .brutal-card, .brutal-dialog, .neuron-content-read {
+  background: var(--nm-panel) !important; border-color: var(--nm-border) !important; color: var(--nm-text) !important; box-shadow: none !important;
+}
+.nm-workspace-card:hover, .nm-doc-row:hover { background: var(--nm-hover) !important; }
+.nm-settings h1, .nm-settings-card h2, .nm-panel-title, .nm-workspace-title,
+.nm-docs-empty p:first-child, .nm-detail-card-title, .space-documents-title h1,
+.nm-empty-workspace h1 { color: var(--nm-text); }
+.nm-workspace-meta, .nm-docs-status, .nm-docs-head p, .nm-doc-row small,
+.space-documents-title p, .nm-empty-workspace p, .nm-activity-copy, .nm-status { color: var(--nm-muted); }
+
+/* Forms, menus, dialogs, sheets and onboarding. */
+.nm-modal-overlay, .nm-sheet-backdrop { background: rgba(0, 0, 0, .72); }
+.nm-modal, .nm-modal-head, .nm-modal-foot, .nm-sheet-panel, .nm-onboarding-tip,
+.nm-md-compose, .nm-md-toolbar, .nm-pending-doc, .nm-drop,
+.brutal-input, .brutal-textarea, .brutal-upload-zone, .brutal-file-row {
+  background: var(--nm-panel) !important; border-color: var(--nm-border) !important; color: var(--nm-text) !important; box-shadow: none !important;
+}
+.nm-modal-head p, .nm-field-hint, .nm-pending-doc small, .nm-drop, .nm-onboarding-kicker { color: var(--nm-muted); }
+.nm-field > span, .nm-drop strong, .nm-onboarding-tip h2, .nm-onboarding-copy { color: var(--nm-text); }
+.nm-input, .nm-textarea, .nm-note-input, .nm-md-editor,
+.brutal-input, .brutal-textarea, .neuron-md-popover input {
+  background: var(--nm-input) !important; border-color: var(--nm-border) !important; color: var(--nm-text) !important;
+}
+.nm-input:focus, .nm-textarea:focus, .nm-note-input:focus, .nm-md-editor:focus {
+  border-color: var(--nm-primary) !important; box-shadow: 0 0 0 3px rgba(139, 30, 45, .18) !important;
+}
+.nm-swatch.is-on { box-shadow: 0 0 0 2px var(--nm-panel), 0 0 0 4px var(--nm-primary); }
+.nm-swatch-custom { background: var(--nm-input); border-color: var(--nm-border); }
+.nm-sheet-handle { background: var(--nm-muted); }
+
+/* Global search palette. */
+.gs-overlay { background: rgba(0, 0, 0, .76) !important; }
+.gs-modal, .gs-header, .gs-body, .gs-foot, .gs-plan-out, .gs-json, .gs-raw {
+  background: var(--nm-panel) !important; border-color: var(--nm-border) !important; color: var(--nm-text) !important;
+}
+.gs-field, .gs-switch { background: var(--nm-input) !important; border-color: var(--nm-border) !important; color: var(--nm-text) !important; }
+.gs-field input { color: var(--nm-text) !important; }
+.gs-hit { background: transparent !important; border-color: var(--nm-border) !important; color: var(--nm-text) !important; }
+.gs-hit:hover, .gs-hit[aria-selected="true"] { background: var(--nm-hover) !important; }
+.gs-hit-meta, .gs-hit-score, .gs-hint, .gs-space { color: var(--nm-muted) !important; }
+
+/* Authentication */
+.nm-auth-page { background: var(--nm-bg) !important; color: var(--nm-text); }
+.nm-auth-card { background: var(--nm-panel) !important; border-color: var(--nm-border) !important; color: var(--nm-text); box-shadow: 0 24px 70px #0009 !important; }
+.nm-auth-logo, .nm-auth-product { color: var(--nm-primary-hover); }
+.nm-auth-title, .nm-auth-field span { color: var(--nm-text); }
+.nm-auth-subtitle, .nm-auth-tagline, .nm-auth-switch { color: var(--nm-muted); }
+.nm-auth-field input { background: var(--nm-input); border-color: var(--nm-border); color: var(--nm-text); }
+.nm-auth-field input:focus { border-color: var(--nm-primary); box-shadow: 0 0 0 3px rgba(139, 30, 45, .18); }
+
+/* Fullscreen rich-text note. User-authored highlight colors remain untouched. */
+.neuron-note-modal, .neuron-note-modal > .neuron-md { --note-background: var(--nm-bg); background: var(--nm-bg) !important; color: var(--nm-text); }
+.neuron-note-header { background: var(--nm-sidebar); border-color: var(--nm-border); color: var(--nm-text); }
+.neuron-note-title-wrap h2 { color: var(--nm-text); }
+.neuron-md.neuron-md, .neuron-md.neuron-md :is(.nm-visual-note, .nm-note-content, .neuron-md-editor) { background: var(--nm-bg) !important; color: var(--nm-text); }
+.neuron-md .nm-shared-toolbar { background: var(--nm-panel) !important; border-color: var(--nm-border); }
+.neuron-md .nm-toolbar-slot > button { color: var(--nm-text); }
+.neuron-md .nm-toolbar-slot > button:hover:not(:disabled), .neuron-md .nm-toolbar-slot > button[aria-pressed="true"] { background: var(--nm-hover); color: #fff; }
+.neuron-md .nm-shared-toolbar :is(select, option), .neuron-md .nm-note-popover { background: var(--nm-input) !important; border-color: var(--nm-border) !important; color: var(--nm-text) !important; }
+.neuron-md .nm-note-popover input { background: var(--nm-bg) !important; color: var(--nm-text); border-color: var(--nm-border); }
+.neuron-md .nm-note-document { color: var(--nm-text); }
+.neuron-md .nm-note-document :is(h1, h2, h3, strong) { color: #fff; }
+.neuron-md .nm-note-document :is(table, td, th) { border-color: var(--nm-border); color: var(--nm-text); }
+.neuron-md .nm-note-document pre, .neuron-md .nm-note-document code { background: var(--nm-input); color: var(--nm-text); }
+.neuron-md .nm-note-document blockquote { border-color: var(--nm-muted); color: var(--nm-muted); }
+.neuron-md-ref-chip { background: rgba(139, 30, 45, .22); color: #F5F5F5; }
+
+/* Connection/detail components still carrying utility light colors. */
+.learning-map-detail-pane :is(.bg-white, [class*="bg-white"]),
+.dashboard-main :is(.bg-white, [class*="bg-white"]) { background-color: var(--nm-panel) !important; }
+.learning-map-detail-pane :is(.text-slate-950, .text-slate-600, .text-slate-400),
+.dashboard-main :is(.text-slate-950, .text-slate-600, .text-slate-400) { color: var(--nm-muted) !important; }
+.learning-map-detail-pane :is(.border-slate-200, .border-slate-300) { border-color: var(--nm-border) !important; }
+.learning-map-detail-pane :is(h1, h2, h3, .text-slate-950), .dashboard-main :is(h1, h2, h3) { color: var(--nm-text) !important; }
+.nm-shell .bg-white, .nm-shell .bg-slate-50 { background-color: var(--nm-panel) !important; }
+.nm-shell .text-slate-950, .nm-shell .text-slate-900, .nm-shell .text-slate-800 { color: var(--nm-text) !important; }
+.nm-shell .text-slate-600, .nm-shell .text-slate-500, .nm-shell .text-slate-400 { color: var(--nm-muted) !important; }
+.nm-shell .border-black, .nm-shell .border-slate-200, .nm-shell .border-slate-300 { border-color: var(--nm-border) !important; }
+
+::-webkit-scrollbar-thumb { background: #3F3F46; border-radius: 99px; }
+::-webkit-scrollbar-track { background: transparent; }

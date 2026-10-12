@@ -5,7 +5,7 @@
 .nm-note-modes { display: flex; flex-shrink: 0; gap: 4px; padding: 8px 16px; border-bottom: 1px solid var(--nm-border); }
 .nm-note-modes button, .nm-visual-toolbar button, .nm-visual-toolbar select { border: 1px solid var(--nm-border); background: var(--nm-surface); border-radius: 6px; padding: 5px 10px; color: var(--nm-text); }
 .nm-note-modes button[aria-pressed="true"] { background: var(--nm-milk); color: var(--nm-primary); border-color: var(--nm-primary); }
-.nm-visual-note { display: flex; flex-direction: column; flex: 1; min-height: 0; background: var(--nm-surface); min-width: 0; position: relative; }
+.nm-visual-note { display: flex; flex-direction: column; flex: 1; min-height: 0; background: var(--nm-bg); min-width: 0; position: relative; }
 .nm-visual-toolbar { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 5px; padding: 10px 16px; border-bottom: 1px solid var(--nm-border); }
 .nm-visual-hint { color: var(--nm-muted); font-size: 12px; padding: 0 20px; }
 .nm-visual-blocks { padding: 12px 20px 36px; }
@@ -23,7 +23,7 @@
 .nm-slash-menu button { display: block; width: 100%; border: 0; text-align: left; padding: 6px 12px; background: transparent; }
 .nm-slash-menu button[aria-selected="true"], .nm-slash-menu button:hover { background: var(--nm-milk); color: var(--nm-primary); }
 /* Continuous document surface. ProseMirror owns caret, selections and keyboard editing. */
-.nm-visual-toolbar { padding: 8px 12px; gap: 3px; align-items: center; background: #fffdfa; }
+.nm-visual-toolbar { padding: 8px 12px; gap: 3px; align-items: center; background: var(--nm-panel); }
 .nm-visual-toolbar button, .nm-visual-toolbar select { height: 32px; padding: 4px 8px; border-color: transparent; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; }
 .nm-visual-toolbar button:hover { background: var(--nm-milk); color: var(--nm-primary); }
 .nm-visual-toolbar select { border-color: var(--nm-border); max-width: 126px; }

@@ -32,15 +32,15 @@ type GraphLink = SimulationLinkDatum<GraphNode> & {
 
 type GraphTransform = { x: number; y: number; k: number };
 
-const LINK_STROKE = "#B7ADA9";
-const LINK_STROKE_ACTIVE = "#8F8582";
-const LINK_STROKE_SELECTED = "#706663";
+const LINK_STROKE = "#FFFFFF";
+const LINK_STROKE_ACTIVE = "#FFFFFF";
+const LINK_STROKE_SELECTED = "#B3263D";
 const NODE_IDLE_FILL = "url(#nm-neuron-idle)";
 const NODE_DEPTH_FILTER = "url(#nm-neuron-depth)";
-const NODE_STROKE = "#2B2B2B";
+const NODE_STROKE = "#D4D4D8";
 const NODE_STROKE_WIDTH = "1.25";
-const LABEL_FILL = "#171717";
-const LABEL_HALO = "#FAF9F6";
+const LABEL_FILL = "#F5F5F5";
+const LABEL_HALO = "#09090B";
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 function nodeRadius(connectionCount: number) {
@@ -88,7 +88,7 @@ function neuronGradientId(neuronId: string) {
 }
 
 function neuronFill(neuronId: string, emphasized: boolean) {
-  return emphasized ? `url(#${neuronGradientId(neuronId)})` : NODE_IDLE_FILL;
+  return emphasized ? "#FFFFFF" : NODE_IDLE_FILL;
 }
 
 function displayLabel(name: string, expanded: boolean) {
@@ -218,7 +218,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   };
 
   const applyHighlight = (hoveredNodeId: string | null) => {
-    const hoverColor = neurons.find((neuron) => neuron.id === hoveredNodeId)?.color ?? LINK_STROKE_ACTIVE;
+    const hoverColor = LINK_STROKE_ACTIVE;
     const hoverFilter = `drop-shadow(0px 0px 3px ${hoverColor})`;
     const neighbors = hoveredNodeId ? adjacencyMap.get(hoveredNodeId) ?? new Set<string>() : new Set<string>();
     neurons.forEach((neuron) => {
@@ -253,7 +253,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
       const line = linkLineRefs.current.get(connection.id);
       line?.setAttribute("stroke", selected ? LINK_STROKE_SELECTED : relatedHover ? hoverColor : emphasized ? LINK_STROKE_ACTIVE : LINK_STROKE);
       line?.setAttribute("stroke-width", selected ? "2" : relatedHover ? "2.4" : emphasized ? "1.8" : "1.15");
-      line?.setAttribute("opacity", hoveredNodeId && !relatedHover && !selected ? "0.22" : selected || relatedHover ? "1" : emphasized ? "0.9" : "0.65");
+      line?.setAttribute("opacity", hoveredNodeId && !relatedHover && !selected ? "0.22" : selected || relatedHover ? "1" : emphasized ? "0.9" : "0.78");
       // Keep selected styling authoritative and never filter the invisible hit area.
       if (relatedHover && !selected) line?.setAttribute("filter", hoverFilter);
       else line?.removeAttribute("filter");
@@ -646,7 +646,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   };
 
   return (
-    <div ref={containerRef} className="h-full min-h-0 min-w-0 w-full overflow-hidden bg-[#FAF9F6]">
+    <div ref={containerRef} className="h-full min-h-0 min-w-0 w-full overflow-hidden bg-[#09090B]">
       <svg
         width="100%"
         height="100%"
@@ -660,12 +660,12 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
         <defs>
           <radialGradient id="nm-neuron-idle" cx="32%" cy="28%" r="70%">
             <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="35%" stopColor="#F7F3EA" />
-            <stop offset="72%" stopColor="#DED7CC" />
-            <stop offset="100%" stopColor="#AAA297" />
+            <stop offset="35%" stopColor="#FAFAFA" />
+            <stop offset="72%" stopColor="#E4E4E7" />
+            <stop offset="100%" stopColor="#A1A1AA" />
           </radialGradient>
           <filter id="nm-neuron-depth" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="1" dy="2" stdDeviation="1" floodColor="#000000" floodOpacity="0.18" />
+            <feDropShadow dx="0" dy="1" stdDeviation="1.2" floodColor="#FFFFFF" floodOpacity="0.18" />
           </filter>
           {neurons.map((neuron) => {
             const stops = sphereStops(neuron.color);
@@ -709,7 +709,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                   y2={target.y}
                   stroke={selected ? LINK_STROKE_SELECTED : LINK_STROKE}
                   strokeWidth={selected ? 2 : 1.15}
-                  opacity={selected ? 1 : 0.65}
+                  opacity={selected ? 1 : 0.78}
                   style={{ transition: "stroke 180ms ease, stroke-width 180ms ease, opacity 180ms ease, filter 180ms ease" }}
                   vectorEffect="non-scaling-stroke"
                   className="pointer-events-none"
