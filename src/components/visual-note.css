@@ -57,7 +57,7 @@
 .nm-note-block-controls button { display: grid; place-items: center; border: 0; background: transparent; color: inherit; padding: 4px; border-radius: 4px; }
 .nm-note-block-controls button:hover { background: var(--nm-milk); color: var(--nm-primary); }
 .nm-note-page:not(:hover):not(:focus-within) .nm-note-block-controls { visibility: hidden; }
-.nm-note-popover { position: relative; margin: 0 12px; padding: 16px; padding-top: 34px; border: 1px solid var(--nm-border); border-radius: 8px; box-shadow: 0 4px 16px #3219100c; max-width: 460px; max-height: 300px; overflow-y: auto; z-index: 3; background: var(--nm-surface); }
+.nm-note-popover { position: absolute; top: 52px; left: 12px; width: min(460px, calc(100% - 24px)); padding: 16px; padding-top: 34px; border: 1px solid var(--nm-border); border-radius: 8px; box-shadow: 0 12px 32px #32191026; max-height: min(420px, calc(100dvh - 150px)); overflow-y: auto; z-index: 30; background: var(--nm-surface); }
 .nm-note-popover label { display: block; font-size: 13px; margin: 6px 0; }
 .nm-note-popover input { width: 100%; min-width: 0; padding: 6px 9px; border: 1px solid var(--nm-border); border-radius: 5px; background: var(--nm-bg); }
 .nm-note-popover button { padding: 5px 9px; margin: 3px; border: 1px solid var(--nm-border); border-radius: 5px; background: var(--nm-milk); color: var(--nm-primary); font-size: 13px; }
@@ -65,6 +65,10 @@
 .nm-note-popup-close { position: absolute; right: 6px; top: 3px; }
 .nm-note-popover [role=alert] { color: var(--nm-primary); font-size: 13px; }
 .nm-note-colors { display: flex; flex-wrap: wrap; gap: 4px; }
+.nm-note-document ul, .nm-note-document ol { margin: 7px 0; padding-left: 28px; }
+.nm-note-document blockquote { margin: 10px 0; padding: 4px 16px; border-left: 3px solid var(--nm-border); color: var(--nm-muted); }
+.nm-note-document pre { margin: 10px 0; padding: 14px 16px; overflow-x: auto; border-radius: 7px; background: #282522; color: #fff; white-space: pre; }
+.neuron-md-ref-chip { display: inline-flex; align-items: center; border: 0; border-radius: 5px; padding: 2px 6px; background: var(--nm-milk); color: var(--nm-primary); cursor: pointer; }
 @media (max-width: 600px) {
   .nm-visual-toolbar { flex-wrap: nowrap; overflow-x: auto; max-width: 100%; }
   .nm-visual-toolbar > * { flex-shrink: 0; }

@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { EditorState, TextSelection, type Command } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { baseKeymap, setBlockType, toggleMark, chainCommands, splitBlock } from "prosemirror-commands";
+import { baseKeymap, setBlockType, toggleMark, chainCommands, splitBlock, wrapIn } from "prosemirror-commands";
 import { history, undo, redo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import { Plus, GripVertical, X } from "lucide-react";
 import { NoteToolbar } from "./NoteToolbar";
-import { noteSchema, parseDocument, serializeDocument, createTable, safeLink, highlightColors } from "../markdown/documentEditor";
+import { noteSchema, parseStoredDocument, serializeRichTextDocument, createTable, safeLink, highlightColors } from "../markdown/documentEditor";
 import { imageTypes, loadDocumentImage, uploadDocument, validateImageFile, type DocumentMeta } from "../api/documents";
 import type { Neuron } from "../types";
 import "prosemirror-view/style/prosemirror.css";
 import "./visual-note.css";
 
-type Props = { value: string; onChange: (value: string) => void; onRaw: () => void; neurons: Neuron[]; documents: DocumentMeta[];
-  neuronId: string; onEnsureConnection: (id: string) => Promise<void> };
+type Props = { value: string; onChange: (value: string) => void; neurons: Neuron[]; documents: DocumentMeta[];
+  neuronId: string; onEnsureConnection: (id: string) => Promise<void>; onSelectNeuron?: (id: string) => void };
 export const tableTab: Command = (state, dispatch) => {
   const cells: number[] = []; state.doc.descendants((node, pos) => { if (node.type.name === "table_cell") cells.push(pos + 1); });
   const current = cells.findIndex((pos) => pos <= state.selection.from && state.selection.from <= pos + state.doc.nodeAt(pos - 1)!.content.size);
@@ -34,6 +34,7 @@ export function VisualNoteEditor(props: Props) {
   const host = useRef<HTMLDivElement>(null), view = useRef<EditorView | null>(null);
   const latest = useRef(props); latest.current = props;
   const emitted = useRef(props.value);
+  const migratedFromMarkdown = useRef(parseStoredDocument(props.value).source === "markdown");
   const [menu, setMenu] = useState<"highlight" | "link" | "relation" | "table" | "image" | "insert" | null>(null);
   const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState(""); const [label, setLabel] = useState(""); const [url, setUrl] = useState("");
@@ -48,7 +49,7 @@ export function VisualNoteEditor(props: Props) {
   useEffect(() => {
     if (!host.current) return;
     const editor = new EditorView(host.current, {
-      state: EditorState.create({ schema: noteSchema, doc: parseDocument(latest.current.value), plugins: [history(), keymap({
+      state: EditorState.create({ schema: noteSchema, doc: parseStoredDocument(latest.current.value).doc, plugins: [history(), keymap({
         "Mod-z": undo, "Mod-Shift-z": redo, "Mod-y": redo, "Mod-b": toggleMark(noteSchema.marks.strong), "Mod-i": toggleMark(noteSchema.marks.em), "Mod-u": toggleMark(noteSchema.marks.underline),
         "Enter": chainCommands(checklistEnter, splitBlock), "Tab": tableTab,
         "Shift-Enter": (state, dispatch) => { dispatch?.(state.tr.replaceSelectionWith(noteSchema.nodes.hard_break.create()).scrollIntoView()); return true; },
@@ -56,7 +57,18 @@ export function VisualNoteEditor(props: Props) {
       attributes: { class: "nm-note-document", role: "textbox", "aria-label": "Nội dung ghi chú", "aria-multiline": "true", spellcheck: "true" },
       dispatchTransaction(transaction) {
         editor.updateState(editor.state.apply(transaction));
-        if (transaction.docChanged) { emitted.current = serializeDocument(editor.state.doc); latest.current.onChange(emitted.current); }
+        if (transaction.docChanged) { emitted.current = serializeRichTextDocument(editor.state.doc, migratedFromMarkdown.current ? "markdown" : undefined); latest.current.onChange(emitted.current); }
+      },
+      handleDOMEvents: {
+        click(_view, event) {
+          const mouse = event as MouseEvent;
+          const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
+          if (!anchor || !(mouse.ctrlKey || mouse.metaKey)) return false;
+          event.preventDefault();
+          const href = anchor.getAttribute("href") ?? "";
+          if (safeLink(href)) window.open(href, "_blank", "noopener,noreferrer");
+          return true;
+        },
       },
       handlePaste(_view, event) { const text = event.clipboardData?.getData("text/plain"); if (text === undefined) return false; editor.dispatch(editor.state.tr.insertText(text)); return true; },
       nodeViews: {
@@ -64,6 +76,13 @@ export function VisualNoteEditor(props: Props) {
           const dom = document.createElement("span"); dom.className = "neuron-md-ref-chip"; dom.contentEditable = "false";
           const name = node.attrs.kind === "relation" ? latest.current.neurons.find((n) => n.id === node.attrs.id)?.name : latest.current.documents.find((d) => d.id === node.attrs.id)?.originalName;
           dom.textContent = `${node.attrs.kind === "relation" ? "↗" : "▤"} ${name ?? "Liên kết không khả dụng"}`; return { dom };
+        },
+        neuron_link(node) {
+          const dom = document.createElement("button"); dom.type = "button"; dom.className = "neuron-md-ref-chip"; dom.contentEditable = "false";
+          const target = latest.current.neurons.find((n) => n.id === node.attrs.neuronId);
+          dom.textContent = `↗ ${target?.name ?? node.attrs.label ?? "Liên kết không khả dụng"}`;
+          dom.disabled = !target; dom.onclick = () => { if (target) latest.current.onSelectNeuron?.(target.id); };
+          return { dom, stopEvent: () => true };
         },
         image(node) {
           const dom = document.createElement("span"); dom.className = "nm-note-image"; dom.contentEditable = "false";
@@ -89,8 +108,7 @@ export function VisualNoteEditor(props: Props) {
           const dom = document.createElement("div"); dom.className = "nm-note-raw"; dom.contentEditable = "false";
           // Show unsupported syntax without interpreting HTML or rewriting its source.
           const source = document.createElement("pre"); source.textContent = node.attrs.content;
-          const button = document.createElement("button"); button.type = "button"; button.textContent = "Nội dung Markdown nâng cao — mở nguồn";
-          button.onclick = () => latest.current.onRaw(); dom.append(source, button); return { dom, stopEvent: () => true };
+          dom.append(source); return { dom, stopEvent: () => true };
         },
       },
     });
@@ -100,7 +118,8 @@ export function VisualNoteEditor(props: Props) {
     const editor = view.current;
     if (editor && props.value !== emitted.current) { emitted.current = props.value;
       // Loading a server snapshot is not an edit; preserve its document attributes too.
-      editor.updateState(EditorState.create({ schema: noteSchema, doc: parseDocument(props.value), plugins: editor.state.plugins })); }
+      const parsed = parseStoredDocument(props.value); migratedFromMarkdown.current = parsed.source === "markdown";
+      editor.updateState(EditorState.create({ schema: noteSchema, doc: parsed.doc, plugins: editor.state.plugins })); }
   }, [props.value]);
   useEffect(() => { view.current?.setProps({ editable: () => !busy }); }, [busy]);
   useEffect(() => { if (menu) popup.current?.querySelector<HTMLElement>("input,button,select")?.focus(); }, [menu]);
@@ -116,9 +135,25 @@ export function VisualNoteEditor(props: Props) {
   return <div className="nm-visual-note">
     <NoteToolbar busy={busy} onBlockType={(level) => run(setBlockType(level ? noteSchema.nodes.heading : noteSchema.nodes.paragraph, level ? { level } : undefined))} handlers={{
       undo: () => run(undo), redo: () => run(redo),
-      bold: () => run(toggleMark(noteSchema.marks.strong)), italic: () => run(toggleMark(noteSchema.marks.em)), underline: () => run(toggleMark(noteSchema.marks.underline)),
+      bold: () => run(toggleMark(noteSchema.marks.strong)), italic: () => run(toggleMark(noteSchema.marks.em)), underline: () => run(toggleMark(noteSchema.marks.underline)), strike: () => run(toggleMark(noteSchema.marks.strike)),
       highlight: () => open("highlight"),
-      link: () => { setLabel(view.current?.state.doc.textBetween(view.current.state.selection.from, view.current.state.selection.to) ?? ""); setUrl(""); open("link"); },
+      bullet: () => run(wrapIn(noteSchema.nodes.bullet_list)), ordered: () => run(wrapIn(noteSchema.nodes.ordered_list)),
+      quote: () => run(wrapIn(noteSchema.nodes.blockquote)), code: () => run(toggleMark(noteSchema.marks.code)), codeBlock: () => run(setBlockType(noteSchema.nodes.code_block)),
+      link: () => {
+        const editor = view.current; if (!editor) return;
+        let { from, to } = editor.state.selection;
+        const active = editor.state.storedMarks?.find((mark) => mark.type === noteSchema.marks.link) ?? editor.state.selection.$from.marks().find((mark) => mark.type === noteSchema.marks.link);
+        if (editor.state.selection.empty && active) {
+          const $pos = editor.state.selection.$from, base = $pos.start(); let offset = 0;
+          $pos.parent.forEach((child) => {
+            const end = offset + child.nodeSize;
+            if (offset <= $pos.parentOffset && $pos.parentOffset <= end && child.marks.some((mark) => mark.eq(active))) { from = base + offset; to = base + end; }
+            offset = end;
+          });
+          editor.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, from, to)));
+        }
+        setLabel(editor.state.doc.textBetween(from, to)); setUrl(active?.attrs.href ?? ""); open("link");
+      },
       relation: () => { setQuery(""); open("relation"); },
       checklist: () => insertBlock(noteSchema.nodes.check_list.create(null, noteSchema.nodes.check_item.create(null, noteSchema.nodes.paragraph.create()))),
       table: () => open("table"), image: () => open("image"),
@@ -127,14 +162,14 @@ export function VisualNoteEditor(props: Props) {
       <button type="button" aria-label="Đóng" className="nm-note-popup-close" disabled={busy} onClick={close}><X size={16} /></button>
       {menu === "highlight" && <div className="nm-note-colors">{Object.entries(highlightColors).map(([color, background]) => <button key={color} type="button" aria-label={`Highlight ${color}`} style={{ background }} onClick={() => { const editor = view.current!; editor.dispatch(editor.state.tr.addMark(editor.state.selection.from, editor.state.selection.to, noteSchema.marks.highlight.create({ color }))); close(); }}>{color}</button>)}
         <button type="button" onClick={() => { const editor = view.current!; editor.dispatch(editor.state.tr.removeMark(editor.state.selection.from, editor.state.selection.to, noteSchema.marks.highlight)); close(); }}>Xóa highlight</button></div>}
-      {menu === "link" && <form onSubmit={(event) => { event.preventDefault(); if (!safeLink(url) || !label.trim()) { setError("Nhập tên và URL https://, http:// hoặc mailto: hợp lệ."); return; }
-        const editor = view.current!; const { from, to, empty } = editor.state.selection; const mark = noteSchema.marks.link.create({ href: url });
+      {menu === "link" && <form onSubmit={(event) => { event.preventDefault(); const normalized = /^(https?:\/\/|mailto:)/i.test(url.trim()) ? url.trim() : `https://${url.trim()}`; if (!safeLink(normalized) || !label.trim()) { setError("Nhập tên và URL https://, http:// hoặc mailto: hợp lệ."); return; }
+        const editor = view.current!; const { from, to, empty } = editor.state.selection; const mark = noteSchema.marks.link.create({ href: normalized });
         editor.dispatch(empty ? editor.state.tr.insertText(label, from, to).addMark(from, from + label.length, mark) : editor.state.tr.addMark(from, to, mark)); close(); }}>
         <label>Tên liên kết<input value={label} onChange={(e) => setLabel(e.target.value)} /></label><label>URL<input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" /></label><button type="submit">Chèn Link</button></form>}
       {menu === "table" && <form onSubmit={(event) => { event.preventDefault(); try { insertBlock(createTable(rows, columns)); } catch { setError("Bảng cần 2–20 hàng và 1–8 cột."); } }}>
         <label>Hàng (gồm tiêu đề)<input type="number" min={2} max={20} value={rows} onChange={(e) => setRows(Number(e.target.value))} /></label><label>Cột<input type="number" min={1} max={8} value={columns} onChange={(e) => setColumns(Number(e.target.value))} /></label><button type="submit">Chèn bảng</button></form>}
       {menu === "relation" && <><label>Tìm Neuron<input value={query} onChange={(e) => setQuery(e.target.value)} /></label>{targets.map((neuron) => <button type="button" key={neuron.id} disabled={busy} onClick={async () => {
-        if (busy) return; setBusy(true); try { await props.onEnsureConnection(neuron.id); const editor = view.current; if (editor) editor.dispatch(editor.state.tr.replaceSelectionWith(noteSchema.nodes.reference.create({ kind: "relation", id: neuron.id }))); close(); }
+        if (busy) return; setBusy(true); try { await props.onEnsureConnection(neuron.id); const editor = view.current; if (editor) editor.dispatch(editor.state.tr.replaceSelectionWith(noteSchema.nodes.neuron_link.create({ neuronId: neuron.id, label: neuron.name }))); close(); }
         catch { setError("Không tạo được liên kết. Vui lòng thử lại."); } finally { setBusy(false); }
       }}>{neuron.name}</button>)}{!targets.length && <p>Không có Neuron phù hợp.</p>}</>}
       {menu === "image" && <><label>Tải ảnh JPEG, PNG, WebP<input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || !currentNeuron} onChange={async (event) => {

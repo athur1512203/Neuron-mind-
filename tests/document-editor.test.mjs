@@ -223,3 +223,59 @@ test('Visual → Markdown → Visual retains references, links, checklist, table
   } finally { await ui.close(); }
 });
 
+
+test('fullscreen moves the same editor outside layout and restores caret, scroll and drafts', async () => {
+  const id = 'fullscreen-ui', source = 'A long note\n\n$$x^2$$\n\n<div style="background:white">HTML</div>';
+  m.neuronMarkdownStore.applyServer(id, source);
+  const writes = [];
+  globalThis.fetch = async (_url, init) => { if (init.method === 'PUT') writes.push(JSON.parse(init.body).content); return Response.json({ content: source }); };
+  const ui = await mount(m.NeuronMarkdownEditor, { neuronId: id, neurons: [{ id, name: 'Fullscreen neuron', subjectId: 'S1' }] });
+  const click = async (label) => { const button = [...document.querySelectorAll('button')].find((b) => b.textContent === label); assert.ok(button, label); await act(async () => button.click()); };
+  try {
+    const editor = ui.container.querySelector('.ProseMirror');
+    await act(async () => editor.focus());
+    const range = document.createRange(); range.setStart(editor.querySelector('p').firstChild, 3); range.collapse(true);
+    window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+    const content = ui.container.querySelector('.nm-note-content'); content.scrollTop = 123;
+    await click('Xem toàn màn hình');
+    const fullscreen = document.querySelector('.neuron-md.is-fullscreen');
+    assert.equal(fullscreen.parentElement.parentElement, document.body);
+    assert.equal(fullscreen.querySelector('.ProseMirror'), editor);
+    assert.equal(document.activeElement, editor);
+    assert.equal(window.getSelection().anchorOffset, 3);
+    assert.equal(content.scrollTop, 123);
+    assert.equal(fullscreen.querySelector('h3').textContent, 'Fullscreen neuron');
+    assert.equal(document.body.style.overflow, 'hidden');
+    await click('Thu nhỏ');
+    assert.equal(ui.container.querySelector('.ProseMirror'), editor);
+    assert.equal(window.getSelection().anchorOffset, 3);
+    await click('Xem toàn màn hình'); await click('Markdown');
+    const textarea = document.querySelector('textarea'); assert.equal(textarea.value, source);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set.call(textarea, source + '\nDraft');
+      textarea.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    });
+    textarea.focus(); textarea.setSelectionRange(4, 8); textarea.scrollTop = 87;
+    await click('Thu nhỏ');
+    assert.equal(ui.container.querySelector('textarea'), textarea);
+    assert.equal(textarea.selectionStart, 4); assert.equal(textarea.selectionEnd, 8);
+    assert.equal(textarea.scrollTop, 87); assert.equal(textarea.value, source + '\nDraft');
+    assert.equal(document.body.style.overflow, '');
+    await act(async () => { await new Promise((r) => setTimeout(r, 900)); });
+    assert.deepEqual(writes, [source + '\nDraft']);
+    await click('Xem toàn màn hình');
+  } finally { await ui.close(); }
+  assert.equal(document.querySelector('.nm-note-portal-host'), null);
+  assert.equal(document.body.style.overflow, '');
+});
+
+
+test('unsupported code, math and HTML remain readable as literal source without applying HTML styles', async () => {
+  const source = '```js\nconst answer = 42;\n```\n\n$$\nx^2\n$$\n\n<div style="background:white">HTML</div>';
+  const ui = await mount(m.VisualNoteEditor, { value: source, neuronId: 'N1', neurons, documents: [], onRaw() {}, onChange() {}, onEnsureConnection: async () => {} });
+  try {
+    assert.match(ui.container.querySelector('.nm-note-raw pre').textContent, /const answer = 42/);
+    assert.equal(ui.container.querySelector('[style*="background:white"]'), null);
+    assert.equal(serializeDocument(parseDocument(source)), source);
+  } finally { await ui.close(); }
+});
