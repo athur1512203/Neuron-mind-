@@ -75,6 +75,15 @@ export function parseStoredDocument(value: string): { doc: PMNode; source: "json
   }
 }
 
+export function getNeuronLinkIds(value: string) {
+  const ids = new Set<string>();
+  const { doc } = parseStoredDocument(value);
+  doc.descendants((node) => {
+    if (node.type.name === "neuron_link" && typeof node.attrs.neuronId === "string") ids.add(node.attrs.neuronId);
+  });
+  return ids;
+}
+
 export function serializeRichTextDocument(doc: PMNode, migratedFrom?: "markdown"): string {
   const payload: StoredRichText = { format: RICH_TEXT_FORMAT, version: RICH_TEXT_VERSION, doc: doc.toJSON() };
   if (migratedFrom) payload.migratedFrom = migratedFrom;

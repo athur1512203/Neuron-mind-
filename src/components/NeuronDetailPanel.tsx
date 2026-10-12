@@ -12,9 +12,10 @@ export type DetailTab = "content" | "markdown" | "custom";
 type Props = { neuron: Neuron; subjectId: string; connections: NeuronConnection[]; neurons: Neuron[]; connectionCount: number;
   onClose: () => void; onDelete: (neuronId: string) => Promise<void>; onUpdate: (neuron: Neuron) => void;
   onRename: (id: string, name: string) => Promise<void>; onSelectNeuron: (neuronId: string) => void;
-  onCreateConnection: (sourceId: string, targetId: string) => void | Promise<void>; onToggleSidebar?: () => void; initialTab?: DetailTab };
+  onCreateConnection: (sourceId: string, targetId: string) => void | Promise<void>;
+  onDeleteConnection: (connectionId: string) => void | Promise<void>; onToggleSidebar?: () => void; initialTab?: DetailTab };
 
-export function NeuronDetailPanel({ neuron, subjectId, neurons, connections, onClose, onDelete, onSelectNeuron, onCreateConnection }: Props) {
+export function NeuronDetailPanel({ neuron, subjectId, neurons, connections, onClose, onDelete, onSelectNeuron, onCreateConnection, onDeleteConnection }: Props) {
   const [documents, setDocuments] = useState<DocumentMeta[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -81,7 +82,8 @@ export function NeuronDetailPanel({ neuron, subjectId, neurons, connections, onC
         </div>
       </header>
       <NeuronMarkdownEditor key={neuron.id} neuronId={neuron.id} neurons={neurons} documents={documents} connections={connections}
-        onEnsureConnection={(targetId) => onCreateConnection(neuron.id, targetId)} onSelectNeuron={(targetId) => void selectNeuronSafely(targetId)} />
+        onEnsureConnection={(targetId) => onCreateConnection(neuron.id, targetId)} onDeleteConnection={onDeleteConnection}
+        onSelectNeuron={(targetId) => void selectNeuronSafely(targetId)} />
       {confirmDelete ? (
         <div className="neuron-note-delete-overlay" role="presentation" onMouseDown={() => { if (!deleting) setConfirmDelete(false); }}>
           <section className="nm-modal nm-modal-sm neuron-note-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-neuron-title" onMouseDown={(event) => event.stopPropagation()}>

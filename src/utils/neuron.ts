@@ -1,11 +1,13 @@
 import type { NeuronConnection } from "../types";
 
 export const NEURON_COLOR_PALETTE = [
-  { label: "Cyan", value: "#19D9D2" },
-  { label: "Blue", value: "#238BFA" },
-  { label: "Teal", value: "#44D9AD" },
-  { label: "Yellow", value: "#FFC45C" },
-  { label: "Orange", value: "#FF873C" },
+  { label: "Xanh dương", value: "#3B82F6" },
+  { label: "Tím", value: "#A855F7" },
+  { label: "Xanh ngọc", value: "#20D6C7" },
+  { label: "Xanh lá", value: "#34C38F" },
+  { label: "Cam", value: "#FB923C" },
+  { label: "Vàng", value: "#FACC15" },
+  { label: "Hồng", value: "#EC4899" },
 ];
 
 export const colorPresets = NEURON_COLOR_PALETTE;

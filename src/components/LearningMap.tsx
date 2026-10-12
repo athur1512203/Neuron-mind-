@@ -5,7 +5,6 @@ import {
   Plus,
   Search,
   SlidersHorizontal,
-  Trash2,
 } from "lucide-react";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -86,12 +85,6 @@ export function LearningMap({
   const [showCreateNeuron, setShowCreateNeuron] = useState(false);
   const [connectionMode, setConnectionMode] = useState(false);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<NeuronConnection | null>(null);
-  const [deleteBusy, setDeleteBusy] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
-  const [toast, setToast] = useState("");
-  const deletingRef = useRef(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const [query, setQuery] = useState("");
   const [focusNeuronId, setFocusNeuronId] = useState<string | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
@@ -113,56 +106,12 @@ export function LearningMap({
 
   useEffect(() => {
     setSelectedConnectionId(null);
-    setPendingDelete(null);
-    setToast("");
   }, [subject.id]);
 
   useEffect(() => {
     if (!selectedConnection) setSelectedConnectionId(null);
   }, [selectedConnection]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(""), 3000);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
-
-  useEffect(() => {
-    if (pendingDelete) dialogRef.current?.showModal();
-    else dialogRef.current?.close();
-  }, [pendingDelete]);
-
-  useEffect(() => {
-    const handleKey = (event: KeyboardEvent) => {
-      const target = event.target;
-      if (event.defaultPrevented || event.repeat || event.isComposing || connectionMode || pendingDelete || !selectedConnection) return;
-      if (target instanceof HTMLElement && (target.isContentEditable || target.closest("input, textarea, select, [contenteditable], [role='textbox'], dialog"))) return;
-      if (event.key !== "Delete" && event.key !== "Backspace") return;
-      event.preventDefault();
-      setDeleteError("");
-      setPendingDelete(selectedConnection);
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [selectedConnection, connectionMode, pendingDelete]);
-
-  const confirmDeleteConnection = async () => {
-    if (!pendingDelete || deletingRef.current) return;
-    deletingRef.current = true;
-    setDeleteBusy(true);
-    setDeleteError("");
-    try {
-      await onDeleteConnection(pendingDelete.id);
-      setSelectedConnectionId((current) => current === pendingDelete.id ? null : current);
-      setPendingDelete(null);
-      setToast("Đã xóa liên kết");
-    } catch {
-      setDeleteError("Không thể xóa liên kết. Vui lòng thử lại.");
-    } finally {
-      deletingRef.current = false;
-      setDeleteBusy(false);
-    }
-  };
   const focusNeuron = (neuronId: string) => {
     setFocusNeuronId(neuronId);
     onSelectNeuron(neuronId);
@@ -228,16 +177,6 @@ export function LearningMap({
 
         <div className={`learning-map-layout min-h-0 flex-1 overflow-hidden ${selectedNeuron ? "has-neuron-detail" : ""}`}>
           <div className="nm-graph-stage" data-onboarding="graph">
-            <div className="nm-graph-tools">
-
-
-              {selectedConnection && !connectionMode ? (
-                <Button variant="danger" size="sm" className="nm-graph-delete" onClick={() => { setDeleteError(""); setPendingDelete(selectedConnection); }}>
-                  <Trash2 size={16} />Xóa liên kết
-                </Button>
-              ) : null}
-            </div>
-            {toast ? <div role="status" className="nm-toast">{toast}</div> : null}
             <NeuralCanvas
               ref={canvasRef}
               neurons={neurons}
@@ -287,6 +226,7 @@ export function LearningMap({
                 onRename={onRenameNeuron}
                 onSelectNeuron={focusNeuron}
                 onCreateConnection={onCreateConnection}
+                onDeleteConnection={onDeleteConnection}
                 onToggleSidebar={onToggleSidebar}
                 initialTab={detailInitialTab}
               />
@@ -295,15 +235,6 @@ export function LearningMap({
         </div>
       </section>
 
-      <dialog ref={dialogRef} aria-labelledby="delete-connection-title" className="brutal-dialog m-auto backdrop:bg-black/60" onCancel={(event) => { event.preventDefault(); if (!deleteBusy) setPendingDelete(null); }}>
-        <h2 id="delete-connection-title" className="text-xl font-bold">Xóa liên kết?</h2>
-        <p className="mt-3 break-words">Bạn có chắc muốn xóa liên kết giữa {neurons.find((neuron) => neuron.id === pendingDelete?.sourceNeuronId)?.name} và {neurons.find((neuron) => neuron.id === pendingDelete?.targetNeuronId)?.name}?</p>
-        {deleteError ? <p role="alert" className="mt-3 text-sm text-red-700">{deleteError}</p> : null}
-        <div className="mt-5 flex justify-end gap-3">
-          <Button variant="secondary" autoFocus disabled={deleteBusy} onClick={() => setPendingDelete(null)}>Hủy</Button>
-          <Button variant="danger" disabled={deleteBusy} onClick={() => void confirmDeleteConnection()}><Trash2 size={16} />{deleteBusy ? "Đang xóa..." : "Xóa liên kết"}</Button>
-        </div>
-      </dialog>
       {showCreateNeuron && (
         <CreateNeuronModal
           subjectId={subject.id}

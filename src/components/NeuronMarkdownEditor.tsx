@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { DocumentMeta } from "../api/documents";
 import { getNeuronMarkdown } from "../api/markdownNotes";
-import { parseStoredDocument } from "../markdown/documentEditor";
+import { getNeuronLinkIds, parseStoredDocument } from "../markdown/documentEditor";
 import { saveWorkingNote } from "../markdown/noteAutosave";
 import { neuronMarkdownStore } from "../markdown/neuronMarkdownStore";
 import type { Neuron, NeuronConnection } from "../types";
@@ -10,10 +10,11 @@ import { VisualNoteEditor } from "./VisualNoteEditor";
 
 type SaveStatus = "saved" | "unsaved" | "saving" | "error";
 type Props = { neuronId: string; neurons?: Neuron[]; documents?: DocumentMeta[]; connections?: NeuronConnection[];
-  onSaved?: (content: string) => void; onEnsureConnection?: (targetNeuronId: string) => void | Promise<void>; onSelectNeuron?: (neuronId: string) => void };
+  onSaved?: (content: string) => void; onEnsureConnection?: (targetNeuronId: string) => void | Promise<void>;
+  onDeleteConnection?: (connectionId: string) => void | Promise<void>; onSelectNeuron?: (neuronId: string) => void };
 
 /** A single WYSIWYG editor. Legacy Markdown is converted in memory and replaced only after a real edit. */
-export function NeuronMarkdownEditor({ neuronId, neurons = [], documents = [], connections = [], onSaved, onEnsureConnection, onSelectNeuron }: Props) {
+export function NeuronMarkdownEditor({ neuronId, neurons = [], documents = [], connections = [], onSaved, onEnsureConnection, onDeleteConnection, onSelectNeuron }: Props) {
   const mounted = useRef(true), saving = useRef(false), loadRequest = useRef(0);
   const relationPending = useRef(new Map<string, Promise<void>>());
   const [value, setValue] = useState(() => neuronMarkdownStore.getWorking(neuronId));
@@ -41,6 +42,12 @@ export function NeuronMarkdownEditor({ neuronId, neurons = [], documents = [], c
     saving.current = true; setStatus("saving");
     try {
       const snapshot = await saveWorkingNote(neuronId);
+      const linkedNeuronIds = getNeuronLinkIds(snapshot);
+      await Promise.all([...linkedNeuronIds].map((targetId) => ensureRelation(targetId)));
+      const staleConnections = connections.filter((connection) =>
+        connection.sourceNeuronId === neuronId && !linkedNeuronIds.has(connection.targetNeuronId),
+      );
+      await Promise.all(staleConnections.map((connection) => onDeleteConnection?.(connection.id)));
       if (mounted.current) { setStatus(neuronMarkdownStore.isDirty(neuronId) ? "unsaved" : "saved"); onSaved?.(snapshot); }
     } catch { if (mounted.current) setStatus("error"); }
     finally { saving.current = false; }

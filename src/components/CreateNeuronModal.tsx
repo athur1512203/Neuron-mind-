@@ -4,6 +4,7 @@ import { apiMessage } from "../api/client";
 import type { Neuron } from "../types";
 import { colorPresets } from "../utils/neuron";
 import { Button } from "./ui/Button";
+import { NeuronColorPicker } from "./NeuronColorPicker";
 
 function getInitialLayoutPosition(seed: string, isFirstNeuron: boolean) {
   if (isFirstNeuron) return { x: 0, y: 0, z: 0 };
@@ -27,10 +28,11 @@ type CreateNeuronModalProps = {
   onCreate: (neuron: Neuron) => Promise<Neuron>;
 };
 
-const DEFAULT_NEURON_COLOR = colorPresets[0].value;
+const DEFAULT_NEURON_COLOR = colorPresets[2].value;
 
 export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }: CreateNeuronModalProps) {
   const [name, setName] = useState("");
+  const [color, setColor] = useState(DEFAULT_NEURON_COLOR);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -56,7 +58,7 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
         id: "",
         subjectId,
         name: trimmedName,
-        color: DEFAULT_NEURON_COLOR,
+        color,
         position: getInitialLayoutPosition(`${subjectId}:${trimmedName.toLowerCase()}`, neuronCount === 0),
         textContent: "",
         images: [],
@@ -93,6 +95,10 @@ export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }:
               onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); void handleSubmit(); } }}
               className="nm-input" placeholder="Nhập tên neuron..." maxLength={120} />
           </label>
+          <div className="nm-field">
+            <span>Màu neuron</span>
+            <NeuronColorPicker value={color} onChange={setColor} disabled={busy} />
+          </div>
           {error ? <p className="nm-modal-error" role="alert">{error}</p> : null}
         </div>
 
