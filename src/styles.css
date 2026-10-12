@@ -5267,6 +5267,10 @@ textarea:focus-visible {
 }
 .neuron-note-title-wrap { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .neuron-note-title-wrap h2 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 700; }
+.neuron-note-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.neuron-note-delete-overlay { position: fixed; inset: 0; z-index: 10001; display: grid; place-items: center; padding: 20px; background: rgba(20, 15, 15, .55); }
+.neuron-note-delete-dialog { width: min(440px, calc(100vw - 32px)); }
+.neuron-note-delete-error { margin: 0 20px 8px; }
 .neuron-note-modal > .neuron-md { position: relative; display: flex; flex: 1; min-height: 0; border: 0; border-radius: 0; box-shadow: none; background: #fff; }
 .neuron-note-modal .nm-visual-note { width: 100%; }
 .neuron-note-modal .nm-shared-toolbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }

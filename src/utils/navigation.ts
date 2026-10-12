@@ -9,6 +9,7 @@ export type NavigationState = {
 };
 
 export const dashboardNavigation: NavigationState = {
+  // Internal bootstrap sentinel; App resolves it to the first available map.
   activeView: "dashboard",
   selectedSubjectId: null,
   selectedNeuronId: null,
@@ -46,7 +47,7 @@ export function readNavigation(userId: string): NavigationState {
       return { ...dashboardNavigation };
     }
     if (
-      !["dashboard", "map", "documents", "connections", "settings", "aiAgent"].includes(String(saved.activeView)) ||
+      !["dashboard", "map", "documents", "connections", "settings"].includes(String(saved.activeView)) ||
       !validId(saved.selectedSubjectId) ||
       !validId(saved.selectedNeuronId)
     ) {
@@ -84,7 +85,7 @@ export async function restoreNavigation(
   subjects: Subject[],
   loadGraph: (subjectId: string) => Promise<Graph>,
 ): Promise<{ navigation: NavigationState; graph?: Graph }> {
-  if (saved.activeView === "dashboard" || saved.activeView === "settings" || saved.activeView === "aiAgent") {
+  if (saved.activeView === "dashboard" || saved.activeView === "settings") {
     return { navigation: { ...dashboardNavigation, activeView: saved.activeView } };
   }
   if (!saved.selectedSubjectId || !subjects.some((subject) => subject.id === saved.selectedSubjectId)) {

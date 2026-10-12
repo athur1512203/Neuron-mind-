@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import { listDocuments, type DocumentMeta } from "../api/documents";
 import { saveWorkingNote } from "../markdown/noteAutosave";
 import { neuronMarkdownStore } from "../markdown/neuronMarkdownStore";
@@ -14,8 +14,11 @@ type Props = { neuron: Neuron; subjectId: string; connections: NeuronConnection[
   onRename: (id: string, name: string) => Promise<void>; onSelectNeuron: (neuronId: string) => void;
   onCreateConnection: (sourceId: string, targetId: string) => void | Promise<void>; onToggleSidebar?: () => void; initialTab?: DetailTab };
 
-export function NeuronDetailPanel({ neuron, subjectId, neurons, connections, onClose, onSelectNeuron, onCreateConnection }: Props) {
+export function NeuronDetailPanel({ neuron, subjectId, neurons, connections, onClose, onDelete, onSelectNeuron, onCreateConnection }: Props) {
   const [documents, setDocuments] = useState<DocumentMeta[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   useEffect(() => {
     let active = true;
     listDocuments(subjectId).then((items) => { if (active) setDocuments(items); }).catch(() => { if (active) setDocuments([]); });
@@ -25,10 +28,14 @@ export function NeuronDetailPanel({ neuron, subjectId, neurons, connections, onC
   useEffect(() => {
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") void closeSafely(); };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (confirmDelete) { if (!deleting) setConfirmDelete(false); return; }
+      void closeSafely();
+    };
     window.addEventListener("keydown", escape);
     return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", escape); };
-  }, [neuron.id]);
+  }, [neuron.id, confirmDelete, deleting]);
 
   const closeSafely = async () => {
     if (neuronMarkdownStore.isDirty(neuron.id)) {
@@ -44,6 +51,21 @@ export function NeuronDetailPanel({ neuron, subjectId, neurons, connections, onC
     onSelectNeuron(targetId);
   };
 
+  const deleteNeuron = async () => {
+    if (deleting) return;
+    setDeleting(true); setDeleteError("");
+    const snapshot = neuronMarkdownStore.discardForDeletion(neuron.id);
+    try {
+      await onDelete(neuron.id);
+      onClose();
+    } catch (error) {
+      neuronMarkdownStore.restoreAfterFailedDeletion(neuron.id, snapshot);
+      void saveWorkingNote(neuron.id).catch(() => {});
+      setDeleteError(error instanceof Error ? error.message : "Không xóa được neuron. Vui lòng thử lại.");
+      setDeleting(false);
+    }
+  };
+
   return createPortal(
     <section className="neuron-note-modal" role="dialog" aria-modal="true" aria-labelledby="neuron-note-title">
       <header className="neuron-note-header">
@@ -51,10 +73,34 @@ export function NeuronDetailPanel({ neuron, subjectId, neurons, connections, onC
           <span className="nm-neuron-swatch" style={{ backgroundColor: neuron.color }} aria-hidden="true" />
           <h2 id="neuron-note-title">{neuron.name}</h2>
         </div>
-        <Button variant="icon" onClick={() => void closeSafely()} aria-label="Đóng ghi chú"><X size={20} /></Button>
+        <div className="neuron-note-header-actions">
+          <Button variant="danger" size="sm" onClick={() => { setDeleteError(""); setConfirmDelete(true); }} aria-label={`Xóa neuron ${neuron.name}`}>
+            <Trash2 size={16} /> Xóa
+          </Button>
+          <Button variant="icon" onClick={() => void closeSafely()} aria-label="Đóng ghi chú"><X size={20} /></Button>
+        </div>
       </header>
       <NeuronMarkdownEditor key={neuron.id} neuronId={neuron.id} neurons={neurons} documents={documents} connections={connections}
         onEnsureConnection={(targetId) => onCreateConnection(neuron.id, targetId)} onSelectNeuron={(targetId) => void selectNeuronSafely(targetId)} />
+      {confirmDelete ? (
+        <div className="neuron-note-delete-overlay" role="presentation" onMouseDown={() => { if (!deleting) setConfirmDelete(false); }}>
+          <section className="nm-modal nm-modal-sm neuron-note-delete-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-neuron-title" onMouseDown={(event) => event.stopPropagation()}>
+            <header className="nm-modal-head">
+              <div>
+                <h2 id="delete-neuron-title">Xóa neuron?</h2>
+                <p>Bạn có chắc chắn muốn xóa neuron &apos;{neuron.name}&apos; không? Hành động này không thể hoàn tác.</p>
+              </div>
+            </header>
+            {deleteError ? <p className="nm-modal-error neuron-note-delete-error" role="alert">{deleteError}</p> : null}
+            <footer className="nm-modal-foot">
+              <Button variant="secondary" disabled={deleting} onClick={() => setConfirmDelete(false)}>Hủy</Button>
+              <Button variant="danger" disabled={deleting} onClick={() => void deleteNeuron()}>
+                <Trash2 size={16} /> {deleting ? "Đang xóa…" : "Xóa neuron"}
+              </Button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
     </section>,
     document.body,
   );

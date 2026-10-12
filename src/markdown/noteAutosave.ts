@@ -8,9 +8,10 @@ export function createNoteSaver(write: (id: string, content: string) => Promise<
     const existing = lanes.get(id);
     if (existing) return existing;
     const run = async () => {
-      while (store.isDirty(id)) {
+      while (!store.isDiscarded?.(id) && store.isDirty(id)) {
         const snapshot = store.getWorking(id);
         await write(id, snapshot);
+        if (store.isDiscarded?.(id)) return "";
         // Newer drafts remain intact; write them only after the previous request finishes.
         store.acknowledge(id, snapshot);
       }

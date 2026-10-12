@@ -3,7 +3,6 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import { connectionRouter } from "./routes/connection.routes";
-import { aiRouter } from "./routes/ai.routes";
 import { authRouter } from "./routes/auth.routes";
 import { documentRouter } from "./routes/document.routes";
 import { neuronRouter } from "./routes/neuron.routes";
@@ -51,7 +50,6 @@ app.use("/api/neurons", neuronRouter);
 app.use("/api/documents", documentRouter);
 app.use("/api/connections", connectionRouter);
 app.use("/api/search", searchRouter);
-app.use("/api/ai", aiRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
