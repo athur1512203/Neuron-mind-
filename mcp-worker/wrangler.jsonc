@@ -2,6 +2,17 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "neuromind-mcp",
   "main": "src/index.ts",
+  "workers_dev": true,
   "compatibility_date": "2026-06-11",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "neuromind",
+      "database_id": "bbfd15a3-5439-4ba8-9350-d5a46e95ae06"
+    }
+  ],
+  "vars": {
+    "MCP_USER_ID": "8c3d0647-ba5d-4e08-ab7a-19091d4fb7ef"
+  }
 }

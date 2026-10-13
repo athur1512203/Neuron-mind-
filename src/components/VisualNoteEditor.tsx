@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { EditorState, TextSelection, type Command } from "prosemirror-state";
+import { EditorState, NodeSelection, TextSelection, type Command } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
+import katex from "katex";
+import type { MathfieldElement } from "mathlive";
 import { baseKeymap, setBlockType, toggleMark, chainCommands, splitBlock, wrapIn } from "prosemirror-commands";
 import { history, undo, redo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
@@ -10,7 +12,51 @@ import { noteSchema, parseStoredDocument, serializeRichTextDocument, createTable
 import { imageTypes, loadDocumentImage, uploadDocument, validateImageFile, type DocumentMeta } from "../api/documents";
 import type { Neuron } from "../types";
 import "prosemirror-view/style/prosemirror.css";
+import "katex/dist/katex.min.css";
+import "mathlive/fonts.css";
 import "./visual-note.css";
+
+type MathKind = "mathInline" | "mathBlock";
+const mathTemplates: { label: string; latex: string; kind: MathKind }[] = [
+  { label: "Phân số", latex: String.raw`\frac{a}{b}`, kind: "mathInline" },
+  { label: "Căn bậc hai", latex: String.raw`\sqrt{x}`, kind: "mathInline" },
+  { label: "Lũy thừa", latex: String.raw`x^{n}`, kind: "mathInline" },
+  { label: "Ma trận 2×2", latex: String.raw`\begin{pmatrix}a & b \\ c & d\end{pmatrix}`, kind: "mathBlock" },
+  { label: "Ma trận 3×3", latex: String.raw`\begin{pmatrix}a & b & c \\ d & e & f \\ g & h & i\end{pmatrix}`, kind: "mathBlock" },
+  { label: "Định thức", latex: String.raw`\begin{vmatrix}a & b \\ c & d\end{vmatrix}`, kind: "mathBlock" },
+  { label: "Tổng Sigma", latex: String.raw`\sum_{i=1}^{n} i`, kind: "mathInline" },
+  { label: "Tích phân", latex: String.raw`\int_{a}^{b} f(x)\,dx`, kind: "mathInline" },
+  { label: "Công thức tùy chỉnh", latex: "", kind: "mathBlock" },
+];
+
+export function renderMathInto(dom: HTMLElement, latex: string, displayMode: boolean) {
+  dom.replaceChildren();
+  try {
+    katex.render(latex, dom, { displayMode, throwOnError: true, trust: false, strict: "warn", output: "htmlAndMathml" });
+    dom.removeAttribute("data-invalid"); dom.removeAttribute("role"); dom.removeAttribute("aria-label");
+  } catch {
+    dom.dataset.invalid = "true"; dom.setAttribute("role", "alert"); dom.setAttribute("aria-label", "Công thức LaTeX không hợp lệ");
+    dom.textContent = "Công thức không hợp lệ";
+  }
+}
+
+function MathLiveInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const host = useRef<HTMLDivElement>(null), onChangeRef = useRef(onChange); onChangeRef.current = onChange;
+  useEffect(() => {
+    let disposed = false; let field: MathfieldElement | null = null;
+    void import("mathlive").then(({ MathfieldElement }) => {
+      if (disposed || !host.current) return;
+      field = new MathfieldElement(); field.setValue(value); field.mathVirtualKeyboardPolicy = "auto";
+      field.setAttribute("aria-label", "Nhập công thức toán học");
+      field.addEventListener("input", () => onChangeRef.current(field?.getValue("latex") ?? ""));
+      host.current.replaceChildren(field);
+      queueMicrotask(() => field?.focus());
+    }).catch(() => {});
+    return () => { disposed = true; field?.remove(); };
+  }, []);
+  useEffect(() => { const field = host.current?.querySelector("math-field") as MathfieldElement | null; if (field && field.getValue("latex") !== value) field.setValue(value); }, [value]);
+  return <div className="nm-math-input"><div ref={host} className="nm-math-field-host" /><label>LaTeX<textarea value={value} onChange={(event) => onChange(event.target.value)} spellCheck={false} /></label></div>;
+}
 
 type Props = { value: string; onChange: (value: string) => void; neurons: Neuron[]; documents: DocumentMeta[];
   neuronId: string; onEnsureConnection: (id: string) => Promise<void>; onSelectNeuron?: (id: string) => void };
@@ -35,10 +81,12 @@ export function VisualNoteEditor(props: Props) {
   const latest = useRef(props); latest.current = props;
   const emitted = useRef(props.value);
   const migratedFromMarkdown = useRef(parseStoredDocument(props.value).source === "markdown");
-  const [menu, setMenu] = useState<"highlight" | "link" | "relation" | "table" | "image" | "insert" | null>(null);
+  const [menu, setMenu] = useState<"highlight" | "link" | "relation" | "table" | "image" | "insert" | "math" | null>(null);
   const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState(""); const [label, setLabel] = useState(""); const [url, setUrl] = useState("");
   const [rows, setRows] = useState(2), [columns, setColumns] = useState(3);
+  const [mathLatex, setMathLatex] = useState(""), [mathKind, setMathKind] = useState<MathKind>("mathInline"), [mathEditing, setMathEditing] = useState(false);
+  const mathPos = useRef<number | null>(null);
   const [addedImages, setAddedImages] = useState<DocumentMeta[]>([]);
   const [handle, setHandle] = useState<{ top: number; pos: number } | null>(null);
   const blockAt = useRef<number | null>(null), popup = useRef<HTMLDivElement>(null), opener = useRef<HTMLElement | null>(null);
@@ -46,6 +94,11 @@ export function VisualNoteEditor(props: Props) {
   const targets = props.neurons.filter((n) => n.id !== props.neuronId && n.subjectId === currentNeuron?.subjectId && n.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
   const close = () => { setMenu(null); setError(""); view.current?.focus(); };
   const open = (next: typeof menu) => { opener.current = document.activeElement as HTMLElement; setError(""); setMenu(next); };
+  const editMath = (pos: number, kind: MathKind, latex: string) => {
+    const editor = view.current; if (!editor) return;
+    editor.dispatch(editor.state.tr.setSelection(NodeSelection.create(editor.state.doc, pos)));
+    mathPos.current = pos; setMathKind(kind); setMathLatex(latex); setMathEditing(true); open("math");
+  };
   useEffect(() => {
     if (!host.current) return;
     const editor = new EditorView(host.current, {
@@ -95,6 +148,20 @@ export function VisualNoteEditor(props: Props) {
             }).catch(() => { if (!controller.signal.aborted) dom.textContent = "Không tải được ảnh."; });
           } else if (safeLink(node.attrs.url)) { img.src = node.attrs.url; dom.append(img); }
           return { dom, destroy() { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); } };
+        },
+        mathInline(node, _view, getPos) {
+          let current = node; const dom = document.createElement("span"); dom.className = "nm-math nm-math-inline"; dom.contentEditable = "false";
+          renderMathInto(dom, node.attrs.latex, false); dom.title = "Nhấn để chỉnh sửa công thức";
+          dom.onclick = () => { const pos = getPos(); if (pos !== undefined) editMath(pos, "mathInline", current.attrs.latex); };
+          return { dom, update(next) { if (next.type !== current.type) return false; current = next; renderMathInto(dom, next.attrs.latex, false); return true; }, stopEvent: () => true,
+            selectNode() { dom.classList.add("is-selected"); }, deselectNode() { dom.classList.remove("is-selected"); } };
+        },
+        mathBlock(node, _view, getPos) {
+          let current = node; const dom = document.createElement("div"); dom.className = "nm-math nm-math-block"; dom.contentEditable = "false";
+          renderMathInto(dom, node.attrs.latex, true); dom.title = "Nhấn để chỉnh sửa công thức";
+          dom.onclick = () => { const pos = getPos(); if (pos !== undefined) editMath(pos, "mathBlock", current.attrs.latex); };
+          return { dom, update(next) { if (next.type !== current.type) return false; current = next; renderMathInto(dom, next.attrs.latex, true); return true; }, stopEvent: () => true,
+            selectNode() { dom.classList.add("is-selected"); }, deselectNode() { dom.classList.remove("is-selected"); } };
         },
         check_item(node, _view, getPos) {
           let current = node;
@@ -157,6 +224,7 @@ export function VisualNoteEditor(props: Props) {
       relation: () => { setQuery(""); open("relation"); },
       checklist: () => insertBlock(noteSchema.nodes.check_list.create(null, noteSchema.nodes.check_item.create(null, noteSchema.nodes.paragraph.create()))),
       table: () => open("table"), image: () => open("image"),
+      math: () => { mathPos.current = null; setMathLatex(""); setMathKind("mathInline"); setMathEditing(false); open("math"); },
     }} />
     {menu && <div ref={popup} role="dialog" aria-modal="false" aria-label={`Chèn ${menu}`} className="nm-note-popover" onKeyDown={(event) => { if (event.key === "Escape" && !busy) { event.stopPropagation(); close(); opener.current?.focus(); } }}>
       <button type="button" aria-label="Đóng" className="nm-note-popup-close" disabled={busy} onClick={close}><X size={16} /></button>
@@ -177,6 +245,22 @@ export function VisualNoteEditor(props: Props) {
         setBusy(true); setError(""); try { const uploaded = await uploadDocument(currentNeuron.subjectId, file); setAddedImages((images) => [...images, uploaded]); insertImage(uploaded); }
         catch { setError("Không tải ảnh lên được. Vui lòng thử lại."); } finally { setBusy(false); }
       }} /></label>{[...props.documents, ...addedImages].filter((d) => d.subjectId === currentNeuron?.subjectId && imageTypes.has(d.mimeType)).map((file) => <button type="button" key={file.id} disabled={busy} onClick={() => insertImage(file)}>{file.originalName}</button>)}{busy && <p role="status">Đang tải ảnh...</p>}</>}
+      {menu === "math" && (!mathEditing ? <div className="nm-math-templates"><p>Chọn mẫu công thức</p>{mathTemplates.map((template) => <button type="button" key={template.label} onClick={() => {
+        setMathLatex(template.latex); setMathKind(template.kind); setMathEditing(true);
+      }}>{template.label}</button>)}</div> : <form className="nm-math-editor" onSubmit={(event) => { event.preventDefault(); const latex = mathLatex.trim();
+        if (!latex) { setError("Hãy nhập công thức."); return; }
+        try { katex.renderToString(latex, { displayMode: mathKind === "mathBlock", throwOnError: true, trust: false, strict: "warn" }); }
+        catch { setError("LaTeX không hợp lệ. Hãy kiểm tra dấu ngoặc và lệnh toán học."); return; }
+        const editor = view.current; if (!editor) return; const node = noteSchema.nodes[mathKind].create({ latex });
+        if (mathPos.current !== null) { const existing = editor.state.doc.nodeAt(mathPos.current); if (!existing) { setError("Không tìm thấy công thức để cập nhật."); return; }
+          editor.dispatch(editor.state.tr.replaceWith(mathPos.current, mathPos.current + existing.nodeSize, node).scrollIntoView()); mathPos.current = null; close();
+        } else if (mathKind === "mathInline") { editor.dispatch(editor.state.tr.replaceSelectionWith(node).scrollIntoView()); close(); }
+        else insertBlock(node);
+      }}>
+        <div className="nm-math-kind" role="group" aria-label="Kiểu công thức"><button type="button" aria-pressed={mathKind === "mathInline"} onClick={() => setMathKind("mathInline")}>Trong dòng</button><button type="button" aria-pressed={mathKind === "mathBlock"} onClick={() => setMathKind("mathBlock")}>Khối riêng</button></div>
+        <MathLiveInput value={mathLatex} onChange={(next) => { setMathLatex(next); setError(""); }} />
+        <button type="submit">{mathPos.current === null ? "Chèn công thức" : "Cập nhật công thức"}</button>
+      </form>)}
       {menu === "insert" && <>{[0, 1, 2, 3].map((level) => <button type="button" key={level} onClick={() => insertBlock(level ? noteSchema.nodes.heading.create({ level }) : noteSchema.nodes.paragraph.create())}>{level ? `Heading ${level}` : "Paragraph"}</button>)}</>}
       {error && <p role="alert">{error}</p>}
     </div>}

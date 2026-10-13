@@ -259,7 +259,7 @@ export default {
       return Response.json({ ok: true, service: "neuromind-mcp" });
     }
     if (url.pathname !== "/mcp") return new Response("Not found", { status: 404 });
-    if (env.MCP_BEARER_TOKEN?.length < 32 || !env.NEURONMIND_API_URL || !env.NEURONMIND_EMAIL || !env.NEURONMIND_PASSWORD) {
+    if (typeof env.MCP_BEARER_TOKEN !== "string" || env.MCP_BEARER_TOKEN.length < 32 || !env.MCP_USER_ID || env.MCP_USER_ID === "REPLACE_AFTER_REGISTERING_A_USER" || !env.DB) {
       return Response.json({ error: "Server is not configured" }, { status: 503 });
     }
     const authorization = request.headers.get("Authorization") ?? "";

@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from "react";
-import { Undo2, Redo2, Bold, Italic, Underline, Strikethrough, Highlighter, List, ListOrdered, ListChecks, Quote, Code, SquareCode, Link, Network, Table, Image } from "lucide-react";
+import { Undo2, Redo2, Bold, Italic, Underline, Strikethrough, Highlighter, List, ListOrdered, ListChecks, Quote, Code, SquareCode, Link, Network, Table, Image, Sigma } from "lucide-react";
 import "./note-toolbar.css";
 
 const actions = {
@@ -7,10 +7,10 @@ const actions = {
   bold: [Bold, "In đậm"], italic: [Italic, "In nghiêng"], underline: [Underline, "Gạch chân"], strike: [Strikethrough, "Gạch ngang"], highlight: [Highlighter, "Tô sáng"],
   bullet: [List, "Danh sách"], ordered: [ListOrdered, "Danh sách số"], checklist: [ListChecks, "Checklist"],
   quote: [Quote, "Trích dẫn"], code: [Code, "Code"], codeBlock: [SquareCode, "Khối code"],
-  link: [Link, "Chèn liên kết"], relation: [Network, "Liên kết neuron"], table: [Table, "Chèn bảng"], image: [Image, "Chèn ảnh"],
+  link: [Link, "Chèn liên kết"], relation: [Network, "Liên kết neuron"], table: [Table, "Chèn bảng"], image: [Image, "Chèn ảnh"], math: [Sigma, "Σ Công thức"],
 } as const;
 export type NoteToolbarAction = keyof typeof actions;
-const groups: NoteToolbarAction[][] = [["undo", "redo"], ["bold", "italic", "underline", "strike", "highlight"], ["bullet", "ordered", "checklist"], ["quote", "code", "codeBlock"], ["link", "relation"], ["table", "image"]];
+const groups: NoteToolbarAction[][] = [["undo", "redo"], ["bold", "italic", "underline", "strike", "highlight"], ["bullet", "ordered", "checklist"], ["quote", "code", "codeBlock"], ["link", "relation"], ["table", "image", "math"]];
 
 export function NoteToolbar({ handlers, disabled = [], busy = false, onBlockType, paragraphSupported = true, popovers = {} }: {
   handlers: Partial<Record<NoteToolbarAction, () => void>>;

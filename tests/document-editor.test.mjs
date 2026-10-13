@@ -84,6 +84,29 @@ test('image insertion stores Document URI only; supported image validator reject
   for (const [name,type] of [['a.svg','image/svg+xml'],['a.png','image/svg+xml'],['a.exe','image/png']]) assert.ok(m.validateImageFile({ name, type, size: 10 }));
 });
 
+test('math nodes serialize and deserialize as rich-text JSON without changing existing nodes', () => {
+  const doc = s.nodes.doc.create(null, [
+    s.nodes.paragraph.create(null, [s.text('Euler: '), s.nodes.mathInline.create({ latex: 'e^{i\\pi}+1=0' })]),
+    s.nodes.mathBlock.create({ latex: '\\begin{pmatrix}1 & 2 \\\\ 3 & 4\\end{pmatrix}' }),
+  ]);
+  const stored = m.serializeRichTextDocument(doc);
+  const parsed = m.parseStoredDocument(stored).doc;
+  assert.equal(parsed.firstChild.lastChild.type.name, 'mathInline');
+  assert.equal(parsed.firstChild.lastChild.attrs.latex, 'e^{i\\pi}+1=0');
+  assert.equal(parsed.lastChild.type.name, 'mathBlock');
+  assert.match(parsed.lastChild.attrs.latex, /pmatrix/);
+});
+
+test('KaTeX renders valid matrix math and shows a safe error for invalid LaTeX', () => {
+  const valid = document.createElement('div');
+  m.renderMathInto(valid, '\\begin{pmatrix}1 & 2 \\\\ 3 & 4\\end{pmatrix}', true);
+  assert.ok(valid.querySelector('.katex')); assert.equal(valid.dataset.invalid, undefined);
+  const invalid = document.createElement('div');
+  m.renderMathInto(invalid, '\\frac{', false);
+  assert.equal(invalid.dataset.invalid, 'true'); assert.equal(invalid.textContent, 'Công thức không hợp lệ');
+  assert.doesNotMatch(invalid.textContent, /\\frac/);
+});
+
 test('authenticated image upload/download reuse the existing Document endpoints', async () => {
   const calls = []; globalThis.fetch = async (url, init) => {
     calls.push({ url, init });
@@ -119,6 +142,36 @@ async function mount(Component, props) {
   return { container, click, render: async (next) => { await act(async () => root.render(React.createElement(Component, next))); }, close: async () => { await act(async () => root.unmount()); container.remove(); } };
 }
 const neurons = [{ id: 'N1', name: 'Current', subjectId: 'S1' }, { id: 'N2', name: 'Friendly name', subjectId: 'S1' }, { id: 'FOREIGN', name: 'Other Space', subjectId: 'S2' }];
+
+test('math toolbar inserts a template and clicking the rendered node edits it in place', async () => {
+  let output = '';
+  const base = m.serializeRichTextDocument(s.nodes.doc.create(null, s.nodes.paragraph.create(null, s.text('Start '))));
+  const props = { value: base, neuronId: 'N1', neurons, documents: [], onChange: (value) => { output = value; }, onEnsureConnection: async () => {} };
+  const ui = await mount(m.VisualNoteEditor, props);
+  try {
+    await ui.click('Σ Công thức'); await ui.click('Phân số');
+    const textarea = ui.container.querySelector('.nm-math-input textarea');
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set.call(textarea, '\\frac{x+1}{y}');
+      textarea.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    });
+    await ui.click('Chèn công thức');
+    let parsed = m.parseStoredDocument(output).doc; let math;
+    parsed.descendants((node) => { if (node.type.name === 'mathInline') math = node; });
+    assert.ok(math); assert.equal(math.attrs.latex, '\\frac{x+1}{y}');
+    assert.ok(ui.container.querySelector('.nm-math-inline .katex'));
+
+    await act(async () => ui.container.querySelector('.nm-math-inline').click());
+    const edit = ui.container.querySelector('.nm-math-input textarea');
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set.call(edit, 'x^2');
+      edit.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    });
+    await ui.click('Cập nhật công thức'); parsed = m.parseStoredDocument(output).doc; math = undefined;
+    parsed.descendants((node) => { if (node.type.name === 'mathInline') math = node; });
+    assert.equal(math.attrs.latex, 'x^2');
+  } finally { await ui.close(); }
+});
 
 test('visual editor hides IDs, has no edit-block buttons, and Link never calls relation creation', async () => {
   let relations = 0, output = '';

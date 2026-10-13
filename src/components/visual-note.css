@@ -51,6 +51,21 @@
 .nm-check-item > div { min-width: 0; flex: 1; }
 .nm-note-image { display: inline-block; max-width: 100%; vertical-align: middle; margin: 10px 0; }
 .nm-note-image img, .nm-note-inline-image { display: block; max-width: 100%; max-height: 520px; object-fit: contain; border-radius: 5px; }
+.nm-math { color: inherit; cursor: pointer; max-width: 100%; }
+.nm-math-inline { display: inline-block; vertical-align: -0.15em; margin: 0 .12em; line-height: normal; }
+.nm-math-block { display: block; margin: 14px 0; padding: 8px 4px; overflow-x: auto; overflow-y: hidden; text-align: center; scrollbar-width: thin; }
+.nm-math-block > .katex-display { width: max-content; min-width: 100%; margin: 0; }
+.nm-math.is-selected { border-radius: 4px; outline: 2px solid var(--nm-primary); outline-offset: 2px; }
+.nm-math[data-invalid="true"] { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 8px; border: 1px solid #d24b4b; border-radius: 5px; color: #d24b4b; background: color-mix(in srgb, #d24b4b 9%, transparent); font: 13px/1.4 system-ui, sans-serif; }
+.nm-math-block[data-invalid="true"] { display: flex; justify-content: center; }
+.nm-math-templates > p { margin: 0 3px 8px; color: var(--nm-muted); font-size: 13px; }
+.nm-math-editor { display: grid; gap: 10px; }
+.nm-math-kind { display: flex; gap: 5px; }
+.nm-math-kind button[aria-pressed="true"] { border-color: var(--nm-primary); background: color-mix(in srgb, var(--nm-primary) 12%, var(--nm-surface)); }
+.nm-math-input { display: grid; gap: 8px; min-width: 0; }
+.nm-math-field-host { min-height: 58px; padding: 8px; overflow-x: auto; border: 1px solid var(--nm-border); border-radius: 6px; background: var(--nm-bg); }
+.nm-math-field-host math-field { display: block; width: max-content; min-width: 100%; color: var(--nm-text); background: transparent; font-size: 1.2rem; }
+.nm-math-input textarea { display: block; width: 100%; min-height: 66px; margin-top: 4px; resize: vertical; padding: 8px; border: 1px solid var(--nm-border); border-radius: 5px; color: var(--nm-text); background: var(--nm-bg); font: 13px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
 .nm-note-raw { margin: 8px 0; padding: 8px 12px; border-left: 2px solid var(--nm-border); color: var(--nm-muted); font-size: 13px; }
 .nm-note-raw button { background: transparent; border: 0; text-align: left; color: inherit; }
 .nm-note-block-controls { position: absolute; left: 7px; display: flex; align-items: center; color: #9b918b; height: 28px; z-index: 2; }
