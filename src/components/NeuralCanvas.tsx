@@ -44,7 +44,7 @@ const LABEL_HALO = "#09090D";
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 function nodeRadius(connectionCount: number) {
-  return Math.min(24, 10 + 4 * Math.sqrt(connectionCount));
+  return Math.min(18, 7 + 3 * Math.sqrt(connectionCount));
 }
 
 function clampByte(value: number) {
@@ -242,6 +242,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
       ring?.setAttribute("stroke-width", "2");
       ring?.setAttribute("opacity", selected ? "1" : "0");
       label?.setAttribute("fill", LABEL_FILL);
+      label?.setAttribute("fill-opacity", hovered || selected ? "1" : "0.76");
       label?.setAttribute("font-weight", hovered || selected ? "600" : "500");
       label?.setAttribute("x", String(visualRadius + 8));
       if (label) label.textContent = displayLabel(neuron.name, hovered || selected, connectionCount);
@@ -346,18 +347,18 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
         forceLink<GraphNode, GraphLink>(graphLinks)
           .id((node) => node.id)
           .distance((link) => {
-            const sourceRadius = typeof link.source === "string" ? 10 : link.source.radius;
-            const targetRadius = typeof link.target === "string" ? 10 : link.target.radius;
-            return (64 + sourceRadius + targetRadius) * (neuronSpacing / 2.4);
+            const sourceRadius = typeof link.source === "string" ? 7 : link.source.radius;
+            const targetRadius = typeof link.target === "string" ? 7 : link.target.radius;
+            return (96 + sourceRadius + targetRadius) * (neuronSpacing / 2.4);
           })
           .strength(0.25),
       )
-      .force("charge", forceManyBody<GraphNode>().strength((node) => -(85 + node.radius * 2.6)).distanceMax(neuronSpacing * 200))
+      .force("charge", forceManyBody<GraphNode>().strength((node) => -(90 + node.radius * 2.4)).distanceMax(neuronSpacing * 210))
       .force(
         "collision",
         forceCollide<GraphNode>()
-          .radius((node) => node.radius + Math.min(46, 14 + Math.min(node.name.length, 18) * 1.6))
-          .strength(0.9)
+          .radius((node) => node.radius + Math.min(54, 18 + Math.min(node.name.length, 18) * 1.8))
+          .strength(0.92)
           .iterations(2),
       )
       .force("center", forceCenter<GraphNode>(0, 0).strength(0.025))
@@ -451,7 +452,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
     for (const node of nodesRef.current) {
       if (node.id === excludeId) continue;
       const distance = Math.hypot((node.x ?? 0) - x, (node.y ?? 0) - y);
-      const hitRadius = node.radius + 10;
+      const hitRadius = Math.max(22, node.radius + 10);
       if (distance <= hitRadius && distance < best) {
         match = node;
         best = distance;
@@ -830,6 +831,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                   x={radius + 8}
                   y={4}
                   fill={LABEL_FILL}
+                  fillOpacity={selected ? 1 : 0.76}
                   fontSize={13}
                   fontWeight={selected ? 600 : 500}
                   stroke={LABEL_HALO}
