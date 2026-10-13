@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { DocumentMeta } from "../api/documents";
-import { getNeuronMarkdown } from "../api/markdownNotes";
+import { getNote } from "../api/markdownNotes";
 import { getNeuronLinkIds, parseStoredDocument } from "../markdown/documentEditor";
 import { saveWorkingNote } from "../markdown/noteAutosave";
 import { neuronMarkdownStore } from "../markdown/neuronMarkdownStore";
@@ -9,59 +9,55 @@ import { areSameConnection } from "../utils/neuron";
 import { VisualNoteEditor } from "./VisualNoteEditor";
 
 type SaveStatus = "saved" | "unsaved" | "saving" | "error";
-type Props = { neuronId: string; neurons?: Neuron[]; documents?: DocumentMeta[]; connections?: NeuronConnection[];
+type Props = { noteId: string; neuronId: string; neurons?: Neuron[]; documents?: DocumentMeta[]; connections?: NeuronConnection[];
   onSaved?: (content: string) => void; onEnsureConnection?: (targetNeuronId: string) => void | Promise<void>;
-  onDeleteConnection?: (connectionId: string) => void | Promise<void>; onSelectNeuron?: (neuronId: string) => void };
+  onSelectNeuron?: (neuronId: string) => void };
 
 /** A single WYSIWYG editor. Legacy Markdown is converted in memory and replaced only after a real edit. */
-export function NeuronMarkdownEditor({ neuronId, neurons = [], documents = [], connections = [], onSaved, onEnsureConnection, onDeleteConnection, onSelectNeuron }: Props) {
+export function NeuronMarkdownEditor({ noteId, neuronId, neurons = [], documents = [], connections = [], onSaved, onEnsureConnection, onSelectNeuron }: Props) {
   const mounted = useRef(true), saving = useRef(false), loadRequest = useRef(0);
   const relationPending = useRef(new Map<string, Promise<void>>());
-  const [value, setValue] = useState(() => neuronMarkdownStore.getWorking(neuronId));
-  const [status, setStatus] = useState<SaveStatus>(() => neuronMarkdownStore.isDirty(neuronId) ? "unsaved" : "saved");
+  const [value, setValue] = useState(() => neuronMarkdownStore.getWorking(noteId));
+  const [status, setStatus] = useState<SaveStatus>(() => neuronMarkdownStore.isDirty(noteId) ? "unsaved" : "saved");
 
   useEffect(() => {
     const requestId = ++loadRequest.current, controller = new AbortController();
-    const savedAtLoad = neuronMarkdownStore.getSaved(neuronId), workingAtLoad = neuronMarkdownStore.getWorking(neuronId);
-    setValue(workingAtLoad); setStatus(neuronMarkdownStore.isDirty(neuronId) ? "unsaved" : "saved");
-    void getNeuronMarkdown(neuronId, controller.signal).then((note) => {
+    const savedAtLoad = neuronMarkdownStore.getSaved(noteId), workingAtLoad = neuronMarkdownStore.getWorking(noteId);
+    setValue(workingAtLoad); setStatus(neuronMarkdownStore.isDirty(noteId) ? "unsaved" : "saved");
+    void getNote(noteId, controller.signal).then((note) => {
       if (controller.signal.aborted || requestId !== loadRequest.current) return;
-      if (neuronMarkdownStore.getSaved(neuronId) !== savedAtLoad || neuronMarkdownStore.getWorking(neuronId) !== workingAtLoad) return;
+      if (neuronMarkdownStore.getSaved(noteId) !== savedAtLoad || neuronMarkdownStore.getWorking(noteId) !== workingAtLoad) return;
       const source = note.content ?? "";
-      if (!neuronMarkdownStore.applyServer(neuronId, source)) return;
+      if (!neuronMarkdownStore.applyServer(noteId, source)) return;
       parseStoredDocument(source); // Validate without migrating a read-only note.
       setValue(source); setStatus("saved");
     }).catch((error: unknown) => {
       if (!controller.signal.aborted && requestId === loadRequest.current && !(error instanceof DOMException && error.name === "AbortError")) setStatus("error");
     });
     return () => controller.abort();
-  }, [neuronId]);
+  }, [noteId]);
 
   const save = async () => {
-    if (saving.current || !neuronMarkdownStore.isDirty(neuronId)) return;
+    if (saving.current || !neuronMarkdownStore.isDirty(noteId)) return;
     saving.current = true; setStatus("saving");
     try {
-      const snapshot = await saveWorkingNote(neuronId);
+      const snapshot = await saveWorkingNote(noteId);
       const linkedNeuronIds = getNeuronLinkIds(snapshot);
       await Promise.all([...linkedNeuronIds].map((targetId) => ensureRelation(targetId)));
-      const staleConnections = connections.filter((connection) =>
-        connection.sourceNeuronId === neuronId && !linkedNeuronIds.has(connection.targetNeuronId),
-      );
-      await Promise.all(staleConnections.map((connection) => onDeleteConnection?.(connection.id)));
-      if (mounted.current) { setStatus(neuronMarkdownStore.isDirty(neuronId) ? "unsaved" : "saved"); onSaved?.(snapshot); }
+      if (mounted.current) { setStatus(neuronMarkdownStore.isDirty(noteId) ? "unsaved" : "saved"); onSaved?.(snapshot); }
     } catch { if (mounted.current) setStatus("error"); }
     finally { saving.current = false; }
   };
 
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; if (neuronMarkdownStore.isDirty(neuronId)) void saveWorkingNote(neuronId).catch(() => {}); };
-  }, [neuronId]);
+    return () => { mounted.current = false; if (neuronMarkdownStore.isDirty(noteId)) void saveWorkingNote(noteId).catch(() => {}); };
+  }, [noteId]);
   useEffect(() => {
-    if (!neuronMarkdownStore.isDirty(neuronId)) return;
+    if (!neuronMarkdownStore.isDirty(noteId)) return;
     const timer = window.setTimeout(() => void save(), 800);
     return () => window.clearTimeout(timer);
-  }, [value, neuronId]);
+  }, [value, noteId]);
 
   const ensureRelation = (targetId: string): Promise<void> => {
     const current = neurons.find((item) => item.id === neuronId), target = neurons.find((item) => item.id === targetId);
@@ -75,7 +71,7 @@ export function NeuronMarkdownEditor({ neuronId, neurons = [], documents = [], c
 
   const change = (next: string) => {
     if (next === value) return;
-    setValue(next); neuronMarkdownStore.setWorking(neuronId, next); setStatus("unsaved");
+    setValue(next); neuronMarkdownStore.setWorking(noteId, next); setStatus("unsaved");
   };
 
   return <section className="neuron-md" onKeyDown={(event) => {

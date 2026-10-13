@@ -19,6 +19,7 @@ import type { Neuron, NeuronConnection, Position3D, Selection, Subject, ViewName
 import { areSameConnection } from "./utils/neuron";
 import { clearNavigation, readNavigation, restoreNavigation, saveNavigation } from "./utils/navigation";
 import { isOnboardingCompleted } from "./utils/onboarding";
+import { rememberActiveNote } from "./utils/noteSelection";
 import { OnboardingTour } from "./components/onboarding/OnboardingTour";
 import { useLayoutMode } from "./hooks/useMediaQuery";
 import { Button } from "./components/ui/Button";
@@ -322,6 +323,7 @@ export default function App() {
       return;
     }
     if (!result.neuronId) return;
+    if (result.type === "markdown") rememberActiveNote(result.neuronId, result.id);
     const tab: DetailTab = result.type === "markdown" ? "markdown" : "content";
     openNeuron(result.subjectId, result.neuronId, tab);
   };

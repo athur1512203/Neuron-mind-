@@ -132,6 +132,7 @@ const subjectSelect = `id, user_id AS userId, name, color, created_at AS created
 const neuronSelect = `n.id, n.space_id AS subjectId, n.name, n.color, n.text_content AS textContent, n.note, n.key_points AS keyPoints, n.memory_method AS memoryMethod, n.application, n.position_x AS positionX, n.position_y AS positionY, n.position_z AS positionZ, n.created_at AS createdAt, n.updated_at AS updatedAt`;
 const connectionSelect = `c.id, c.space_id AS subjectId, c.source_neuron_id AS sourceNeuronId, c.target_neuron_id AS targetNeuronId, c.created_at AS createdAt`;
 const documentSelect = `d.id, d.space_id AS subjectId, d.original_name AS originalName, d.stored_name AS storedName, d.mime_type AS mimeType, d.extension, d.size, d.storage_key AS storageKey, d.checksum, d.created_at AS createdAt, d.updated_at AS updatedAt`;
+const noteSelect = `mn.id, mn.neuron_id AS neuronId, mn.name, mn.content, mn.sort_order AS sortOrder, mn.is_default AS isDefault, mn.created_at AS createdAt, mn.updated_at AS updatedAt`;
 
 async function ownedSpace(env: Env, spaceId: string, userId: string) {
   const row = await env.DB.prepare(`SELECT ${subjectSelect} FROM spaces WHERE id = ? AND user_id = ?`).bind(spaceId, userId).first();
@@ -142,6 +143,12 @@ async function ownedSpace(env: Env, spaceId: string, userId: string) {
 async function ownedNeuron(env: Env, neuronId: string, userId: string) {
   const row = await env.DB.prepare(`SELECT ${neuronSelect} FROM neurons n JOIN spaces s ON s.id = n.space_id WHERE n.id = ? AND s.user_id = ?`).bind(neuronId, userId).first();
   if (!row) throw new HttpError(404, "NEURON_NOT_FOUND", "Neuron not found");
+  return row;
+}
+
+async function ownedNote(env: Env, noteId: string, userId: string) {
+  const row = await env.DB.prepare(`SELECT ${noteSelect} FROM notes mn JOIN neurons n ON n.id = mn.neuron_id JOIN spaces s ON s.id = n.space_id WHERE mn.id = ? AND s.user_id = ?`).bind(noteId, userId).first();
+  if (!row) throw new HttpError(404, "NOTE_NOT_FOUND", "Note not found");
   return row;
 }
 
@@ -272,7 +279,10 @@ async function neurons(request: Request, env: Env, path: string, userId: string)
       const input = neuronInput(await body(request), false), neuronId = id(), timestamp = now();
       const columns = ["id", "space_id", ...Object.keys(input), "created_at", "updated_at"];
       const values = [neuronId, spaceId, ...Object.values(input), timestamp, timestamp];
-      await env.DB.prepare(`INSERT INTO neurons (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`).bind(...values).run();
+      await env.DB.batch([
+        env.DB.prepare(`INSERT INTO neurons (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`).bind(...values),
+        env.DB.prepare("INSERT INTO notes (id, neuron_id, name, content, sort_order, is_default, created_at, updated_at) VALUES (?, ?, 'Ghi chú', '', 0, 1, ?, ?)").bind(id(), neuronId, timestamp, timestamp),
+      ]);
       return json({ ...(await ownedNeuron(env, neuronId, userId)), images: [], audio: [] }, 201);
     }
   }
@@ -296,18 +306,89 @@ async function neurons(request: Request, env: Env, path: string, userId: string)
 }
 
 async function notes(request: Request, env: Env, path: string, userId: string) {
-  const match = path.match(/^\/neurons\/([^/]+)\/note$/); if (!match) return null;
-  const neuronId = decodeURIComponent(match[1]); await ownedNeuron(env, neuronId, userId);
-  if (request.method === "GET") {
-    const note = await env.DB.prepare("SELECT id, neuron_id AS neuronId, content, created_at AS createdAt, updated_at AS updatedAt FROM notes WHERE neuron_id = ?").bind(neuronId).first();
-    return json(note ?? { neuronId, content: null });
+  const ordering = path.match(/^\/neurons\/([^/]+)\/notes\/order$/);
+  if (ordering) {
+    const neuronId = decodeURIComponent(ordering[1]); await ownedNeuron(env, neuronId, userId);
+    if (request.method !== "PUT") return null;
+    const noteIds = (await body(request)).noteIds;
+    if (!Array.isArray(noteIds) || noteIds.some((value) => typeof value !== "string") || new Set(noteIds).size !== noteIds.length) {
+      throw new HttpError(400, "VALIDATION_ERROR", "noteIds must contain unique note IDs");
+    }
+    const existing = await env.DB.prepare("SELECT id FROM notes WHERE neuron_id = ? ORDER BY sort_order, created_at").bind(neuronId).all<{ id: string }>();
+    const expected = new Set(existing.results.map((item) => item.id));
+    if (noteIds.length !== expected.size || noteIds.some((noteId) => !expected.has(noteId))) throw new HttpError(400, "VALIDATION_ERROR", "noteIds must include every note in the neuron");
+    const timestamp = now();
+    await env.DB.batch(noteIds.map((noteId, index) => env.DB.prepare("UPDATE notes SET sort_order = ?, updated_at = ? WHERE id = ?").bind(index, timestamp, noteId)));
+    return json({ noteIds });
   }
+  const collection = path.match(/^\/neurons\/([^/]+)\/notes$/);
+  if (collection) {
+    const neuronId = decodeURIComponent(collection[1]); await ownedNeuron(env, neuronId, userId);
+    if (request.method === "GET") {
+      const rows = await env.DB.prepare("SELECT id, neuron_id AS neuronId, name, sort_order AS sortOrder, is_default AS isDefault, created_at AS createdAt, updated_at AS updatedAt FROM notes WHERE neuron_id = ? ORDER BY sort_order, created_at").bind(neuronId).all();
+      return json(rows.results);
+    }
+    if (request.method === "POST") {
+      const data = await body(request);
+      const name = text(data.name ?? "Note mới", "name", { max: 120 }) as string;
+      const timestamp = now(), noteId = id();
+      const order = await env.DB.prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 AS nextOrder FROM notes WHERE neuron_id = ?").bind(neuronId).first<{ nextOrder: number }>();
+      await env.DB.prepare("INSERT INTO notes (id, neuron_id, name, content, sort_order, is_default, created_at, updated_at) VALUES (?, ?, ?, '', ?, 0, ?, ?)").bind(noteId, neuronId, name, order?.nextOrder ?? 0, timestamp, timestamp).run();
+      return json(await ownedNote(env, noteId, userId), 201);
+    }
+    return null;
+  }
+
+  const legacy = path.match(/^\/neurons\/([^/]+)\/note$/);
+  if (legacy) {
+    const neuronId = decodeURIComponent(legacy[1]); await ownedNeuron(env, neuronId, userId);
+    const current = () => env.DB.prepare(`SELECT ${noteSelect} FROM notes mn WHERE mn.neuron_id = ? ORDER BY mn.is_default DESC, mn.sort_order, mn.created_at LIMIT 1`).bind(neuronId).first();
+    if (request.method === "GET") return json((await current()) ?? { neuronId, content: null });
+    if (request.method === "PUT") {
+      const content = text((await body(request)).content, "content") as string;
+      if (bytes(content) > NOTE_MAX) throw new HttpError(413, "CONTENT_TOO_LARGE", "Rich-text content exceeds 1MB");
+      const existing = await current(), timestamp = now();
+      if (existing) await env.DB.prepare("UPDATE notes SET content = ?, updated_at = ? WHERE id = ?").bind(content, timestamp, existing.id).run();
+      else await env.DB.prepare("INSERT INTO notes (id, neuron_id, name, content, sort_order, is_default, created_at, updated_at) VALUES (?, ?, 'Ghi chú', ?, 0, 1, ?, ?)").bind(id(), neuronId, content, timestamp, timestamp).run();
+      return json(await current());
+    }
+    return null;
+  }
+
+  const item = path.match(/^\/notes\/([^/]+)$/); if (!item) return null;
+  const noteId = decodeURIComponent(item[1]); const note = await ownedNote(env, noteId, userId);
+  if (request.method === "GET") return json(note);
   if (request.method === "PUT") {
     const content = text((await body(request)).content, "content") as string;
-    if (bytes(content) > NOTE_MAX) throw new HttpError(413, "CONTENT_TOO_LARGE", "Markdown content exceeds 1MB");
-    const timestamp = now(), noteId = id();
-    await env.DB.prepare(`INSERT INTO notes (id, neuron_id, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(neuron_id) DO UPDATE SET content = excluded.content, updated_at = excluded.updated_at`).bind(noteId, neuronId, content, timestamp, timestamp).run();
-    return json(await env.DB.prepare("SELECT id, neuron_id AS neuronId, content, created_at AS createdAt, updated_at AS updatedAt FROM notes WHERE neuron_id = ?").bind(neuronId).first());
+    if (bytes(content) > NOTE_MAX) throw new HttpError(413, "CONTENT_TOO_LARGE", "Rich-text content exceeds 1MB");
+    await env.DB.prepare("UPDATE notes SET content = ?, updated_at = ? WHERE id = ?").bind(content, now(), noteId).run();
+    return json(await ownedNote(env, noteId, userId));
+  }
+  if (request.method === "PATCH") {
+    const data = await body(request), updates: string[] = [], values: unknown[] = [];
+    if (data.name !== undefined) { updates.push("name = ?"); values.push(text(data.name, "name", { max: 120 })); }
+    if (data.sortOrder !== undefined) {
+      const sortOrder = finite(data.sortOrder, "sortOrder", false) as number;
+      if (!Number.isInteger(sortOrder) || sortOrder < 0) throw new HttpError(400, "VALIDATION_ERROR", "sortOrder must be a non-negative integer");
+      updates.push("sort_order = ?"); values.push(sortOrder);
+    }
+    if (!updates.length) throw new HttpError(400, "VALIDATION_ERROR", "At least one field is required");
+    updates.push("updated_at = ?"); values.push(now(), noteId);
+    await env.DB.prepare(`UPDATE notes SET ${updates.join(", ")} WHERE id = ?`).bind(...values).run();
+    return json(await ownedNote(env, noteId, userId));
+  }
+  if (request.method === "DELETE") {
+    const count = await env.DB.prepare("SELECT COUNT(*) AS total FROM notes WHERE neuron_id = ?").bind(note.neuronId).first<{ total: number }>();
+    if ((count?.total ?? 0) <= 1) throw new HttpError(409, "LAST_NOTE_REQUIRED", "A neuron must keep at least one note");
+    if (Number(note.isDefault) === 1) {
+      const replacement = await env.DB.prepare("SELECT id FROM notes WHERE neuron_id = ? AND id <> ? ORDER BY sort_order, created_at LIMIT 1").bind(note.neuronId, noteId).first<{ id: string }>();
+      if (!replacement) throw new HttpError(409, "LAST_NOTE_REQUIRED", "A neuron must keep at least one note");
+      await env.DB.batch([
+        env.DB.prepare("DELETE FROM notes WHERE id = ?").bind(noteId),
+        env.DB.prepare("UPDATE notes SET is_default = 1, updated_at = ? WHERE id = ?").bind(now(), replacement.id),
+      ]);
+    } else await env.DB.prepare("DELETE FROM notes WHERE id = ?").bind(noteId).run();
+    return new Response(null, { status: 204 });
   }
   return null;
 }
@@ -391,7 +472,7 @@ async function search(request: Request, env: Env, path: string, userId: string) 
       const item = assertObject(raw), requestId = String(item.id ?? ""), query = String(item.query ?? "").trim();
       if (!requestId || !query) { responses.push({ requestId, query, found: false, results: [] }); continue; }
       const pattern = likePattern(query);
-      const rows = await env.DB.prepare(`SELECT n.id AS sourceId, 'NEURON' AS sourceType, n.id AS neuronId, s.id AS subjectId, s.name AS subjectName, n.name AS title, '' AS heading, n.text_content AS content, n.updated_at AS updatedAt FROM neurons n JOIN spaces s ON s.id = n.space_id WHERE s.user_id = ? AND (n.name LIKE ? ESCAPE '\\' OR n.text_content LIKE ? ESCAPE '\\') UNION ALL SELECT mn.id, 'MARKDOWN', n.id, s.id, s.name, n.name, 'Note', mn.content, mn.updated_at FROM notes mn JOIN neurons n ON n.id = mn.neuron_id JOIN spaces s ON s.id = n.space_id WHERE s.user_id = ? AND mn.content LIKE ? ESCAPE '\\' UNION ALL SELECT d.id, 'DOCUMENT', '', s.id, s.name, d.original_name, '', d.mime_type, d.updated_at FROM documents d JOIN spaces s ON s.id = d.space_id WHERE s.user_id = ? AND d.original_name LIKE ? ESCAPE '\\' LIMIT ?`).bind(userId, pattern, pattern, userId, pattern, userId, pattern, maximum).all();
+      const rows = await env.DB.prepare(`SELECT n.id AS sourceId, 'NEURON' AS sourceType, n.id AS neuronId, s.id AS subjectId, s.name AS subjectName, n.name AS title, '' AS heading, n.text_content AS content, n.updated_at AS updatedAt FROM neurons n JOIN spaces s ON s.id = n.space_id WHERE s.user_id = ? AND (n.name LIKE ? ESCAPE '\\' OR n.text_content LIKE ? ESCAPE '\\') UNION ALL SELECT mn.id, 'MARKDOWN', n.id, s.id, s.name, mn.name, n.name, mn.content, mn.updated_at FROM notes mn JOIN neurons n ON n.id = mn.neuron_id JOIN spaces s ON s.id = n.space_id WHERE s.user_id = ? AND (mn.name LIKE ? ESCAPE '\\' OR mn.content LIKE ? ESCAPE '\\') UNION ALL SELECT d.id, 'DOCUMENT', '', s.id, s.name, d.original_name, '', d.mime_type, d.updated_at FROM documents d JOIN spaces s ON s.id = d.space_id WHERE s.user_id = ? AND d.original_name LIKE ? ESCAPE '\\' LIMIT ?`).bind(userId, pattern, pattern, userId, pattern, pattern, userId, pattern, maximum).all();
       const allowed = Array.isArray(item.sources) ? new Set(item.sources.map(String)) : null;
       const filtered = rows.results.filter((row) => (!allowed || allowed.has(String(row.sourceType))) && (!resolvedSpaceIds.length || resolvedSpaceIds.includes(String(row.subjectId))) && (!resolvedNeuronIds.length || resolvedNeuronIds.includes(String(row.neuronId))));
       const results = filtered.map((row, index) => {
@@ -412,12 +493,12 @@ async function search(request: Request, env: Env, path: string, userId: string) 
     SELECT n.id, 'neuron' AS type, n.name AS title, n.text_content AS snippet, n.id AS neuronId, s.id AS subjectId, s.name AS subjectName, n.updated_at AS updatedAt, 0 AS rank
     FROM neurons n JOIN spaces s ON s.id = n.space_id WHERE s.user_id = ? AND (n.name LIKE ? ESCAPE '\\' OR n.text_content LIKE ? ESCAPE '\\' OR n.key_points LIKE ? ESCAPE '\\' OR n.memory_method LIKE ? ESCAPE '\\' OR n.application LIKE ? ESCAPE '\\')
     UNION ALL
-    SELECT mn.id, 'markdown', n.name, substr(mn.content, 1, 500), n.id, s.id, s.name, mn.updated_at, 1
-    FROM notes mn JOIN neurons n ON n.id = mn.neuron_id JOIN spaces s ON s.id = n.space_id WHERE s.user_id = ? AND mn.content LIKE ? ESCAPE '\\'
+    SELECT mn.id, 'markdown', mn.name, substr(mn.content, 1, 500), n.id, s.id, s.name, mn.updated_at, 1
+    FROM notes mn JOIN neurons n ON n.id = mn.neuron_id JOIN spaces s ON s.id = n.space_id WHERE s.user_id = ? AND (mn.name LIKE ? ESCAPE '\\' OR mn.content LIKE ? ESCAPE '\\')
     UNION ALL
     SELECT d.id, 'document', d.original_name, d.mime_type, NULL, s.id, s.name, d.updated_at, 2
     FROM documents d JOIN spaces s ON s.id = d.space_id WHERE s.user_id = ? AND d.original_name LIKE ? ESCAPE '\\'
-    ORDER BY rank, updatedAt DESC LIMIT ?`).bind(userId, pattern, pattern, pattern, pattern, pattern, userId, pattern, userId, pattern, limit).all();
+    ORDER BY rank, updatedAt DESC LIMIT ?`).bind(userId, pattern, pattern, pattern, pattern, pattern, userId, pattern, pattern, userId, pattern, limit).all();
   return json({ query, limit, results: rows.results.map(({ rank: _, ...item }) => item) });
 }
 

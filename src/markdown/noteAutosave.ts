@@ -1,4 +1,4 @@
-import { saveNeuronMarkdown } from "../api/markdownNotes";
+import { saveNoteContent } from "../api/markdownNotes";
 import { neuronMarkdownStore } from "./neuronMarkdownStore";
 
 /** One write lane per Neuron, shared across editor mounts. Never abort an in-flight write. */
@@ -21,4 +21,4 @@ export function createNoteSaver(write: (id: string, content: string) => Promise<
     lanes.set(id, result); return result;
   };
 }
-export const saveWorkingNote = createNoteSaver(saveNeuronMarkdown);
+export const saveWorkingNote = createNoteSaver(saveNoteContent);

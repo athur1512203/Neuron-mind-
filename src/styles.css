@@ -5288,6 +5288,25 @@ textarea:focus-visible {
 .neuron-note-title-wrap { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .neuron-note-title-wrap h2 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 700; }
 .neuron-note-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.neuron-note-tabs-shell { flex: 0 0 auto; min-width: 0; border-bottom: 1px solid var(--nm-border); background: #0D1420; }
+.neuron-note-tabs { display: flex; align-items: stretch; gap: 4px; min-width: 0; padding: 7px 10px 0; overflow-x: auto; overflow-y: visible; scrollbar-width: thin; }
+.neuron-note-tab-wrap { position: relative; display: flex; align-items: center; flex: 0 0 auto; max-width: 240px; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; color: var(--nm-muted); background: transparent; }
+.neuron-note-tab-wrap.is-active { border-color: var(--nm-border); color: var(--nm-text); background: var(--nm-bg); }
+.neuron-note-tab { max-width: 190px; padding: 9px 5px 9px 12px; overflow: hidden; border: 0; color: inherit; background: transparent; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.neuron-note-tab-menu-button { display: grid; place-items: center; width: 28px; border: 0; color: inherit; background: transparent; opacity: .7; }
+.neuron-note-tab-wrap:hover .neuron-note-tab-menu-button, .neuron-note-tab-wrap.is-active .neuron-note-tab-menu-button { opacity: 1; }
+.neuron-note-tab-menu { position: fixed; z-index: 10020; width: 154px; padding: 5px; border: 1px solid var(--nm-border); border-radius: 9px; background: var(--nm-surface); box-shadow: 0 12px 30px #0008; }
+.neuron-note-tab-menu button { display: flex; align-items: center; gap: 7px; width: 100%; padding: 8px 9px; border: 0; border-radius: 6px; color: var(--nm-text); background: transparent; text-align: left; }
+.neuron-note-tab-menu button:hover:not(:disabled) { background: var(--nm-hover); }
+.neuron-note-tab-menu button.is-danger { color: #fb7185; }
+.neuron-note-tab-menu button:disabled { opacity: .35; }
+.neuron-note-add { display: grid; place-items: center; flex: 0 0 34px; height: 34px; margin: 2px 6px 5px 2px; border: 1px dashed var(--nm-border); border-radius: 8px; color: var(--nm-muted); background: transparent; }
+.neuron-note-add:hover:not(:disabled) { color: var(--nm-primary); border-color: var(--nm-primary); }
+.neuron-note-tab-rename { display: flex; align-items: center; gap: 4px; padding: 4px; }
+.neuron-note-tab-rename input { width: 140px; min-width: 90px; padding: 5px 7px; border: 1px solid var(--nm-primary); border-radius: 6px; color: var(--nm-text); background: var(--nm-input); }
+.neuron-note-tab-rename button { padding: 5px 7px; border: 0; border-radius: 5px; color: var(--nm-text); background: var(--nm-hover); font-size: 11px; }
+.neuron-note-tabs-error, .neuron-note-tabs-banner { margin: 0; padding: 6px 12px; color: #fda4af; background: #3f121a; font-size: 12px; }
+.neuron-note-loading { display: grid; flex: 1; place-items: center; color: var(--nm-muted); background: var(--nm-bg); }
 .neuron-customize-wrap { position: relative; }
 .neuron-customize-menu, .neuron-color-popover { position: absolute; z-index: 40; top: calc(100% + 8px); right: 0; width: 180px; padding: 6px; border: 1px solid var(--nm-border); border-radius: 10px; background: var(--nm-surface); box-shadow: 0 14px 36px rgba(15, 23, 42, .18); }
 .neuron-customize-menu button { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 10px; border: 0; border-radius: 7px; color: var(--nm-text); background: transparent; text-align: left; }
@@ -5313,6 +5332,8 @@ textarea:focus-visible {
   .neuron-note-header { height: 52px; flex-basis: 52px; padding: 0 10px 0 14px; }
   .neuron-color-popover { position: fixed; top: 58px; right: 10px; left: 10px; width: auto; }
   .neuron-note-modal .nm-note-page { padding-top: 22px; }
+  .neuron-note-tabs { padding-left: 6px; padding-right: 6px; }
+  .neuron-note-tab { max-width: 140px; padding-left: 10px; }
 }
 .neuron-md .neuron-md-head,
 .neuron-md .neuron-md-foot,
