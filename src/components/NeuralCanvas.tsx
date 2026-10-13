@@ -44,7 +44,7 @@ const LABEL_HALO = "#09090D";
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 function nodeRadius(connectionCount: number) {
-  return Math.min(48, 18 + 9 * Math.sqrt(connectionCount));
+  return Math.min(24, 10 + 4 * Math.sqrt(connectionCount));
 }
 
 function clampByte(value: number) {
@@ -346,13 +346,13 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
         forceLink<GraphNode, GraphLink>(graphLinks)
           .id((node) => node.id)
           .distance((link) => {
-            const sourceRadius = typeof link.source === "string" ? 18 : link.source.radius;
-            const targetRadius = typeof link.target === "string" ? 18 : link.target.radius;
-            return (50 + sourceRadius + targetRadius) * (neuronSpacing / 2.4);
+            const sourceRadius = typeof link.source === "string" ? 10 : link.source.radius;
+            const targetRadius = typeof link.target === "string" ? 10 : link.target.radius;
+            return (64 + sourceRadius + targetRadius) * (neuronSpacing / 2.4);
           })
           .strength(0.25),
       )
-      .force("charge", forceManyBody<GraphNode>().strength((node) => -(90 + node.radius * 2.4)).distanceMax(neuronSpacing * 220))
+      .force("charge", forceManyBody<GraphNode>().strength((node) => -(85 + node.radius * 2.6)).distanceMax(neuronSpacing * 200))
       .force(
         "collision",
         forceCollide<GraphNode>()
