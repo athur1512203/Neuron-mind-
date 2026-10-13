@@ -44,7 +44,7 @@ const LABEL_HALO = "#09090D";
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 function nodeRadius(connectionCount: number) {
-  return Math.min(9, 7 + Math.log2(connectionCount + 1) * 0.45);
+  return Math.min(48, 18 + 9 * Math.sqrt(connectionCount));
 }
 
 function clampByte(value: number) {
@@ -91,8 +91,9 @@ function neuronFill(neuronId: string, emphasized: boolean) {
   return `url(#${neuronGradientId(neuronId)})`;
 }
 
-function displayLabel(name: string, expanded: boolean) {
-  if (expanded || name.length <= 18) return name;
+function displayLabel(name: string, expanded: boolean, connectionCount: number) {
+  if (expanded) return `${name} · ${connectionCount} liên kết`;
+  if (name.length <= 18) return name;
   return `${name.slice(0, 16)}…`;
 }
 
@@ -172,23 +173,21 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
     () => Object.fromEntries(neurons.map((neuron, index) => [neuron.id, initialCoordinate(neuron, index)])),
     [neurons],
   );
-  const connectionCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    connections.forEach((connection) => {
-      counts.set(connection.sourceNeuronId, (counts.get(connection.sourceNeuronId) ?? 0) + 1);
-      counts.set(connection.targetNeuronId, (counts.get(connection.targetNeuronId) ?? 0) + 1);
-    });
-    return counts;
-  }, [connections]);
   const adjacencyMap = useMemo(() => {
     const adjacency = new Map<string, Set<string>>();
     neurons.forEach((neuron) => adjacency.set(neuron.id, new Set()));
     connections.forEach((connection) => {
+      if (connection.sourceNeuronId === connection.targetNeuronId) return;
+      if (!adjacency.has(connection.sourceNeuronId) || !adjacency.has(connection.targetNeuronId)) return;
       adjacency.get(connection.sourceNeuronId)?.add(connection.targetNeuronId);
       adjacency.get(connection.targetNeuronId)?.add(connection.sourceNeuronId);
     });
     return adjacency;
   }, [connections, neurons]);
+  const connectionCounts = useMemo(
+    () => new Map(Array.from(adjacencyMap, ([neuronId, neighbors]) => [neuronId, neighbors.size])),
+    [adjacencyMap],
+  );
 
   const applyViewportTransform = () => {
     const viewport = sizeRef.current;
@@ -229,7 +228,8 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
       const circle = nodeCircleRefs.current.get(neuron.id);
       const ring = nodeRingRefs.current.get(neuron.id);
       const label = nodeLabelRefs.current.get(neuron.id);
-      const radius = nodeRadius(connectionCounts.get(neuron.id) ?? 0);
+      const connectionCount = connectionCounts.get(neuron.id) ?? 0;
+      const radius = nodeRadius(connectionCount);
       const visualRadius = hovered || selected ? radius * 1.05 : radius;
       group?.setAttribute("opacity", hoveredNodeId && !related ? "0.28" : "1");
       circle?.setAttribute("r", String(visualRadius));
@@ -243,7 +243,8 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
       ring?.setAttribute("opacity", selected ? "1" : "0");
       label?.setAttribute("fill", LABEL_FILL);
       label?.setAttribute("font-weight", hovered || selected ? "600" : "500");
-      if (label) label.textContent = displayLabel(neuron.name, hovered || selected);
+      label?.setAttribute("x", String(visualRadius + 8));
+      if (label) label.textContent = displayLabel(neuron.name, hovered || selected, connectionCount);
     });
     connections.forEach((connection) => {
       const relatedHover = Boolean(hoveredNodeId) && (hoveredNodeId === connection.sourceNeuronId || hoveredNodeId === connection.targetNeuronId);
@@ -324,6 +325,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
       .map((connection) => ({ id: connection.id, source: connection.sourceNeuronId, target: connection.targetNeuronId }));
     nodesRef.current = graphNodes;
     nodesByIdRef.current = new Map(graphNodes.map((node) => [node.id, node]));
+    const preservesExistingLayout = graphNodes.length > 0 && graphNodes.every((node) => previousNodes.has(node.id));
 
     let layoutCommitted = false;
     const commitSettledLayout = () => {
@@ -343,19 +345,23 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
         "link",
         forceLink<GraphNode, GraphLink>(graphLinks)
           .id((node) => node.id)
-          .distance(90 * (neuronSpacing / 2.4))
+          .distance((link) => {
+            const sourceRadius = typeof link.source === "string" ? 18 : link.source.radius;
+            const targetRadius = typeof link.target === "string" ? 18 : link.target.radius;
+            return (50 + sourceRadius + targetRadius) * (neuronSpacing / 2.4);
+          })
           .strength(0.25),
       )
-      .force("charge", forceManyBody<GraphNode>().strength(-140).distanceMax(neuronSpacing * 180))
+      .force("charge", forceManyBody<GraphNode>().strength((node) => -(90 + node.radius * 2.4)).distanceMax(neuronSpacing * 220))
       .force(
         "collision",
         forceCollide<GraphNode>()
-          .radius((node) => node.radius + Math.min(42, 18 + node.name.length * 2.2))
-          .strength(0.8)
+          .radius((node) => node.radius + Math.min(46, 14 + Math.min(node.name.length, 18) * 1.6))
+          .strength(0.9)
           .iterations(2),
       )
       .force("center", forceCenter<GraphNode>(0, 0).strength(0.025))
-      .alpha(0.9)
+      .alpha(preservesExistingLayout ? 0.28 : 0.9)
       .alphaDecay(0.045)
       .alphaTarget(0)
       .velocityDecay(0.4)
@@ -390,7 +396,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
   useEffect(() => {
     applyHighlight(hoveredNodeIdRef.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedConnectionId, selectedNeuronId, neuronColors]);
+  }, [selectedConnectionId, selectedNeuronId, neuronColors, connectionTopology]);
 
   useEffect(() => {
     if (connectionMode) return;
@@ -445,7 +451,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
     for (const node of nodesRef.current) {
       if (node.id === excludeId) continue;
       const distance = Math.hypot((node.x ?? 0) - x, (node.y ?? 0) - y);
-      const hitRadius = node.radius + 14;
+      const hitRadius = node.radius + 10;
       if (distance <= hitRadius && distance < best) {
         match = node;
         best = distance;
@@ -741,7 +747,8 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
 
           {neurons.map((neuron) => {
             const position = renderPositions[neuron.id] ?? { x: 0, y: 0 };
-            const radius = nodeRadius(connectionCounts.get(neuron.id) ?? 0);
+            const connectionCount = connectionCounts.get(neuron.id) ?? 0;
+            const radius = nodeRadius(connectionCount);
             const selected = selectedNeuronId === neuron.id;
             return (
               <g
@@ -788,6 +795,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                   onSelectNeuron(neuron.id);
                 }}
               >
+                <title>{`${neuron.name} · ${connectionCount} liên kết`}</title>
                 <circle
                   ref={(element) => {
                     if (element) nodeRingRefs.current.set(neuron.id, element);
@@ -819,7 +827,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                     if (element) nodeLabelRefs.current.set(neuron.id, element);
                     else nodeLabelRefs.current.delete(neuron.id);
                   }}
-                  x={radius + 7}
+                  x={radius + 8}
                   y={4}
                   fill={LABEL_FILL}
                   fontSize={13}
@@ -830,7 +838,7 @@ export const NeuralCanvas = forwardRef<NeuralCanvasHandle, NeuralCanvasProps>(fu
                   strokeLinejoin="round"
                   className="pointer-events-none"
                 >
-                  {displayLabel(neuron.name, selected)}
+                  {displayLabel(neuron.name, selected, connectionCount)}
                 </text>
               </g>
             );
