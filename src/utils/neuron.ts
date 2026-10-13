@@ -3,14 +3,16 @@ import type { NeuronConnection } from "../types";
 export const NEURON_COLOR_PALETTE = [
   { label: "Xanh dương", value: "#3B82F6" },
   { label: "Tím", value: "#A855F7" },
-  { label: "Xanh ngọc", value: "#20D6C7" },
   { label: "Xanh lá", value: "#34C38F" },
-  { label: "Cam", value: "#FB923C" },
   { label: "Vàng", value: "#FACC15" },
+  { label: "Cam", value: "#FB923C" },
+  { label: "Đỏ", value: "#EF4444" },
   { label: "Hồng", value: "#EC4899" },
+  { label: "Xám", value: "#64748B" },
 ];
 
 export const colorPresets = NEURON_COLOR_PALETTE;
+export const DEFAULT_NEURON_COLOR = "#20D6C7";
 
 export function getConnectionCount(neuronId: string, connections: NeuronConnection[]) {
   return connections.filter(

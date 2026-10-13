@@ -1,5 +1,9 @@
 .nm-neuron-name-row, .nm-neuron-name form { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .nm-neuron-name button { display: grid; place-items: center; padding: 6px; border: 0; border-radius: 6px; color: var(--nm-primary); background: var(--nm-milk); flex-shrink: 0; }
+.nm-neuron-name { min-width: 0; }
+.nm-neuron-name .nm-neuron-name-label { display: block; min-width: 0; max-width: min(46vw, 620px); padding: 0; color: inherit; background: transparent; text-align: left; cursor: text; }
+.nm-neuron-name-label h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nm-neuron-name form button { display: inline-flex; width: auto; padding: 6px 10px; font-size: 12px; font-weight: 700; }
 .nm-neuron-name input { min-width: 0; width: 100%; border: 1px solid var(--nm-border); border-radius: 6px; padding: 4px 8px; }
 .nm-neuron-name-error { color: var(--nm-primary); font-size: 12px; }
 .nm-note-modes { display: flex; flex-shrink: 0; gap: 4px; padding: 8px 16px; border-bottom: 1px solid var(--nm-border); }

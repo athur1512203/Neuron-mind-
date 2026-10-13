@@ -44,6 +44,7 @@ type LearningMapProps = {
   onCreateConnection: (sourceId: string, targetId: string) => void | Promise<void>;
   onUpdateNeuron: (neuron: Neuron) => void;
   onRenameNeuron: (id: string, name: string) => Promise<void>;
+  onColorNeuron: (id: string, color: string) => Promise<void>;
   onDeleteNeuron: (neuronId: string) => Promise<void>;
   onUpdateConnection: (connection: NeuronConnection) => void;
   onDeleteConnection: (connectionId: string) => Promise<void>;
@@ -77,6 +78,7 @@ export function LearningMap({
   onCreateConnection,
   onUpdateNeuron,
   onRenameNeuron,
+  onColorNeuron,
   onDeleteNeuron,
   onUpdateConnection,
   onDeleteConnection,
@@ -224,6 +226,7 @@ export function LearningMap({
                 onDelete={onDeleteNeuron}
                 onUpdate={onUpdateNeuron}
                 onRename={onRenameNeuron}
+                onColor={onColorNeuron}
                 onSelectNeuron={focusNeuron}
                 onCreateConnection={onCreateConnection}
                 onDeleteConnection={onDeleteConnection}

@@ -1,25 +1,32 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Trash2, X } from "lucide-react";
+import { MoreHorizontal, Palette, Pencil, Trash2, X } from "lucide-react";
 import { listDocuments, type DocumentMeta } from "../api/documents";
 import { saveWorkingNote } from "../markdown/noteAutosave";
 import { neuronMarkdownStore } from "../markdown/neuronMarkdownStore";
 import type { Neuron, NeuronConnection } from "../types";
 import { NeuronMarkdownEditor } from "./NeuronMarkdownEditor";
+import { NeuronColorPicker } from "./NeuronColorPicker";
+import { NeuronNameEditor } from "./NeuronNameEditor";
 import { Button } from "./ui/Button";
 
 export type DetailTab = "content" | "markdown" | "custom";
 type Props = { neuron: Neuron; subjectId: string; connections: NeuronConnection[]; neurons: Neuron[]; connectionCount: number;
   onClose: () => void; onDelete: (neuronId: string) => Promise<void>; onUpdate: (neuron: Neuron) => void;
   onRename: (id: string, name: string) => Promise<void>; onSelectNeuron: (neuronId: string) => void;
+  onColor: (id: string, color: string) => Promise<void>;
   onCreateConnection: (sourceId: string, targetId: string) => void | Promise<void>;
   onDeleteConnection: (connectionId: string) => void | Promise<void>; onToggleSidebar?: () => void; initialTab?: DetailTab };
 
-export function NeuronDetailPanel({ neuron, subjectId, neurons, connections, onClose, onDelete, onSelectNeuron, onCreateConnection, onDeleteConnection }: Props) {
+export function NeuronDetailPanel({ neuron, subjectId, neurons, connections, onClose, onDelete, onRename, onColor, onSelectNeuron, onCreateConnection, onDeleteConnection }: Props) {
   const [documents, setDocuments] = useState<DocumentMeta[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [customizeMode, setCustomizeMode] = useState<"menu" | "rename" | "color" | null>(null);
+  const [draftColor, setDraftColor] = useState(neuron.color);
+  const [colorBusy, setColorBusy] = useState(false);
+  const [colorError, setColorError] = useState("");
   useEffect(() => {
     let active = true;
     listDocuments(subjectId).then((items) => { if (active) setDocuments(items); }).catch(() => { if (active) setDocuments([]); });
@@ -32,11 +39,27 @@ export function NeuronDetailPanel({ neuron, subjectId, neurons, connections, onC
     const escape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (confirmDelete) { if (!deleting) setConfirmDelete(false); return; }
+      if (customizeMode) { if (!colorBusy) setCustomizeMode(null); return; }
       void closeSafely();
     };
     window.addEventListener("keydown", escape);
     return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", escape); };
-  }, [neuron.id, confirmDelete, deleting]);
+  }, [neuron.id, confirmDelete, deleting, customizeMode, colorBusy]);
+
+  useEffect(() => {
+    setCustomizeMode(null);
+    setDraftColor(neuron.color);
+    setColorError("");
+  }, [neuron.id]);
+
+  const saveColor = async () => {
+    if (colorBusy) return;
+    if (draftColor.toUpperCase() === neuron.color.toUpperCase()) { setCustomizeMode(null); return; }
+    setColorBusy(true); setColorError("");
+    try { await onColor(neuron.id, draftColor); setCustomizeMode(null); }
+    catch { setColorError("Không đổi màu được neuron. Vui lòng thử lại."); }
+    finally { setColorBusy(false); }
+  };
 
   const closeSafely = async () => {
     if (neuronMarkdownStore.isDirty(neuron.id)) {
@@ -72,9 +95,32 @@ export function NeuronDetailPanel({ neuron, subjectId, neurons, connections, onC
       <header className="neuron-note-header">
         <div className="neuron-note-title-wrap">
           <span className="nm-neuron-swatch" style={{ backgroundColor: neuron.color }} aria-hidden="true" />
-          <h2 id="neuron-note-title">{neuron.name}</h2>
+          <NeuronNameEditor name={neuron.name} onSave={(name) => onRename(neuron.id, name)} editing={customizeMode === "rename"}
+            onEditingChange={(editing) => setCustomizeMode(editing ? "rename" : null)} showEditButton={false} />
         </div>
         <div className="neuron-note-header-actions">
+          <div className="neuron-customize-wrap">
+            <Button variant="icon" onClick={() => setCustomizeMode((mode) => mode === "menu" ? null : "menu")} aria-label="Tùy chỉnh neuron" aria-expanded={customizeMode !== null}>
+              <MoreHorizontal size={19} />
+            </Button>
+            {customizeMode === "menu" ? (
+              <div className="neuron-customize-menu" role="menu">
+                <button type="button" role="menuitem" onClick={() => setCustomizeMode("rename")}><Pencil size={15} />Đổi tên</button>
+                <button type="button" role="menuitem" onClick={() => { setDraftColor(neuron.color); setColorError(""); setCustomizeMode("color"); }}><Palette size={15} />Đổi màu</button>
+              </div>
+            ) : null}
+            {customizeMode === "color" ? (
+              <div className="neuron-color-popover" role="dialog" aria-label="Đổi màu neuron">
+                <strong>Đổi màu</strong>
+                <NeuronColorPicker value={draftColor} onChange={(color) => { setDraftColor(color); setColorError(""); }} disabled={colorBusy} includeDefault includeCustom />
+                {colorError ? <p role="alert">{colorError}</p> : null}
+                <div className="neuron-color-actions">
+                  <Button variant="secondary" size="sm" disabled={colorBusy} onClick={() => setCustomizeMode(null)}>Hủy</Button>
+                  <Button variant="primary" size="sm" disabled={colorBusy} onClick={() => void saveColor()}>{colorBusy ? "Đang lưu…" : "Lưu"}</Button>
+                </div>
+              </div>
+            ) : null}
+          </div>
           <Button variant="danger" size="sm" onClick={() => { setDeleteError(""); setConfirmDelete(true); }} aria-label={`Xóa neuron ${neuron.name}`}>
             <Trash2 size={16} /> Xóa
           </Button>

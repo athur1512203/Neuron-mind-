@@ -2,7 +2,7 @@ import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { apiMessage } from "../api/client";
 import type { Neuron } from "../types";
-import { colorPresets } from "../utils/neuron";
+import { DEFAULT_NEURON_COLOR } from "../utils/neuron";
 import { Button } from "./ui/Button";
 import { NeuronColorPicker } from "./NeuronColorPicker";
 
@@ -27,8 +27,6 @@ type CreateNeuronModalProps = {
   onClose: () => void;
   onCreate: (neuron: Neuron) => Promise<Neuron>;
 };
-
-const DEFAULT_NEURON_COLOR = colorPresets[2].value;
 
 export function CreateNeuronModal({ subjectId, neuronCount, onClose, onCreate }: CreateNeuronModalProps) {
   const [name, setName] = useState("");

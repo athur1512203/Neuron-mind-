@@ -522,8 +522,22 @@ export default function App() {
         onCreateConnection={createConnection}
         onUpdateNeuron={persistNeuron}
         onRenameNeuron={async (id, name) => {
-          const saved = await updateNeuronApi(id, { name });
-          setNeurons((current) => current.map((neuron) => neuron.id === id ? { ...neuron, name: saved.name, updatedAt: saved.updatedAt } : neuron));
+          try {
+            const saved = await updateNeuronApi(id, { name });
+            setNeurons((current) => current.map((neuron) => neuron.id === id ? { ...neuron, name: saved.name, updatedAt: saved.updatedAt } : neuron));
+          } catch (error) {
+            setNotice(apiMessage(error, "Không đổi tên được neuron."));
+            throw error;
+          }
+        }}
+        onColorNeuron={async (id, color) => {
+          try {
+            const saved = await updateNeuronApi(id, { color });
+            setNeurons((current) => current.map((neuron) => neuron.id === id ? { ...neuron, color: saved.color, updatedAt: saved.updatedAt } : neuron));
+          } catch (error) {
+            setNotice(apiMessage(error, "Không đổi màu được neuron."));
+            throw error;
+          }
         }}
         onDeleteNeuron={deleteNeuron}
         onUpdateConnection={() => {

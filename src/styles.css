@@ -5288,6 +5288,19 @@ textarea:focus-visible {
 .neuron-note-title-wrap { display: flex; align-items: center; gap: 11px; min-width: 0; }
 .neuron-note-title-wrap h2 { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 17px; font-weight: 700; }
 .neuron-note-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.neuron-customize-wrap { position: relative; }
+.neuron-customize-menu, .neuron-color-popover { position: absolute; z-index: 40; top: calc(100% + 8px); right: 0; width: 180px; padding: 6px; border: 1px solid var(--nm-border); border-radius: 10px; background: var(--nm-surface); box-shadow: 0 14px 36px rgba(15, 23, 42, .18); }
+.neuron-customize-menu button { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 10px; border: 0; border-radius: 7px; color: var(--nm-text); background: transparent; text-align: left; }
+.neuron-customize-menu button:hover { background: var(--nm-milk); }
+.neuron-color-popover { width: 278px; padding: 14px; }
+.neuron-color-popover > strong { display: block; margin-bottom: 10px; font-size: 14px; }
+.neuron-color-popover > p { margin: 8px 0 0; color: #dc2626; font-size: 12px; }
+.neuron-color-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.nm-swatch-default { display: flex; align-items: center; gap: 7px; width: 100%; margin-bottom: 9px; padding: 7px 8px; border: 1px solid var(--nm-border); border-radius: 8px; color: var(--nm-text); background: transparent; font-size: 12px; }
+.nm-swatch-default.is-on { border-color: var(--nm-primary); box-shadow: 0 0 0 2px color-mix(in srgb, var(--nm-primary) 18%, transparent); }
+.nm-swatch-default .nm-swatch { width: 18px; height: 18px; }
+.nm-custom-color { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 10px; color: var(--nm-muted); font-size: 12px; }
+.nm-custom-color input { width: 36px; height: 28px; padding: 2px; border: 1px solid var(--nm-border); border-radius: 7px; background: transparent; cursor: pointer; }
 .neuron-note-delete-overlay { position: fixed; inset: 0; z-index: 10001; display: grid; place-items: center; padding: 20px; background: rgba(20, 15, 15, .55); }
 .neuron-note-delete-dialog { width: min(440px, calc(100vw - 32px)); }
 .neuron-note-delete-error { margin: 0 20px 8px; }
@@ -5298,6 +5311,7 @@ textarea:focus-visible {
 .nm-note-save-indicator { position: absolute; right: 18px; bottom: 10px; z-index: 5; color: var(--nm-muted); font-size: 12px; pointer-events: none; }
 @media (max-width: 600px) {
   .neuron-note-header { height: 52px; flex-basis: 52px; padding: 0 10px 0 14px; }
+  .neuron-color-popover { position: fixed; top: 58px; right: 10px; left: 10px; width: auto; }
   .neuron-note-modal .nm-note-page { padding-top: 22px; }
 }
 .neuron-md .neuron-md-head,
